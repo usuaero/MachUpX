@@ -1,0 +1,80 @@
+{
+    "name": "Airplane1",
+    "CG": [0,0,0],
+    "reference": {
+        "area": 0,
+        "longitudinal_length": 0,
+        "lateral_length": 0
+    },
+    "controls": {
+        "elevator": {
+            "is_symmetric": 1
+        },
+        "rudder": {
+            "is_symmetric": 0
+        },
+        "aileron": {
+            "is_symmetric": 0
+        },
+        "flap": {
+            "is_symmetric": 1
+        }
+    },
+    "airfoils": "./Airfoils.json",
+    "wings": {
+        "main_wing_inside": {
+            "name": "main_wing_inside",
+            "ID": 1,
+            "is_main": 1,
+            "side": "both",
+            "connect_to": {
+                "ID": 0,
+                "location": "tip",
+                "dx": 0,
+                "dy": 0,
+                "dz": 0,
+                "y_offset_from_centerline": 0
+            },
+            "span": [4,"ft"],
+            "twist" : "twist_file.txt",
+            "dihedral" : [[0.0,0.0,"deg"],
+                          [0.5,5.0,"deg"],
+                          [1.0,10.0,"deg"]],
+            "sweep" : [0.0,"deg"],
+            "chord": [1.0,"ft"],
+            "airfoil" : [[0.0,"NACA_2410"],
+                         [1.0,"NACA_0010"]],
+            "grid": 40,
+            "control": {
+                "root_span" : 0.2,
+                "tip_span" : 0.8,
+                "mix" : {
+                    "flap" : 1.0
+                }
+            }
+        },
+        "main_wing_outside": {
+            "name": "main_wing_outside",
+            "ID": 2,
+            "is_main": 1,
+            "side": "both",
+            "connect_to": {
+                "ID": 1,
+                "location": "tip",
+                "dx": 0,
+                "dy": 0,
+                "dz": 0,
+                "y_offset_from_centerline": 0
+            },
+            "span": [4,"ft"],
+            "twist" : "twist_file.txt",
+            "dihedral" : [15.0,"deg"],
+            "sweep" : [20.0,"deg"],
+            "chord": [[0.0,1.0,"ft"],
+                      [1.0,0.5,"ft"]],
+            "airfoil" : "NACA_0010",
+            "grid": 40,
+            "control": {}
+        }
+    }
+}

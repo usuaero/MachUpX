@@ -1,0 +1,54 @@
+{
+    "tag" : "Ideal MachUpX input file.",
+    "run": {
+        "forces" : "",
+        "stl" : "",
+        "aero_derivatives" : "",
+        "state_derivatives" : ""
+    },
+    "solver": {
+        "type": "linear",
+        "convergence": 0.000001,
+        "relaxation": 0.9
+    },
+    "units" : "English",
+    "scene": {
+        "atmosphere" : {
+            "rho" : "file",
+            "V_wind" : "file",
+            "path" : "./atmosphere_CFD_solution.txt"
+        },
+        "aircraft" : {
+            "airplane0" : {
+                "file" : "./Airplane.json",
+                "state" : {
+                    "type" : "rigid_body",
+                    "position" : [0, 0, 1000],
+                    "velocity" : [100, 0, 0],
+                    "orientation" : [0.0, 0.0, 0.0, 0.0],
+                    "rates" : [0.0, 0.0, 0.0],
+                    
+                    "type" : "aerodynamic",
+                    "position" : [0, 0, 1000],
+                    "V_mag" : 100,
+                    "alpha" : 0.0,
+                    "beta" : 0.0
+                },
+                "control_state" : {
+                    "elevator" : {
+                        "deflection" : [0.0, "deg"]
+                    },
+                    "rudder": {
+                        "deflection" : [0.0, "deg"]
+                    },
+                    "aileron": {
+                        "deflection" : [0.0, "deg"]
+                    },
+                    "flap": {
+                        "deflection" : [0.0, "deg"]
+                    }
+                }
+            }
+        }
+    }
+}
