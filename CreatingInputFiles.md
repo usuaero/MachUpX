@@ -19,24 +19,24 @@ MachUp allows the user to specify the units for each value if they desire. For f
 by making the vaule a list where the first element is the actual value and the second element is a string
 specifying the units. For example:
 
-'''python
+```python
 "area" : [6.75,"ft^2"]
-'''
+```
 
 For vector inputs, such as position and velocity, the units are simply appended to the vector:
 
-'''python
+```python
 "velocity" : [100,13,0,"ft/s"]
-'''
+```
 
 For array inputs, such as a density profile or chord distribution, the units are appended in the first dimension:
 
-'''python
+```python
 "rho" : [[0.0,1.225],
          [2000.0,1.0066],
          [4000.0,0.81935],
          "kg/m^3"]
-'''
+```
 
 Each key here lists which units are allowed.
 
