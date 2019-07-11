@@ -18,6 +18,8 @@ Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
 ## Documentation
 
+For help on creating input files, see How_To_Create_Input_Files.
+
 ## Installation
 
 ### Prerequisites

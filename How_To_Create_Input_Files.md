@@ -366,10 +366,13 @@ Describes an aircraft.
                     affected by any numer of controls.
 
                     "<CONTROL_NAME>" : (dict)
+                        Corresponds to one of the controls listed in "controls".
 
                         "symmetric" : (bool)
                             Specifies whether this control causes the control surface to deflect
-                            symmetrically.
+                            symmetrically (e.g. when using elevons, the elevator control should
+                            deflect the control surfaces symmetrically, whereas the aileron control
+                            should not).
 
                         "mix" : (float)
                             Linearly maps the control deflection to the control surface deflection.
