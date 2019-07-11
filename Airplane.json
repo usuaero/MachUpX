@@ -6,20 +6,7 @@
         "longitudinal_length": 0,
         "lateral_length": 0
     },
-    "controls": {
-        "elevator": {
-            "is_symmetric": 1
-        },
-        "rudder": {
-            "is_symmetric": 0
-        },
-        "aileron": {
-            "is_symmetric": 0
-        },
-        "flap": {
-            "is_symmetric": 1
-        }
-    },
+    "controls": [ "elevator", "rudder", "aileron", "flap"],
     "airfoils": "./Airfoils.json",
     "wings": {
         "main_wing_inside": {
