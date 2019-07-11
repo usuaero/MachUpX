@@ -1,5 +1,5 @@
 {
-    "NACA_4410":{
+    "NACA_4410" :{
         "type" : "linear",	
         "alpha_L0" : -0.0746,
         "CL_alpha" : 6.2881,
@@ -10,7 +10,7 @@
         "CD0_L2" : 0.00969,
         "CL_max" : 1.4
     },
-    "NACA_2410":{
+    "NACA_2410" :{
         "type" : "linear",	
         "alpha_L0" : -0.0368,
         "CL_alpha" : 6.1976,
@@ -20,8 +20,8 @@
         "CD0_L" : -0.00450,
         "CD0_L2" : 0.01040
     },
-    "NACA_0010":{
+    "NACA_0010" :{
         "type" : "file",
-        "path" : "NACA_0010.txt"
+        "path" : "NACA_0010.csv"
     }
 }

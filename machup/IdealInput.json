@@ -1,22 +1,22 @@
 {
     "tag" : "Ideal MachUpX input file.",
-    "run": {
+    "run" : {
         "forces" : "",
         "stl" : "",
         "aero_derivatives" : "",
         "state_derivatives" : ""
     },
-    "solver": {
-        "type": "linear",
-        "convergence": 0.000001,
-        "relaxation": 0.9
+    "solver" : {
+        "type" : "linear",
+        "convergence" : 0.000001,
+        "relaxation" : 0.9
     },
+    "model_aircraft_interactions" : 0,
     "units" : "English",
-    "scene": {
+    "scene" : {
         "atmosphere" : {
-            "rho" : "file",
-            "V_wind" : "file",
-            "path" : "./atmosphere_CFD_solution.txt"
+            "rho" : "standard",
+            "V_wind" : "./wind_profile.csv"
         },
         "aircraft" : {
             "airplane0" : {
@@ -26,28 +26,20 @@
                     "position" : [0, 0, 1000],
                     "velocity" : [100, 0, 0],
                     "orientation" : [0.0, 0.0, 0.0, 0.0],
-                    "rates" : [0.0, 0.0, 0.0],
+                    "angular_rates" : [0.0, 0.0, 0.0],
                     
                     "type" : "aerodynamic",
                     "position" : [0, 0, 1000],
-                    "rates" : [0.0, 0.0, 0.0],
+                    "angular_rates" : [0.0, 0.0, 0.0],
                     "V_mag" : 100,
                     "alpha" : 0.0,
                     "beta" : 0.0
                 },
                 "control_state" : {
-                    "elevator" : {
-                        "deflection" : [0.0, "deg"]
-                    },
-                    "rudder": {
-                        "deflection" : [0.0, "deg"]
-                    },
-                    "aileron": {
-                        "deflection" : [0.0, "deg"]
-                    },
-                    "flap": {
-                        "deflection" : [0.0, "deg"]
-                    }
+                    "elevator" : [0.0, "deg"],
+                    "rudder" : [0.0, "deg"],
+                    "aileron" : [0.0, "deg"],
+                    "flap" : [0.0, "deg"]
                 }
             }
         }
