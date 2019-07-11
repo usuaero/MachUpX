@@ -15,6 +15,10 @@ When using the JSON objects, only the scene object is passed to MachUp. As long 
 other JSON objects are properly specified in the scene object, MachUp will automatically load all other
 required objects.
 
+Boolean values are defined with a 1 or a 0.
+
+## Units
+
 MachUp allows the user to specify the units for each value if they desire. For float values, this is done
 by making the vaule a list where the first element is the actual value and the second element is a string
 specifying the units. For example:
@@ -29,16 +33,24 @@ For vector inputs, such as position and velocity, the units are simply appended 
 "velocity" : [100,13,0,"ft/s"]
 ```
 
-For array inputs, such as a density profile or chord distribution, the units are appended in the first dimension:
+For array inputs, such as a density profile or chord distribution, the units are appended as another row
+in the array:
 
 ```python
 "rho" : [[0.0,1.225],
          [2000.0,1.0066],
          [4000.0,0.81935],
-         "kg/m^3"]
+         ["m","kg/m^3"]]
 ```
 
-Each key here lists which units are allowed.
+The following measurements can be defined with the accompanying units:
+
+Position/displacement/length: "ft", "m", "in", "cm"
+Velocity: "ft/s", "m/s", "mph", "kph", "kn"
+Angular deflection/position: "deg", "rad"
+Angular rate: "deg/s", "rad/s"
+Density: "slug/ft^3", "kg/m^3"
+Weight: "lbf", "N"
 
 ## Scene Object
 The following are tags which can be specified in the scene JSON object. NOTE: all keys not marked as
@@ -95,7 +107,6 @@ deterimined by the user.
                 data. If specified as "file", MachUp will pull the densities from the filename
                 given by "path" (see below). The user can also specify this as "standard", in which
                 case a standard atmosphere profile will be used.
-                Allowable units: "slug/ft^3", "kg/m^3"
             
             "V_wind" : (vector or "file")
                 If a 1D array is given, this is assumed to be the wind velocity vector given in
@@ -103,7 +114,6 @@ deterimined by the user.
                 "file", MachUp will pull the local velocity from the filename given by "path"
                 (see below). NOTE: This value is optional if the state type of all aircraft is
                 specified as "aerodynamic".
-                Allowable units: "ft/s", "m/s", "mph", "kph", "kn"
 
             "path" : (string)
                 Path to text file containing densities and velocities as a function of position.
@@ -130,55 +140,46 @@ deterimined by the user.
                     "position" : (vector)
                         Position of the origin of the aircraft's body-fixed coordinate system in flat-earth
                         coordinates.
-                        Allowable units: "ft", "m"
 
                     "velocity" : (vector)
                         Velocity of the aircraft in flat-earth coordinates.
-                        Allowable units: "ft/s", "m/s", "mph", "kph", "kn"
 
                     "orientation" : (vector)
-                        Orientation of the aircraft in flat-earth coordinates. If this is a 3-element vector
-                        it is assumed an Euler angle formulation is used. If this is a 4-element vector it is
-                        assumed a quaternion formulation is used.
-                        Allowable units: "deg", "rad" (for Euler; quaternion is nondimensional)
+                        Orientation of the aircraft in flat-earth coordinates. If this is a 3-element 
+                        vector it is assumed an Euler angle formulation is used. If this is a 4-element 
+                        vector it is assumed a quaternion formulation is used.
 
                     "rates" : (vector)
                         Angular rate of the aircraft in flat-earth coordinates.
-                        Allowable units: "deg/s", "rad/s"
 
                     If "type" is specified as "aerodynamic", the following keys must be specified:
 
                     "position" : (vector)
                         Position of the origin of the aircraft's body-fixed coordinate system in flat-earth
                         coordinates.
-                        Allowable units: "ft", "m"
 
                     "rates" : (vector)
                         Angular rate of the aircraft in flat-earth coordinates.
-                        Allowable units: "deg/s", "rad/s"
 
                     "V_mag" : (float)
                         Magnitude of the local wind vector.
-                        Allowable units: "ft/s", "m/s", "mph", "kph", "kn"
 
                     "alpha" : (float)
                         Aerodynamic angle of attack.
-                        Allowable units: "deg", "rad"
 
                     "beta" : (float)
                         Aerodynamic sideslip angle.
-                        Allowable units: "deg", "rad"
 
                 "control_state" : (dict, optional)
-                    Describes the control deflections. The number and names of controls are arbitrary and may be
-                    specified by the user. This is discussed more in depth as part of the aircraft object. If the
-                    aircraft has controls but no state is specified, all deflections will be assumed to be zero.
+                    Describes the control deflections. The number and names of controls are arbitrary and 
+                    may be specified by the user. This is discussed more in depth as part of the aircraft 
+                    object. If the aircraft has controls but no state is specified, all deflections will 
+                    be assumed to be zero.
 
                     "<CONTROL_NAME>" : (dict)
 
                         "deflection" : (float)
                             Control surface deflection.
-                            Allowable units: "deg", "rad"
 
 ## Aircraft Object
 Describes an aircraft.
@@ -191,36 +192,36 @@ Describes an aircraft.
         often assumed to be coincident with the body-fixed origin.
 
     "reference" : (dict, optional)
-        Specifies the reference lengths and areas used for nondimensional analysis. Any or none of these may be specified. If not specified, MachUp will select appropriate values based on the geometry of the main wing.
+        Specifies the reference lengths and areas used for nondimensional analysis. Any or none of these 
+        may be specified. If not specified, MachUp will select appropriate values based on the geometry of 
+        the main wing.
 
         "area" : (float)
             The reference area.
-            Allowable units: "ft^2", "in^2", "m^2", or "cm^2".
 
         "longitudinal_length" : (float)
             Longitudinal reference length.
-            Allowable units: "ft", "in", "m", or "cm".
 
         "lateral_length" : (float)
             Lateral reference length.
-            Allowable units: "ft", "in", "m", or "cm".
 
     "controls" : (list, optional)
-        Defines the controls of the aircraft. The number and names of controls are arbitrary and may be specified
-        by the user. A simple aircraft, such as a chuck glider may have no controls, whereas a more complex
-        aircraft may have controls for aileron, elevator, rudder, throttle, and multiple flaps. Defining the
-        controls here can be thought of as deciding which control knobs/switches/sticks you want to make
-        available to the pilot. Later in the object, when defining the wings, you will define how each control
-        affects the deflection of each control surface.
+        Defines the controls of the aircraft. The number and names of controls are arbitrary and may be 
+        specified by the user. A simple aircraft, such as a chuck glider may have no controls, whereas a 
+        more complex aircraft may have controls for aileron, elevator, rudder, throttle, and multiple 
+        flaps. Defining the controls here can be thought of as deciding which control knobs/switches/
+        sticks you want to make available to the pilot. Later in the object, when defining the wings, you 
+        will define how each control affects the deflection of each control surface.
 
     "airfoils" : (dict)
-        Defines the airfoil section parameters for all airfoils used on the aircraft. A dict defining an airfoil
-        has the following structure:
+        Defines the airfoil section parameters for all airfoils used on the aircraft. A dict defining an 
+        airfoil has the following structure:
 
         "<AIRFOIL_NAME>" : (dict)
 
             "type" : (string)
-                The type of information describing the airfoil. If "linear", the following keys are required:
+                The type of information describing the airfoil. If "linear", the following keys are 
+                required:
 
             "alpha_L0" : (float)
                 The zero-lift angle of attack in radians.
@@ -249,14 +250,126 @@ Describes an aircraft.
             If "type" is "file", the following key is required:
 
             "path" : (string)
-                Path to file containing either a JSON object describing the airfoil formatted as above or tabulated
-                data of airfoil coefficients as a function of angle of attack and Reynolds number (described 
-                below).
+                Path to file containing either a JSON object describing the airfoil formatted as above or 
+                tabulated data of airfoil coefficients as a function of angle of attack and Reynolds 
+                number (described below).
 
-        Any number of airfoils can be defined for the aircraft simply by repeating the above structure within the
-        "airfoils" dict. MachUp pulls from these airfoil definitions as needed, depending on which airfoils are
-        specified for the wings.
+        Any number of airfoils can be defined for the aircraft simply by repeating the above structure
+        within the "airfoils" dict. MachUp pulls from these airfoil definitions as needed, depending on 
+        which airfoils are specified for the wings.
 
-    "wings" : (dict)
-        Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in
-        numerical lifting-line and so should be included here as wings.
+    "wing_segments" : (dict)
+        Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the 
+        same in numerical lifting-line and so should be included here as wings. MachUp is set up so the
+        user can define complex geometries by attaching the ends of different wing segments together (for 
+        an example, see the /examples directory). Any number of wing segments can be defined by the user.
+
+        "<WING_SEGMENT_NAME>" : (dict)
+
+            "name" : (string)
+
+            "ID" : (uint)
+                ID tag of the wing segments used for specifying which other wing segments are defined 
+                relative to it. May not be 0.
+
+            "is_main" : (bool)
+                Specifies whether this wing segment is part of the main wing (used for determining
+                reference lengths and areas).
+
+            "side" : (string)
+                May be "right", "left", or "both". Defines which side(s) of the aircraft the wing segment
+                appears on. If "both", the wing segment will be mirrored across the x-z plane.
+
+            "connect_to" : (dict)
+                Places the origin for the wing segment. This can be defined relative to the aircraft's
+                body-fixed origin, or the root or tip of any other wing segment.
+
+                "ID" : (uint)
+                    ID of the wing segment this wing segment's origin is being defined relative to. If 0,
+                    this wing segment's origin will be defined relative to the aircraft's body-fixed 
+                    origin.
+
+                "location" : (string)
+                    May be "root" or "tip". Defines whether this wing segment's origin should be defined 
+                    relative to the root or tip of the other wing segment.
+
+                "dx" : (float)
+                    Displacement of the origin from the selected reference point in the body-fixed x-
+                    direction.
+
+                "dy" : (float)
+                    Displacement of the origin from the selected reference point in the body-fixed y-
+                    direction. NOTE: If "side" is specified as "both", changing this value will shift
+                    both sides of the wing segment in the SAME direction. The effect is not mirrored.
+
+                "dz" : (float)
+                    Displacement of the origin from the selected reference point in the body-fixed z-
+                    direction.
+
+                "y_offset" : (float)
+                    Distance the origin should be shifted from the centerline (positive offset 
+                    corresponds to outward). If "side" is specified as "both", this effect is mirrored.
+            
+            "span" : (float)
+                Length of the wing segment, discounting sweep. If "side" is specified as "both", the total
+                span of the segment is twice this value.
+
+            "twist" : (float, array, or string)
+                Gives the geometric twist of the wing. If specified as a float, then this is simply the
+                mounting angle of the wing segment and the segment will have no further twist. If specified
+                as an array, the array gives the twist as a function of span. The first column gives the
+                span location as a fraction of the total span. The second column gives the twist at that
+                span location. If specified as a string, this string must contain the path to a csv file
+                containing the twist data formatted in columns, as with the array. For properties as a
+                function of span, MachUp will linearly interpolate intermediate values.
+
+            "dihedral" : (float, array, or string)
+                Gives the dihedral of the wing segment. Defined the same as "twist".
+
+            "sweep" : (float, array, or string)
+                Gives the sweep angle of the wing segment. Defined the same as "twist".
+
+            "chord" : (float, array, or string)
+                Gives the chord length of the wing segment. Defined the same as "twist".
+
+            "airfoil" : (string or array)
+                Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined
+                under "airfoils" in this object. If specified as an array, the array gives the airfoil
+                as a function of span. The first column gives the span location, as with "twist", and the
+                second column gives the name of the airfoil at that location. Can also be the path to a
+                csv file containing the airfoil distribution formatted in columns, as with the array.
+
+            "grid" : (uint)
+                Number of horseshoe vortices used to model the wing segment in the numerical lifting-line
+                algorithm.
+
+            "clustering" : (bool, optional)
+                If 1, control points will be distributed using cosine clusering. Otherwise, points will
+                be distributed linearly. Defaults to 1.
+
+            "control_surface" : (dict, optional)
+                Defines a control surface on the wing segment.
+
+                "root_span" : (float)
+                    The span location, as a fraction of total span, where the control surface begins.
+
+                "tip_span" : (float)
+                    The span location, as a fraction of total span, where the control surface ends.
+
+                "chord_fraction" : (float, array, or string)
+                    The depth of the control surface, as a fraction of the local chord length. Defined
+                    the same as "twist". If an array or file is specified, however, the start and end 
+                    of the data must correspond with "root_span" and "tip_span", respectively.
+
+                "control_mixing" : (dict)
+                    Determines which control inputs move this control surface. A control surface can be
+                    affected by any numer of controls.
+
+                    "<CONTROL_NAME>" : (dict)
+
+                        "symmetric" : (bool)
+                            Specifies whether this control causes the control surface to deflect
+                            symmetrically.
+
+                        "mix" : (float)
+                            Linearly maps the control deflection to the control surface deflection.

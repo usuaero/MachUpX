@@ -20,7 +20,7 @@
                 "dx": 0,
                 "dy": 0,
                 "dz": 0,
-                "y_offset_from_centerline": 0
+                "y_offset": 0
             },
             "span": [4,"ft"],
             "twist" : "twist_file.txt",
