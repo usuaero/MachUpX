@@ -21,7 +21,12 @@
         "CD0_L2" : 0.01040
     },
     "NACA_0010" :{
-        "type" : "file",
-        "path" : "NACA_0010.csv"
+        "type" : "nonlinear",
+        "path" : "./NACA_0010.csv"
+    },
+    "Corys_Airfoil" : {
+        "type" : "nonlinear",
+        "path" : "./../Geometries/Airfoils/profile1",
+        "generate_database" : 1
     }
 }

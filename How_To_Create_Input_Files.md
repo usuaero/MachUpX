@@ -223,8 +223,10 @@ Describes an aircraft.
         "<AIRFOIL_NAME>" : (dict)
 
             "type" : (string)
-                The type of information describing the airfoil. If "linear", the following keys are 
-                required:
+                The type of information describing the airfoil. Can be "linear" or "nonlinear".If 
+                "nonlinear", then "path" must give the location of an airfoil data file as described
+                in the next section of this document. If "linear", the following keys must be defined,
+                either here or in a JSON object pointed to by "path".
 
             "alpha_L0" : (float)
                 The zero-lift angle of attack in radians.
@@ -250,12 +252,21 @@ Describes an aircraft.
             "CL_max" : (float)
                 Maximum lift coefficient.
 
-            If "type" is "file", the following key is required:
+            "path" : (string, optional)
+                Path to file containing either a JSON object describing the airfoil using the above keys 
+                or tabulated data of airfoil coefficients as a function of angle of attack and Reynolds 
+                number (described in the following section).
 
-            "path" : (string)
-                Path to file containing either a JSON object describing the airfoil formatted as above or 
-                tabulated data of airfoil coefficients as a function of angle of attack and Reynolds 
-                number (described below).
+            "generate_database" : (bool, optional)
+                If you do not know the properties of the airfoil you would like to use, setting this to 
+                True will instruct MachUp to model the airfoil and automatically generate the required 
+                data. This can be done one of two ways. If "<AIRFOIL_NAME>" is "NACA_" followed by 4 or 
+                5 digits, MachUp will generate the geometry according to the NACA equations. Alternatively,
+                "path" can be set to point to a text file containing a series of x-y points describing 
+                the geometry of the airfoil. This file should be formatted in two columns, separated by
+                spaces, with the x-coordinate in the first column and the y-coordinate in the second 
+                column. The resulting data will be stored in a file named after the airfoil according to 
+                which "type" is specified. Defaults to False.
 
         Any number of airfoils can be defined for the aircraft simply by repeating the above structure
         within the "airfoils" dict. MachUp pulls from these airfoil definitions as needed, depending on 
@@ -265,7 +276,8 @@ Describes an aircraft.
         Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the 
         same in numerical lifting-line and so should be included here as wings. MachUp is set up so the
         user can define complex geometries by attaching the ends of different wing segments together (for 
-        an example, see the /examples directory). Any number of wing segments can be defined by the user.
+        an example, see the /examples directory). Any number of wing segments can be defined by the user 
+        within this dict.
 
         "<WING_SEGMENT_NAME>" : (dict)
 
@@ -390,4 +402,4 @@ Describes an aircraft.
 
 ### Airfoil Data File
 An airfoil in MachUp can be defined as each coefficient being a function of angle of attack and Reynolds
-number.
+number. This is done by specifying a path to a csv file describing the airfoil coefficients.

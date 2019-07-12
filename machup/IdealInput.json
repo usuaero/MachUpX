@@ -3,8 +3,7 @@
     "run" : {
         "forces" : "",
         "stl" : "",
-        "aero_derivatives" : "",
-        "state_derivatives" : ""
+        "aero_derivatives" : ""
     },
     "solver" : {
         "type" : "linear",
@@ -22,12 +21,6 @@
             "airplane0" : {
                 "file" : "./Airplane.json",
                 "state" : {
-                    "type" : "rigid_body",
-                    "position" : [0, 0, 1000],
-                    "velocity" : [100, 0, 0],
-                    "orientation" : [0.0, 0.0, 0.0, 0.0],
-                    "angular_rates" : [0.0, 0.0, 0.0],
-                    
                     "type" : "aerodynamic",
                     "position" : [0, 0, 1000],
                     "angular_rates" : [0.0, 0.0, 0.0],
