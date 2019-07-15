@@ -1,11 +1,10 @@
 # Creating Input Files for MachUpX
-This document is meant to be a complete reference for creating MachUp input files.
-The basic input file for MachUp contains a JSON object which describes the scene and which
-aircraft are in the scene, along with the state of those aircraft in the scene. A separate JSON 
-object is used to specify the geometry and controls of each aircraft. These aircraft
-objects can reference other files that store information on airfoil properties, chord
-distributions, sweep, etc., as will be discussed. At a minimum, two JSON objects must be specified,
-a scene object and an aircraft object.
+This document is meant to be a complete reference for creating MachUp input files. The basic input file for 
+MachUp contains a JSON object which describes the scene and which aircraft are in the scene, along with the 
+state of those aircraft in the scene. A separate JSON object is used to specify the geometry and controls 
+of each aircraft. These aircraft objects can reference other files that store information on airfoil 
+properties, chord distributions, sweep, etc., as will be discussed. At a minimum, two JSON objects must be 
+specified, a scene object and an aircraft object.
 
 ## Input Format
 The basic structure of a JSON object is a set of key-value pairs, analogous to a Python dict. See the
@@ -15,12 +14,12 @@ When using the JSON objects, only the scene object is passed to MachUp. As long 
 other JSON objects are properly specified in the scene object, MachUp will automatically load all other
 required objects.
 
-Boolean values are defined with a 1 or a 0.
+Boolean values are encoded as a 1 or a 0.
 
 ### Units
 
 MachUp allows the user to specify the units for each value if they desire. For float values, this is done
-by making the vaule a list where the first element is the actual value and the second element is a string
+by making the value a list where the first element is the actual value and the second element is a string
 specifying the units. For example:
 
 ```python
@@ -43,21 +42,36 @@ in the array:
          ["m","kg/m^3"]]
 ```
 
+When specifying column units in files, these are prepended as another row:
+
+```python
+# File: density_profile.csv
+"m", "kg/m^3",
+0.0,1.225,
+2000.0,1.0066,
+4000.0,0.81935
+```
+
 The following measurements can be defined with the accompanying units:
 
-Position/displacement/length: "ft", "m", "in", "cm"
-Velocity: "ft/s", "m/s", "mph", "kph", "kn"
-Angular deflection/position: "deg", "rad"
-Angular rate: "deg/s", "rad/s"
-Density: "slug/ft^3", "kg/m^3"
-Weight: "lbf", "N"
+| Measurement                   | MachUp Units                      |
+|-------------------------------|-----------------------------------|
+| Position/displacement/length: | "ft", "m", "in", "cm"             |
+| Area:                         | "ft^2", "m^2"                     |
+| Velocity:                     | "ft/s", "m/s", "mph", "kph", "kn" |
+| Angular deflection/position:  | "deg", "rad"                      |
+| Angular rate:                 | "deg/s", "rad/s"                  |
+| Density:                      | "slug/ft^3", "kg/m^3"             |
+| Weight:                       | "lbf", "N"                        |
 
 Except for angular measurements, the first unit listed is the default for "English" units. The second is 
-the default for "SI". For angular measurements, the default is always degrees.
+the default for "SI". For measurements of state and control deflections, the default is always degrees. 
+For airfoil parameters, measurements may only be expressed in radians. When specifying units in an array 
+and one of the measurements is dimensionless (e.g. chord fraction), "-" should be used.
 
 ### Scene Object
-The following are tags which can be specified in the scene JSON object. NOTE: all keys not marked as
-optional are required. Key values typed in all capitals between carats (e.g. <KEY_VALUE>) are to be
+The following are keys which can be specified in the scene JSON object. NOTE: all keys not marked as
+optional are required. Key names typed in all capitals between carats (e.g. <KEY_VALUE>) are to be
 deterimined by the user.
 
     "tag" : (string, optional)
@@ -68,9 +82,22 @@ deterimined by the user.
         as a command line argument to MachUp. Otherwise, MachUp will return without performing any 
         calculations. If this input file is being given to the API, this does not affect execution.
 
-        "forces" : ()
+        "forces" : (dict, optional)
+            Calculates the aerodynamic forces and moments on the aircraft at the current state.
+
+            "output_file" : (string, optional)
+                File to store the results in. Defaults to the input filename + "_forces".
+
+            "dimensional" : (boolean, optional)
+                Whether results should be returned as dimensional or nondimensional. If 1, will return
+                forces and moments in "lbf" and "ft-lbf" or "N" and "Nm", depending on how "units" is 
+                specified. Defaults to 1.
 
         "stl" : ()
+            Outputs an stl file of the geometry of the scene/aircraft.
+
+        "igs" : ()
+            Outputs an igs file of the geometry of the scene/aircraft.
 
         "aero_derivatives" : ()
 
@@ -92,7 +119,7 @@ deterimined by the user.
 
     "model_aircraft_interactions" : (bool, optional)
         Specifies whether the lifting-line algorithm should be solved for all aircraft together.
-        Defaults to false.
+        Defaults to 0.
 
     "units" : (string)
         Specifies the units to be used for inputs and outputs. Can be "SI" or "English". Any units
@@ -109,10 +136,10 @@ deterimined by the user.
                 this is assumed to be a density profile of the atmosphere. The first column is
                 heights and the second column is densities. MachUp will linearly interpolate these
                 data. The user can also specify this as "standard", in which case a standard atmosphere 
-                profile will be used. this can also be a path to a csv file containing the density as
+                profile will be used. This can also be a path to a csv file containing the density as
                 a function of position. The first three columns contain the position in flat-earth 
                 coordinates and the last column contains the density. The file can also contain 
-                information in the same form as the profile array. Defaults to pressure at sea-level.
+                information in the same form as the profile array. Defaults to density at sea-level.
             
             "V_wind" : (vector or string, optional)
                 If a vector is given, this is assumed to be the wind velocity vector given in
@@ -130,48 +157,45 @@ deterimined by the user.
             "<AIRPLANE_NAME>" : (dict)
 
                 "file" : (string)
-                    Path to file containing the JSON object describing the airplane.
+                    Path to file containing the JSON object describing the aircraft.
 
                 "state" : (dict)
                     Describes the state of the aircraft.
 
                     "type" : (string)
-                        Specifies which definition of state is to be used. If given as "rigid_body", the
-                        following keys must be specified within "state" (not as part of "type"):
+                        Specifies which definition of state is to be used. If given as "rigid_body", then "position", "velocity", "orientation", and "angular_rates" can be  specified as 
+                        well. If given as "aerodynamic", then "position", "velocity", "angular_rates", 
+                        "alpha", and "beta" can be specified as well. Specifying both "rigid_body" and 
+                        "aerodynamic" state variables will throw an input error.
 
                     "position" : (vector, optional)
                         Position of the origin of the aircraft's body-fixed coordinate system in flat-earth
                         coordinates. Defaults to [0,0,0]
 
-                    "velocity" : (vector)
-                        Velocity of the aircraft in flat-earth coordinates.
+                    "velocity" : (float or vector)
+                        In the case of "type" = "rigid_body":
+                            Velocity vector of the aircraft in flat-earth coordinates. Cannot be float.
+
+                        In the case of "type" = "aerodynamic":
+                            If a float, this is the magnitude of the local wind vector. If a vector, this 
+                            is the local freestream vector (i.e. u, v, and w). Specifying a velocity vector 
+                            will override definitions for "alpha" and "beta".
 
                     "orientation" : (vector, optional)
                         Orientation of the aircraft in flat-earth coordinates. If this is a 3-element 
-                        vector it is assumed an Euler angle formulation is used. If this is a 4-element 
-                        vector it is assumed a quaternion formulation is used. Defaults to aligning the
-                        body-fixed frame with the flat-earth frame.
+                        vector it is assumed the Euler angle formulation is used (i.e. [phi, theta, psi]).  
+                        If this is a 4-element vector it is assumed the quaternion formulation is used. 
+                        Defaults to [1.0, 0.0, 0.0, 0.0].
 
                     "angular_rates" : (vector, optional)
                         Angular rate of the aircraft in flat-earth coordinates. Defaults to [0,0,0]
-
-                    If "type" is specified as "aerodynamic", the following keys must be specified:
-
-                    "position" : (vector, optional)
-                        Position of the origin of the aircraft's body-fixed coordinate system in flat-earth
-                        coordinates. Defaults to [0,0,0].
-
-                    "angular_rates" : (vector, optional)
-                        Angular rate of the aircraft in flat-earth coordinates. Defaults to [0,0,0].
-
-                    "V_mag" : (float)
-                        Magnitude of the local wind vector.
 
                     "alpha" : (float, optional)
                         Aerodynamic angle of attack. Defaults to 0.
 
                     "beta" : (float, optional)
-                        Aerodynamic sideslip angle. Defaults to 0.
+                        Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the 
+                        analytical sideslip angle, i.e. B = atan(Vy/Vx).
 
                 "control_state" : (dict, optional)
                     Describes the control deflections. The number and names of controls are arbitrary and 
@@ -217,8 +241,10 @@ Describes an aircraft.
         will define how each control affects the deflection of each control surface.
 
     "airfoils" : (dict)
-        Defines the airfoil section parameters for all airfoils used on the aircraft. A dict defining an 
-        airfoil has the following structure:
+        Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of 
+        airfoils can be defined for the aircraft. MachUp pulls from these airfoil definitions as needed, 
+        depending on which airfoils are specified for the wings. A dict defining an airfoil has the 
+        following structure:
 
         "<AIRFOIL_NAME>" : (dict)
 
@@ -255,28 +281,24 @@ Describes an aircraft.
             "path" : (string, optional)
                 Path to file containing either a JSON object describing the airfoil using the above keys 
                 or tabulated data of airfoil coefficients as a function of angle of attack and Reynolds 
-                number (described in the following section).
+                number (described as part of the following key).
 
             "generate_database" : (bool, optional)
                 If you do not know the properties of the airfoil you would like to use, setting this to 
-                True will instruct MachUp to model the airfoil and automatically generate the required 
+                1 will instruct MachUp to model the airfoil and automatically generate the required 
                 data. This can be done one of two ways. If "<AIRFOIL_NAME>" is "NACA_" followed by 4 or 
                 5 digits, MachUp will generate the geometry according to the NACA equations. Alternatively,
                 "path" can be set to point to a text file containing a series of x-y points describing 
                 the geometry of the airfoil. This file should be formatted in two columns, separated by
                 spaces, with the x-coordinate in the first column and the y-coordinate in the second 
                 column. The resulting data will be stored in a file named after the airfoil according to 
-                which "type" is specified. Defaults to False.
-
-        Any number of airfoils can be defined for the aircraft simply by repeating the above structure
-        within the "airfoils" dict. MachUp pulls from these airfoil definitions as needed, depending on 
-        which airfoils are specified for the wings.
+                which "type" is specified. Defaults to 0.
 
     "wing_segments" : (dict)
         Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the 
-        same in numerical lifting-line and so should be included here as wings. MachUp is set up so the
-        user can define complex geometries by attaching the ends of different wing segments together (for 
-        an example, see the /examples directory). Any number of wing segments can be defined by the user 
+        same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so 
+        the user can define complex geometries by attaching the ends of different wing segments together 
+        (for an example, see the /examples directory). The user can define any number of wing segments 
         within this dict.
 
         "<WING_SEGMENT_NAME>" : (dict)
@@ -284,7 +306,7 @@ Describes an aircraft.
             "name" : (string)
 
             "ID" : (uint)
-                ID tag of the wing segments used for specifying which other wing segments are defined 
+                ID tag of the wing segment, used for specifying which other wing segments are defined 
                 relative to it. May not be 0.
 
             "is_main" : (bool)
@@ -347,7 +369,7 @@ Describes an aircraft.
                 Gives the sweep angle of the wing segment. Defined the same as "twist". Defaults to 0.
 
             "chord" : (float, array, or string, optional)
-                Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 0.
+                Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 1.
 
             "airfoil" : (string or array, optional)
                 Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined
@@ -366,7 +388,7 @@ Describes an aircraft.
                 be distributed linearly. Defaults to 1.
 
             "control_surface" : (dict, optional)
-                Defines a control surface on the wing segment.
+                Defines a control surface on the trailing edge of the wing segment.
 
                 "root_span" : (float, optional)
                     The span location, as a fraction of total span, where the control surface begins.
@@ -379,12 +401,12 @@ Describes an aircraft.
                 "chord_fraction" : (float, array, or string, optional)
                     The depth of the control surface, as a fraction of the local chord length. Defined
                     the same as "twist". If an array or file is specified, however, the start and end 
-                    of the data must correspond with "root_span" and "tip_span", respectively. Defaults
+                    of the data must coincide with "root_span" and "tip_span", respectively. Defaults
                     to 0.25.
 
                 "control_mixing" : (dict)
                     Determines which control inputs move this control surface. A control surface can be
-                    affected by any numer of controls.
+                    affected by any number of controls.
 
                     "<CONTROL_NAME>" : (dict)
                         Corresponds to one of the controls listed in "controls".

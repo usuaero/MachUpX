@@ -48,7 +48,9 @@ you first download and install Git. If you are unsure, you can check by typing
 ## Testing
 
 ##Support
+
 Contact doug.hunsaker@usu.edu or cory.goates@aggiemail.usu.edu with any questions.
 
 ##License
+
 This project is licensed under the MIT license. See LICENSE file for more information. 

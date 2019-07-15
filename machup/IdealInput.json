@@ -24,7 +24,7 @@
                     "type" : "aerodynamic",
                     "position" : [0, 0, 1000],
                     "angular_rates" : [0.0, 0.0, 0.0],
-                    "V_mag" : 100,
+                    "velocity" : 100,
                     "alpha" : 0.0,
                     "beta" : 0.0
                 },
