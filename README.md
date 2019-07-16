@@ -47,6 +47,10 @@ you first download and install Git. If you are unsure, you can check by typing
 
 ## Testing
 
+Testing is accomplished using the pytest module. Run tests using the command:
+
+'python -m pytest test/'
+
 ##Support
 
 Contact doug.hunsaker@usu.edu or cory.goates@aggiemail.usu.edu with any questions.

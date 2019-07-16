@@ -42,14 +42,14 @@ in the array:
          ["m","kg/m^3"]]
 ```
 
-When specifying column units in files, these are prepended as another row:
+When specifying column units in files, these are also appended as another row:
 
 ```python
 # File: density_profile.csv
-"m", "kg/m^3",
 0.0,1.225,
 2000.0,1.0066,
-4000.0,0.81935
+4000.0,0.81935,
+"m", "kg/m^3"
 ```
 
 The following measurements can be defined with the accompanying units:
@@ -129,21 +129,33 @@ deterimined by the user.
 
             "rho" : (float, array, or string, optional)
                 If a float, the atmospheric density is assumed constant. If an array is given,
-                this is assumed to be a density profile of the atmosphere. The first column is
-                heights and the second column is densities. MachUp will linearly interpolate these
-                data. The user can also specify this as "standard", in which case a standard atmosphere 
-                profile will be used. This can also be a path to a csv file containing the density as
-                a function of position. The first three columns contain the position in flat-earth 
-                coordinates and the last column contains the density. The file can also contain 
-                information in the same form as the profile array. Defaults to density at sea-level.
+                this is assumed to be either a density profile or a density field. MachUp will 
+                interpret a 2 column array as a profile where the first column is heights and the 
+                second column is densities. A 4 column array is a field where the first three columns 
+                are the position in flat-earth coordinates and the fourth column is the density. 
+                MachUp will linearly interpolate these data. These arrays can alternatively be stored 
+                as a csv file, in which case, this value should be the path to the file.
+                
+                The following standard profiles can also be specified:
+                
+                    "standard"
+                    
+                Defaults to density at sea-level.
             
-            "V_wind" : (vector or string, optional)
+            "V_wind" : (vector, array, or string, optional)
                 If a vector is given, this is assumed to be the wind velocity vector given in
-                flat-earth coordinates which is constant throughout the scene. If a string is given,
-                this is the path to a csv file containing the wind velocity as a function of position.
-                The first three columns contain the position and the last three columns contain the 
-                velocity vector at each position, all in flat-earth coordinates. NOTE: This does not affect 
-                computation for all aircraft where the "type" of the "state" is set as "aerodynamic".
+                flat-earth coordinates which is constant throughout the scene. If an array is given, 
+                this is assumed to be either a wind profile or a wind field. MachUp will interpret 
+                a 4 column array as a velocity profile where the first column is heights and the last 
+                three columns are velocity components in flat-earth coordinates. A 6 column array is 
+                a field where the first three columns are positions in flat-earth coordinates and the 
+                fourth through sixth columns are velocity components in flat-earth coordinates. These 
+                arrays can alternatively be stored as a csv file, in which case, this value should be 
+                the path to the file. 
+                
+                NOTE: This does not affect computation for all aircraft where the "type" of the 
+                "state" is specified as "aerodynamic".
+
                 Defaults to no wind.
 
         "aircraft" : (dict)
