@@ -1,6 +1,7 @@
 {
     "tag" : "Ideal MachUpX input file.",
     "run" : {
+        "view" : "", !One of the first things we should add is a way to view the wireframe of the airframe. This is pretty simple to do. we can talk about it. But it will help the user understand the coordinate system graphically.
         "forces" : "",
         "stl" : "",
         "aero_derivatives" : ""
