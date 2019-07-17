@@ -13,7 +13,7 @@
         "main_wing_inside" : {
             "name" : "main_wing_inside",
             "ID" : 1,
-            "is_main" : 1,
+            "is_main" : true,
             "side" : "both",
             "connect_to" : {
                 "ID" : 0,
@@ -25,9 +25,10 @@
             },
             "span" : [4,"ft"],
             "twist" : 0.0,
-            "dihedral" : [[0.0,0.0,"deg"],
-                          [0.5,5.0,"deg"],
-                          [1.0,10.0,"deg"]],
+            "dihedral" : [[0.0,0.0],
+                          [0.5,5.0],
+                          [1.0,10.0],
+                          ["-","deg"]],
             "sweep" : 0.0,
             "chord" : [1.0,"ft"],
             "airfoil" : [[0.0,"NACA_2410"],
@@ -39,11 +40,11 @@
                 "chord_fraction" : 0.25,
                 "control_mixing" : {
                     "flap" : {
-                        "symmetric" : 1,
+                        "symmetric" : true,
                         "mix" : 1.0
                     },
                     "aileron" : {
-                        "symmetric" : 0,
+                        "symmetric" : false,
                         "mix" : 1.0
                     }
                 }
@@ -52,7 +53,7 @@
         "main_wing_outside" : {
             "name" : "main_wing_outside",
             "ID" : 2,
-            "is_main" : 1,
+            "is_main" : true,
             "side" : "both",
             "connect_to" : {
                 "ID" : 1,

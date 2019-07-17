@@ -12,7 +12,7 @@ def _check_filepath(input_filename, correct_ext):
 
 def _convert_units(in_value, units, system):
     # Converts the given value from the specified units to the default for the system chosen
-    if units is "-":
+    if units == "-":
         return in_value
 
     to_english_default = {

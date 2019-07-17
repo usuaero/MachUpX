@@ -2,6 +2,7 @@ from .helpers import _check_filepath,_vectorized_convert_units,_import_value
 
 import json
 import numpy as np
+import scipy.integrate as integ
 
 class WingSegment:
     """A class defining a segment of a lifting surface.
@@ -108,6 +109,8 @@ class WingSegment:
         else: # Array
             def getter(span):
                 return np.interp(span, self._getter_data[name][0], self._getter_data[name][1])
+                
+        return getter
 
 
     def get_root_loc(self):
@@ -117,12 +120,27 @@ class WingSegment:
         else:
             return self._origin+self._delta_origin
 
+
     def get_tip_loc(self):
         # Returns the location of the tip quarter-chord
         if self.ID == 0:
             return self._origin
         else:
-            return self._origin+self._delta_origin
+            return self.get_root_loc()+self.get_quarter_chord_loc(1.0)
+
+
+    def get_quarter_chord_loc(self, span):
+        # Returns the location of the quarter-chord at the specified span fraction
+        ds = np.zeros(3)
+        ds[0] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s)))*np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
+        if self._side == "left":
+            ds[1] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        else:
+            ds[1] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        ds[2] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+
+        return self.get_root_loc()+ds
+
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys):
         # Attaches a wing segment. Uses tree recursion.

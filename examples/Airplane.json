@@ -12,7 +12,7 @@
     "wings" : {
         "main_wing_inside" : {
             "ID" : 1,
-            "is_main" : 1, !this should be boolean
+            "is_main" : true,
             "side" : "both",
             "connect_to" : {
                 "ID" : 0,
@@ -36,14 +36,15 @@
                 "root_span" : 0.2,
                 "tip_span" : 0.8,
                 "chord_fraction" : [[0.0,0.25],
-                                    [1.0,0.20]], !we need a way to have a different chord fraction at the root and tip
+                                    [0.5,0.24],
+                                    [1.0,0.20]], !we need a way to have a different chord fraction at the root and tip. How's this?
                 "control_mixing" : { !Im a little confused at how you're planning to handle controls...
                     "flap" : {
-                        "symmetric" : 1, !this should probably be boolean (true/false)
+                        "symmetric" : true,
                         "mix" : 1.0
                     },
                     "aileron" : {
-                        "symmetric" : 0,
+                        "symmetric" : false,
                         "mix" : 1.0
                     }
                 }

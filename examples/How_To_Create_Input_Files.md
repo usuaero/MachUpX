@@ -14,8 +14,6 @@ When using the JSON objects, only the scene object is passed to MachUp. As long 
 other JSON objects are properly specified in the scene object, MachUp will automatically load all other
 required objects.
 
-Boolean values are encoded as a 1 or a 0.
-
 ### Units
 
 MachUp allows the user to specify the units for each value if they desire. For float values, this is done
@@ -92,6 +90,9 @@ deterimined by the user.
                 Whether results should be returned as dimensional or nondimensional. If 1, will return
                 forces and moments in "lbf" and "ft-lbf" or "N" and "Nm", depending on how "units" is 
                 specified. Defaults to 1.
+
+        "view" : ()
+            Displays a wireframe of the geometry of the scene/aircraft.
 
         "stl" : ()
             Outputs an stl file of the geometry of the scene/aircraft.
@@ -310,8 +311,6 @@ Describes an aircraft.
         within this dict.
 
         "<WING_SEGMENT_NAME>" : (dict)
-
-            "name" : (string)
 
             "ID" : (uint)
                 ID tag of the wing segment, used for specifying which other wing segments are defined 
