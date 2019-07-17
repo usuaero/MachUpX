@@ -54,7 +54,7 @@ When specifying column units in files, these are also appended as another row:
 
 The following measurements can be defined with the accompanying units:
 
-| Measurement                   | MachUp Units                      |
+| Measurement                   | Acceptable Units                  |
 |-------------------------------|-----------------------------------|
 | Position/displacement/length: | "ft", "m", "in", "cm"             |
 | Area:                         | "ft^2", "m^2"                     |
@@ -262,25 +262,25 @@ Describes an aircraft.
                 in the next section of this document. If "linear", the following keys must be defined,
                 either here or in a JSON object pointed to by "path".
 
-            "alpha_L0" : (float)
+            "alpha_L0" : (float) !or aL0
                 The zero-lift angle of attack in radians.
 
-            "CL_alpha" : (float)
+            "CL_alpha" : (float) !or CLa
                 The lift slope in radians^-1.
 
-            "Cm_L0" : (float)
+            "Cm_L0" : (float) !or CmL0
                 The zero-lift moment coefficient.
 
-            "Cm_alpha" : (float)
+            "Cm_alpha" : (float) !or Cma
                 The moment slope in radians^-1.
 
             "CD0" : (float)
                 Constant coefficient in the quadratic fit of the CD/CL curve.
 
-            "CD_L" : (float)
+            "CD_L" : (float) !CD1
                 Linear coefficient in the quadratic fit of the CD/CL curve.
 
-            "CD_L2" : (float)
+            "CD_L2" : (float) !CD2
                 Quadratic coefficient in the quadratic fir of the CD/CL curve.
 
             "CL_max" : (float)
@@ -291,7 +291,7 @@ Describes an aircraft.
                 or tabulated data of airfoil coefficients as a function of angle of attack and Reynolds 
                 number (described as part of the following key).
 
-            "generate_database" : (bool, optional)
+            "generate_database" : (bool, optional) ! I don't think we want to include this option right now. We may add it later. But I don't think we should include it for the time being. It will significantly complicate things. We should start with the assumption that the database is already generated. !DFH
                 If you do not know the properties of the airfoil you would like to use, setting this to 
                 1 will instruct MachUp to model the airfoil and automatically generate the required 
                 data. This can be done one of two ways. If "<AIRFOIL_NAME>" is "NACA_" followed by 4 or 
@@ -393,7 +393,7 @@ Describes an aircraft.
 
             "use_clustering" : (bool, optional)
                 If 1, control points will be distributed using cosine clusering. Otherwise, points will
-                be distributed linearly. Defaults to 1.
+                be distributed evenly. Defaults to 1.
 
             "control_surface" : (dict, optional)
                 Defines a control surface on the trailing edge of the wing segment.
