@@ -60,10 +60,63 @@ def _convert_units(in_value, units, system):
     }
     try:
         if system == "English":
-            return in_value*to_english_default[units]
+            return in_value*to_english_default[units.strip(' \t\r\n')]
         else:
-            return in_value*to_si_default[units]
+            return in_value*to_si_default[units.strip(' \t\r\n')]
     except KeyError:
         raise IOError("Improper units specified; {0} is not an allowable unit definition.".format(units))
 
 _vectorized_convert_units = np.vectorize(_convert_units)
+
+def _import_value(key, dict_of_vals, system, default_value):
+    # Imports value from a dictionary. Handles importing arrays from files and 
+    # unit conversions.
+
+    val = dict_of_vals.get(key, default_value)
+    is_array = False
+
+    if isinstance(val, float): # Float without units
+        return_value = val
+
+    elif isinstance(val, str) and ".csv" in val: # Filepath containing array
+        _check_filepath(val, ".csv")
+        with open(val, 'r') as array_file:
+            val = np.genfromtxt(array_file, delimiter=',', dtype=None, encoding='utf-8')
+            is_array = True
+            
+    elif isinstance(val, str): # Simply a string value
+        return_value = val
+
+    elif isinstance(val, list):
+        if any(isinstance(row, list) for row in val): # Array
+            is_array = True
+        
+        elif isinstance(val[-1], str): # Float or vector with units
+            converted_val = _vectorized_convert_units(val[:-1], val[-1], system)
+
+            try:
+                return_value = converted_val.item() # Float
+            except ValueError:
+                return_value = converted_val # Vector
+
+        elif len(val) == 3:
+            return_value = np.asarray(val)
+
+        else:
+            raise ValueError("Did not recognize value format {0}.".format(val))
+
+    else:
+        raise ValueError("Did not recognize value format {0}.".format(val))
+
+    if is_array:
+        if isinstance(val[-1][0], str): # Array with units
+            val = np.asarray(val)
+            units = val[-1,:]
+            data = val[:-1,:].astype(float)
+            return_value = _vectorized_convert_units(data, units, system)
+
+        else: # Array without units
+            #TODO: Allow this to handle arrays specifying a distribution of airfoils
+            return_value = np.asarray(val)
+
+    return return_value

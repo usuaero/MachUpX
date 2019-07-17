@@ -1,4 +1,4 @@
-from .helpers import _check_filepath
+from .helpers import _check_filepath, _import_value
 
 import json
 
@@ -30,18 +30,31 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, filename, state={}, control_state={}):
+    def __init__(self, name, filename, unit_system, state={}, control_state={}):
 
         self.name = name
-        _check_filepath(filename,".json")
+        self._unit_sys = unit_system
+
+        self._CG = None
+        self.W = None
+        self.S_w = None
+        self.l_ref_lon = None
+        self.l_ref_lat = None
+        self._control_names = None
+        self._wings = {}
 
         self._load_params(filename)
         self._initialize_state(state)
         self._initialize_controls(control_state)
 
     def _load_params(self, filename):
-        # Loads the airplane geometry from the JSON file
-        pass
+        # Load JSON object
+        _check_filepath(filename,".json")
+        with open(filename) as json_handle:
+            self._input_dict = json.load(json_handle)
+
+        # Set airplane global params
+        self._CG = _import_value("CG", self._input_dict, self._unit_sys, [0,0,0])
 
     def _initialize_state(self, state):
         # Sets the state vector from the provided dictionary

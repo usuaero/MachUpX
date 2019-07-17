@@ -145,7 +145,7 @@ def test_standard_atmos_with_SI_units():
     del scene
     sp.run(["rm", altered_input_name])
 
-def test_array_atmos_profile():
+def test_density_array_atmos_profile():
     # Alter input
     with open(input_file, 'r') as json_handle:
         input_dict = json.load(json_handle)
