@@ -7,13 +7,13 @@
         "longitudinal_length" : 0,
         "lateral_length" : 0
     },
-    "controls" : [ "elevator", "rudder", "aileron", "flap"],
+    "controls" : [ "elevator", "rudder", "aileron", "flap"], !i think this is where you want to handle symmetry/asymmetry and deflections. Not within the wing.
     "airfoils" : "./Airfoils.json",
     "wings" : {
         "main_wing_inside" : {
-            "name" : "main_wing_inside",
+            "name" : "main_wing_inside", !do we need this? Can we get the name from the object name one step above?
             "ID" : 1,
-            "is_main" : 1,
+            "is_main" : 1, !this should be boolean
             "side" : "both",
             "connect_to" : {
                 "ID" : 0,
@@ -33,13 +33,13 @@
             "airfoil" : [[0.0,"NACA_2410"],
                          [1.0,"NACA_0010"]],
             "grid" : 40,
-            "control_mixing" : {
+            "control_mixing" : { !I think you want to delete the word "mixing" here.
                 "root_span" : 0.2,
                 "tip_span" : 0.8,
-                "chord_fraction" : 0.25,
-                "control_mixing" : {
+                "chord_fraction" : 0.25, !we need a way to have a different chord fraction at the root and tip
+                "control_mixing" : { !Im a little confused at how you're planning to handle controls...
                     "flap" : {
-                        "symmetric" : 1,
+                        "symmetric" : 1, !this should probably be boolean (true/false)
                         "mix" : 1.0
                     },
                     "aileron" : {
