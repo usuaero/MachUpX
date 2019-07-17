@@ -70,13 +70,20 @@ _vectorized_convert_units = np.vectorize(_convert_units)
 
 def _import_value(key, dict_of_vals, system, default_value):
     # Imports value from a dictionary. Handles importing arrays from files and 
-    # unit conversions.
+    # unit conversions. If default_value is -1, then this value must be 
+    # specified in the input (i.e. an error is thrown if -1 is returned).
 
     val = dict_of_vals.get(key, default_value)
+    
+    if val == -1:
+        raise IOError("Key {0} is not optional. Please specify.".format(key))
     is_array = False
 
     if isinstance(val, float): # Float without units
         return_value = val
+
+    elif isinstance(val, int): # Integer values should be converted to floats
+        return_value = float(val)
 
     elif isinstance(val, str) and ".csv" in val: # Filepath containing array
         _check_filepath(val, ".csv")
@@ -99,7 +106,7 @@ def _import_value(key, dict_of_vals, system, default_value):
             except ValueError:
                 return_value = converted_val # Vector
 
-        elif len(val) == 3:
+        elif len(val) == 3: # Vector without units
             return_value = np.asarray(val)
 
         else:

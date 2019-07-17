@@ -48,12 +48,12 @@ class Scene:
         self._unit_sys = self._input_dict.get("units","English")
 
         # Initialize aircraft geometries
-        for airplane_name in self._input_dict["scene"]["aircraft"]:
+        for i, airplane_name in enumerate(self._input_dict["scene"]["aircraft"]):
             airplane_file = self._input_dict["scene"]["aircraft"][airplane_name]["file"]
             state = self._input_dict["scene"]["aircraft"][airplane_name].get("state",{})
             control_state = self._input_dict["scene"]["aircraft"][airplane_name].get("control_state",{})
 
-            self.airplanes[airplane_name] = Airplane(airplane_name, airplane_file, self._unit_sys, state=state, control_state=control_state)
+            self.airplanes[airplane_name] = Airplane(airplane_name, i, airplane_file, self._unit_sys, state=state, control_state=control_state)
 
         # Setup atmospheric property getter functions
         self._get_density = self._initialize_density_getter()

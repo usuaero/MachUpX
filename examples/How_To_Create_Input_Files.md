@@ -315,7 +315,7 @@ Describes an aircraft.
 
             "ID" : (uint)
                 ID tag of the wing segment, used for specifying which other wing segments are defined 
-                relative to it. May not be 0.
+                relative to it. MAY NOT BE 0.
 
             "is_main" : (bool)
                 Specifies whether this wing segment is part of the main wing (used for determining

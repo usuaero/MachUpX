@@ -1,7 +1,7 @@
 {
     "name" : "Airplane1",
     "CG" : [0,0,0],
-    "weight" : 100,
+    "weight" : 100.0,
     "reference" : {
         "area" : 0,
         "longitudinal_length" : 0,

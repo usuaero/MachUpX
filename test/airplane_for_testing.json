@@ -1,7 +1,7 @@
 {
     "name" : "Airplane1",
     "CG" : [0,0,0],
-    "weight" : 100,
+    "weight" : 100.0,
     "reference" : {
         "area" : 0,
         "longitudinal_length" : 0,
@@ -24,7 +24,7 @@
                 "y_offset" : 0
             },
             "span" : [4,"ft"],
-            "twist" : "twist_file.csv",
+            "twist" : 0.0,
             "dihedral" : [[0.0,0.0,"deg"],
                           [0.5,5.0,"deg"],
                           [1.0,10.0,"deg"]],
