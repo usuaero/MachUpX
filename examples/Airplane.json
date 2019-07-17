@@ -7,7 +7,7 @@
         "longitudinal_length" : 0,
         "lateral_length" : 0
     },
-    "controls" : [ "elevator", "rudder", "aileron", "flap"], !i think this is where you want to handle symmetry/asymmetry and deflections. Not within the wing.
+    "controls" : [ "elevator", "rudder", "aileron", "flap"], !i think this is where you want to handle symmetry/asymmetry. Not within the wing.
     "airfoils" : "./Airfoils.json",
     "wings" : {
         "main_wing_inside" : {
