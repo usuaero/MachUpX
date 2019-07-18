@@ -1,5 +1,6 @@
 from .helpers import _check_filepath, _import_value
 from .wing_segment import WingSegment
+from .airfoil import Airfoil
 
 import json
 
@@ -38,10 +39,12 @@ class Airplane:
         self._unit_sys = unit_system
         
         self._wing_segments = {}
+        self._airfoil_database = {}
 
         self._load_params(filename)
         self._initialize_state(state)
         self._initialize_controls(control_state)
+        self._create_airfoil_database()
         self._create_origin_segment()
         self._load_wing_segments()
 
@@ -77,7 +80,7 @@ class Airplane:
         origin_dict = {
             "ID" : 0
         }
-        self._origin_segment = WingSegment("origin", origin_dict, "both", self._unit_sys)
+        self._origin_segment = WingSegment("origin", origin_dict, "both", self._unit_sys, self._airfoil_database)
 
     
     def add_wing_segment(self, wing_segment_name, input_dict):
@@ -125,10 +128,10 @@ class Airplane:
             raise IOError("{0} is not a proper side designation.".format(side))
 
         if side == "left" or side == "both":
-            self._wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys)
+            self._wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys, self._airfoil_database)
 
         if side == "right" or side == "both":
-            self._wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys)
+            self._wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
 
 
     def _load_wing_segments(self):
@@ -162,3 +165,29 @@ class Airplane:
     def _get_wing_segment(self, wing_segment_name):
         # Returns a reference to the specified wing segment. ONLY FOR TESTING!
         return self._origin_segment._get_attached_wing_segment(wing_segment_name)
+
+    
+    def _create_airfoil_database(self):
+        # Creates a dictionary of all the airfoils. This dictionary is then passed to each 
+        # wing segment when it gets created for the wing segment to use.
+
+        try:
+            airfoils = self._input_dict["airfoils"]
+        except NameError:
+            raise IOError("Airfoil database must be defined.")
+
+        # Load airfoil database from separate file
+        if isinstance(airfoils, str):
+            _check_filepath(airfoils, ".json")
+            with open(airfoils, 'r') as airfoil_db_handle:
+                airfoil_dict = json.load(airfoil_db_handle)
+
+        # Load from airplane dict
+        elif isinstance(airfoils, dict):
+            airfoil_dict = airfoils
+
+        else:
+            raise IOError("'airfoils' must be a string or dict.")
+
+        for key in airfoil_dict:
+            self._airfoil_database[key] = Airfoil(key, airfoil_dict[key])

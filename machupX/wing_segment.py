@@ -21,6 +21,9 @@ class WingSegment:
     unit_sys : str
         Default system of units.
 
+    airfoil_dict : dict
+        Dictionary of airfoil objects. Must contain the airfoils specified for this wing segment.
+
     origin : vector
         Origin (root) coordinates of the wing segment in body-fixed coordinates.
 
@@ -35,7 +38,7 @@ class WingSegment:
         If the input is improperly specified.
     """
 
-    def __init__(self, name, input_dict, side, unit_sys, origin=[0,0,0]):
+    def __init__(self, name, input_dict, side, unit_sys, airfoil_dict, origin=[0,0,0]):
 
         self.name = name
         self._input_dict = input_dict
@@ -53,6 +56,7 @@ class WingSegment:
             self._getter_data = {}
             self._initialize_params()
             self._initialize_getters()
+            self._initialize_airfoils(airfoil_dict)
 
     
     def _initialize_params(self):
@@ -113,6 +117,25 @@ class WingSegment:
         return getter
 
 
+    def _initialize_airfoils(self, airfoil_dict):
+        # Picks out the airfoils used in this wing segment and stores them. Also 
+        # initializes airfoil coefficient getters
+
+        # Get which airfoils are specified for this segment
+        default_airfoil = list(airfoil_dict.keys())[0]
+        airfoil = _import_value("airfoil", self._input_dict, self._unit_sys, default_airfoil)
+
+        # Setup getters
+        if isinstance(airfoil, str): # Constant airfoil
+            pass
+
+        elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
+            pass
+
+        else:
+            raise IOError("Airfoil definition must a be a string or an array.")
+
+
     def get_root_loc(self):
         # Returns the location of the root quarter-chord
         if self.ID == 0:
@@ -142,7 +165,7 @@ class WingSegment:
         return self.get_root_loc()+ds
 
 
-    def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys):
+    def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
         # Attaches a wing segment. Uses tree recursion.
 
         parent_ID = input_dict.get("connect_to", {}).get("ID", 0)
@@ -154,7 +177,7 @@ class WingSegment:
             else:
                 attachment_point = self.get_tip_loc()
 
-            self._attached_segments[wing_segment_name] = WingSegment(wing_segment_name, input_dict, side, unit_sys, attachment_point)
+            self._attached_segments[wing_segment_name] = WingSegment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
 
             return self._attached_segments[wing_segment_name] # Return reference to newly created wing segment
 
@@ -163,7 +186,7 @@ class WingSegment:
             for key in self._attached_segments:
                 if side not in key: # Only attach segments of the same side
                     continue
-                result = self._attached_segments[key].attach_wing_segment(wing_segment_name, input_dict, side, unit_sys)
+                result = self._attached_segments[key].attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
                 if result is not False:
                     break
 

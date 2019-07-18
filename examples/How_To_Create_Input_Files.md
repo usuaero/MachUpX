@@ -261,27 +261,28 @@ Describes an aircraft.
                 The type of information describing the airfoil. Can be "linear" or "nonlinear".If 
                 "nonlinear", then "path" must give the location of an airfoil data file as described
                 in the next section of this document. If "linear", the following keys must be defined,
-                either here or in a JSON object pointed to by "path".
+                either here or in a JSON object pointed to by "path". NOTE: Units may not be specified 
+                by the user for any airfoil parameters. These must be specified in the units given.
 
-            "alpha_L0" : (float) !or aL0
+            "aL0" : (float)
                 The zero-lift angle of attack in radians.
 
-            "CL_alpha" : (float) !or CLa
+            "CLa" : (float)
                 The lift slope in radians^-1.
 
-            "Cm_L0" : (float) !or CmL0
+            "CmL0" : (float)
                 The zero-lift moment coefficient.
 
-            "Cm_alpha" : (float) !or Cma
+            "Cma" : (float)
                 The moment slope in radians^-1.
 
             "CD0" : (float)
                 Constant coefficient in the quadratic fit of the CD/CL curve.
 
-            "CD_L" : (float) !CD1
+            "CD1" : (float)
                 Linear coefficient in the quadratic fit of the CD/CL curve.
 
-            "CD_L2" : (float) !CD2
+            "CD2" : (float)
                 Quadratic coefficient in the quadratic fir of the CD/CL curve.
 
             "CL_max" : (float)
@@ -292,16 +293,7 @@ Describes an aircraft.
                 or tabulated data of airfoil coefficients as a function of angle of attack and Reynolds 
                 number (described as part of the following key).
 
-            "generate_database" : (bool, optional) ! I don't think we want to include this option right now. We may add it later. But I don't think we should include it for the time being. It will significantly complicate things. We should start with the assumption that the database is already generated. !DFH
-                If you do not know the properties of the airfoil you would like to use, setting this to 
-                1 will instruct MachUp to model the airfoil and automatically generate the required 
-                data. This can be done one of two ways. If "<AIRFOIL_NAME>" is "NACA_" followed by 4 or 
-                5 digits, MachUp will generate the geometry according to the NACA equations. Alternatively,
-                "path" can be set to point to a text file containing a series of x-y points describing 
-                the geometry of the airfoil. This file should be formatted in two columns, separated by
-                spaces, with the x-coordinate in the first column and the y-coordinate in the second 
-                column. The resulting data will be stored in a file named after the airfoil according to 
-                which "type" is specified. Defaults to 0.
+            "generate_database" : (bool, optional) NOT CURRENTLY IMPLEMENTED
 
     "wing_segments" : (dict)
         Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the 
@@ -384,7 +376,7 @@ Describes an aircraft.
                 as a function of span. The first column gives the span location, as with "twist", and the
                 second column gives the name of the airfoil at that location. Can also be the path to a
                 csv file containing the airfoil distribution formatted in columns, as with the array.
-                Defaults to the name of the first airfoil listed under "airfoils".
+                Defaults to the name of the first airfoil listed under "airfoils". Cannot have units.
 
             "grid" : (uint, optional)
                 Number of horseshoe vortices used to model the wing segment in the numerical lifting-line
