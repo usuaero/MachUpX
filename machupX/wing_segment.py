@@ -131,8 +131,8 @@ class WingSegment:
             if airfoil not in list(airfoil_dict.keys()):
                 raise IOError("'{0}' must be specified in 'airfoils'.".format(airfoil))
 
-            self._airfoil_data = np.asarray([[0.0, airfoil, airfoil_dict[airfoil]],
-                                             [1.0, airfoil, airfoil_dict[airfoil]]])
+            self._airfoil_data = airfoil_dict[airfoil]
+            self._constant_airfoil = True
 
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
             self._airfoil_data = np.zeros(airfoil.shape, dtype=None)
@@ -144,6 +144,8 @@ class WingSegment:
                     raise IOError("'{0}' must be specified in 'airfoils'.".format(name))
 
                 self._airfoil_data[i] = [row[0], name, airfoil_dict[name]]
+
+            self._constant_airfoil = False
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
@@ -308,7 +310,22 @@ class WingSegment:
         float
             Coefficient of lift
         """
-        return np.interp(span, self._airfoil_data[:,0], self._airfoil_data[:,2].get_CL(args))
+        if self._constant_airfoil:
+            CL = self._airfoil_data.get_CL(*args)
+        
+        else:
+            for i in range(self._airfoil_data.shape[0]):
+                if span >= self._airfoil_data[i,0] and span <= self._airfoil_data[i+1,0]:
+                    break
+
+            s0 = self._airfoil_data[i,0]
+            CL0 = self._airfoil_data[i,2].item().get_CL(*args)
+            s1 = self._airfoil_data[i+1,0]
+            CL1 = self._airfoil_data[i+1,2].item().get_CL(*args)
+
+            CL = CL0 + span*(CL1-CL0)/(s1-s0)
+
+        return CL
 
 
     def get_CD(self, span, *args):
@@ -327,7 +344,22 @@ class WingSegment:
         float
             Coefficient of drag
         """
-        return np.interp(span, self._airfoil_data[:,0], self._airfoil_data[:,2].get_CD(args))
+        if self._constant_airfoil:
+            CD = self._airfoil_data.get_CD(*args)
+        
+        else:
+            for i in range(self._airfoil_data.shape[0]):
+                if span >= self._airfoil_data[i,0] and span <= self._airfoil_data[i+1,0]:
+                    break
+
+            s0 = self._airfoil_data[i,0]
+            CD0 = self._airfoil_data[i,2].item().get_CD(*args)
+            s1 = self._airfoil_data[i+1,0]
+            CD1 = self._airfoil_data[i+1,2].item().get_CD(*args)
+
+            CD = CD0 + span*(CD1-CD0)/(s1-s0)
+
+        return CD
 
 
     def get_Cm(self, span, *args):
@@ -346,4 +378,19 @@ class WingSegment:
         float
             Moment coefficient
         """
-        return np.interp(span, self._airfoil_data[:,0], self._airfoil_data[:,2].get_Cm(args))
+        if self._constant_airfoil:
+            Cm = self._airfoil_data.get_Cm(*args)
+        
+        else:
+            for i in range(self._airfoil_data.shape[0]):
+                if span >= self._airfoil_data[i,0] and span <= self._airfoil_data[i+1,0]:
+                    break
+
+            s0 = self._airfoil_data[i,0]
+            Cm0 = self._airfoil_data[i,2].item().get_Cm(*args)
+            s1 = self._airfoil_data[i+1,0]
+            Cm1 = self._airfoil_data[i+1,2].item().get_Cm(*args)
+
+            Cm = Cm0 + span*(Cm1-Cm0)/(s1-s0)
+
+        return Cm

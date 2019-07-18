@@ -124,7 +124,7 @@ class Airfoil:
             Drag coefficient.
         """
         if self._type == "linear":
-            CL = self.get_CL(args)
+            CL = self.get_CL(*args)
             return self._CD0+self._CD1*CL+self._CD2*CL**2
 
 

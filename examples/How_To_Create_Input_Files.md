@@ -356,10 +356,11 @@ Describes an aircraft.
                 Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the
                 mounting angle of the wing segment and the segment will have no further twist. If specified
                 as an array, the array gives the twist as a function of span. The first column gives the
-                span location as a fraction of the total span. The second column gives the twist at that
-                span location. If specified as a string, this string must contain the path to a csv file
-                containing the twist data formatted in columns, as with the array. For properties as a
-                function of span, MachUp will linearly interpolate intermediate values. Defaults to 0.
+                span location as a fraction of the total span. This column must have values going from 0.0 
+                to 1.0. The second column gives the twist at that span location. If specified as a string, 
+                this string must contain the path to a csv file containing the twist data formatted in 
+                columns, as with the array. For properties as a function of span, MachUp will linearly 
+                interpolate intermediate values. Defaults to 0.
 
             "dihedral" : (float, array, or string, optional)
                 Gives the dihedral of the wing segment. Defined the same as "twist". Defaults to 0.
