@@ -353,7 +353,7 @@ Describes an aircraft.
                 span of the segment is twice this value.
 
             "twist" : (float, array, or string, optional)
-                Gives the geometric twist of the wing. If specified as a float, then this is simply the
+                Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the
                 mounting angle of the wing segment and the segment will have no further twist. If specified
                 as an array, the array gives the twist as a function of span. The first column gives the
                 span location as a fraction of the total span. The second column gives the twist at that

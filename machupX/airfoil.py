@@ -38,6 +38,8 @@ class Airfoil:
         self._input_dict = input_dict
         self._type = _import_value("type", self._input_dict, "SI", -1) # Unit system doesn't matter for these
 
+        #TODO: Implement mapping of args
+
         self._initialize_data()
 
     
@@ -84,7 +86,60 @@ class Airfoil:
             raise IOError("'{0}' is not an allowable airfoil type.".format(self._type))
 
 
-    #TODO: Implement this
     def _generate_database(self):
         # Generates a database of airfoil parameters from the scetion geometry
+        #TODO: Implement this
         pass
+
+    
+    def get_CL(self, *args):
+        """Returns the coefficient of lift as a function of args.
+
+        Parameters
+        ----------
+        *args : floats
+            Arbitrary airfoil parameters. The first is always angle of attack in radians
+
+        Returns
+        -------
+        float
+            Lift coefficient.
+        """
+
+        if self._type == "linear":
+            return self._CLa*(args[0]-self._aL0)
+
+
+    def get_CD(self, *args):
+        """Returns the coefficient of drag as a function of args.
+
+        Parameters
+        ----------
+        *args : floats
+            Arbitrary airfoil parameters. The first is always angle of attack in radians
+
+        Returns
+        -------
+        float
+            Drag coefficient.
+        """
+        if self._type == "linear":
+            CL = self.get_CL(args)
+            return self._CD0+self._CD1*CL+self._CD2*CL**2
+
+
+    def get_Cm(self, *args):
+        """Returns the coefficient of moment as a function of args.
+
+        Parameters
+        ----------
+        *args : floats
+            Arbitrary airfoil parameters. The first is always angle of attack in radians
+
+        Returns
+        -------
+        float
+            Moment coefficient.
+        """
+        if self._type == "linear":
+            return self._Cma*args[0]+self._CmL0

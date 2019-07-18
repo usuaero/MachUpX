@@ -125,19 +125,41 @@ class WingSegment:
         default_airfoil = list(airfoil_dict.keys())[0]
         airfoil = _import_value("airfoil", self._input_dict, self._unit_sys, default_airfoil)
 
-        # Setup getters
+        # Setup data table
         if isinstance(airfoil, str): # Constant airfoil
-            pass
+
+            if airfoil not in list(airfoil_dict.keys()):
+                raise IOError("'{0}' must be specified in 'airfoils'.".format(airfoil))
+
+            self._airfoil_data = np.asarray([[0.0, airfoil, airfoil_dict[airfoil]],
+                                             [1.0, airfoil, airfoil_dict[airfoil]]])
 
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
-            pass
+            self._airfoil_data = np.zeros(airfoil.shape, dtype=None)
+
+            for i,row in enumeratre(airfoil):
+
+                name = row[1]
+                if name not in list(airfoil_dict.keys()):
+                    raise IOError("'{0}' must be specified in 'airfoils'.".format(name))
+
+                self._airfoil_data[i] = [row[0], name, airfoil_dict[name]]
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
 
 
     def get_root_loc(self):
-        # Returns the location of the root quarter-chord
+        """Returns the location of the root quarter-chord.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        ndarray
+            Location of the root quarter-chord.
+        """
         if self.ID == 0:
             return self._origin
         else:
@@ -145,7 +167,16 @@ class WingSegment:
 
 
     def get_tip_loc(self):
-        # Returns the location of the tip quarter-chord
+        """Returns the location of the tip quarter-chord.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        ndarray
+            Location of the tip quarter-chord.
+        """
         if self.ID == 0:
             return self._origin
         else:
@@ -153,7 +184,18 @@ class WingSegment:
 
 
     def get_quarter_chord_loc(self, span):
-        # Returns the location of the quarter-chord at the specified span fraction
+        """Returns the location of the quarter-chord at the given span fraction.
+
+        Parameters
+        ----------
+        span : float
+            Span location as a fraction of the total span starting at the root.
+
+        Returns
+        -------
+        ndarray
+            Location of the quarter-chord.
+        """
         ds = np.zeros(3)
         ds[0] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
         if self._side == "left":
@@ -166,7 +208,46 @@ class WingSegment:
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
-        # Attaches a wing segment. Uses tree recursion.
+        """Attaches a wing segment to the current segment or one of its children.
+        
+        Parameters
+        ----------
+        wing_segment_name : str
+            Name of the wing segment to attach.
+
+        input_dict : dict
+            Dictionary describing the wing segment to attach.
+
+        side : str
+            Which side this wing segment goes on. Can only be "left" or "right"
+
+        unit_sys : str
+            The unit system being used. "English" or "SI".
+
+        airfoil_dict : dict
+            Dictionary of airfoil objects the wing segment uses to initialize its own airfoils.
+
+        Returns
+        -------
+        WingSegment
+            Returns a newly created wing segment.
+
+        Raises
+        ------
+        RuntimeError
+            If the segment could not be added.
+
+        """
+
+        # This can only be called by the origin segment
+        if self.ID != 0:
+            raise RuntimeError("Please add segments only at the origin segment.")
+
+        else:
+            return self._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+
+    def _attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+        # Recursive function for attaching a wing segment.
 
         parent_ID = input_dict.get("connect_to", {}).get("ID", 0)
         if self.ID == parent_ID: # The new segment is supposed to attach to this one
@@ -184,9 +265,9 @@ class WingSegment:
         else: # We need to recurse deeper
             result = False
             for key in self._attached_segments:
-                if side not in key: # Only attach segments of the same side
+                if side not in key: # A right segment only ever attaches to a right segment and same with left
                     continue
-                result = self._attached_segments[key].attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+                result = self._attached_segments[key]._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
                 if result is not False:
                     break
 
@@ -209,3 +290,60 @@ class WingSegment:
                     break
 
             return result
+
+
+    def get_CL(self, span, *args):
+        """Returns the coefficient of lift at the given span location as a function of *args.
+
+        Parameters
+        ----------
+        span : float
+            Span location as a fraction of the total span, starting at the root.
+
+        *args : floats
+            Airfoil parameters. The first is always angle of attack in radians.
+
+        Returns
+        -------
+        float
+            Coefficient of lift
+        """
+        return np.interp(span, self._airfoil_data[:,0], self._airfoil_data[:,2].get_CL(args))
+
+
+    def get_CD(self, span, *args):
+        """Returns the coefficient of drag at the given span location as a function of *args.
+
+        Parameters
+        ----------
+        span : float
+            Span location as a fraction of the total span, starting at the root.
+
+        *args : floats
+            Airfoil parameters. The first is always angle of attack in radians.
+
+        Returns
+        -------
+        float
+            Coefficient of drag
+        """
+        return np.interp(span, self._airfoil_data[:,0], self._airfoil_data[:,2].get_CD(args))
+
+
+    def get_Cm(self, span, *args):
+        """Returns the moment coefficient at the given span location as a function of *args.
+
+        Parameters
+        ----------
+        span : float
+            Span location as a fraction of the total span, starting at the root.
+
+        *args : floats
+            Airfoil parameters. The first is always angle of attack in radians.
+
+        Returns
+        -------
+        float
+            Moment coefficient
+        """
+        return np.interp(span, self._airfoil_data[:,0], self._airfoil_data[:,2].get_Cm(args))
