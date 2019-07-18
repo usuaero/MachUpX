@@ -376,7 +376,7 @@ Describes an aircraft.
                 Gives the sweep angle of the wing segment. Defined the same as "twist". Defaults to 0.
 
             "chord" : (float, array, or string, optional)
-                Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 1.
+                Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 1.0.
 
             "airfoil" : (string or array, optional)
                 Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined

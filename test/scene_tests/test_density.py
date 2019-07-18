@@ -15,7 +15,7 @@ def test_unspecified_SI_density():
     input_dict["units"] = "SI"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -36,7 +36,7 @@ def test_unspecified_english_density():
     input_dict["units"] = "English"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -58,7 +58,7 @@ def test_specified_english_density_with_SI_units():
     input_dict["scene"]["atmosphere"]["rho"] = [0.0023769, "slug/ft^3"]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -80,7 +80,7 @@ def test_specified_SI_density_with_english_units():
     input_dict["scene"]["atmosphere"]["rho"] = [1.225, "kg/m^3"]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -102,7 +102,7 @@ def test_standard_atmos_with_english_units():
     input_dict["scene"]["atmosphere"]["rho"] = "standard"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -128,7 +128,7 @@ def test_standard_atmos_with_SI_units():
     input_dict["scene"]["atmosphere"]["rho"] = "standard"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -158,7 +158,7 @@ def test_density_array_atmos_profile():
                                                 [5000.0, 0.18]]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -189,7 +189,7 @@ def test_array_atmos_profile_with_unit_conversion():
                                                 ["m", "kg/m^3"]]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -215,7 +215,7 @@ def test_array_atmos_profile_from_file():
     input_dict["scene"]["atmosphere"]["rho"] = "test/scene_tests/density_profile.csv"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -241,7 +241,7 @@ def test_array_atmos_profile_from_file_with_units():
     input_dict["scene"]["atmosphere"]["rho"] = "test/scene_tests/density_profile_with_units.csv"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -268,7 +268,7 @@ def test_atmos_field_from_file():
     input_dict["scene"]["atmosphere"]["rho"] = "test/scene_tests/density_field.csv"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)

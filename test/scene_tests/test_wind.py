@@ -16,7 +16,7 @@ def test_unspecified_wind():
 
     altered_input_name = "input.json"
     sp.run(["rm", altered_input_name])
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -38,7 +38,7 @@ def test_specified_english_wind_with_SI_units():
     input_dict["scene"]["atmosphere"]["V_wind"] = [100, 100, 100, "kn"]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -60,7 +60,7 @@ def test_specified_SI_wind_with_english_units():
     input_dict["scene"]["atmosphere"]["V_wind"] = [100, 100, 100, "kph"]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -86,7 +86,7 @@ def test_wind_array_atmos_profile():
                                                 [5000.0, 20.0, 180.0, 150.0]]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -122,7 +122,7 @@ def test_wind_array_atmos_profile_with_unit_conversion():
                                                 ["ft","mph","mph","mph"]]
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -152,7 +152,7 @@ def test_wind_array_atmos_profile_from_file():
     input_dict["scene"]["atmosphere"]["V_wind"] = "test/scene_tests/wind_profile.csv"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -180,7 +180,7 @@ def test_wind_array_atmos_profile_from_file_with_units():
     input_dict["scene"]["atmosphere"]["V_wind"] = "test/scene_tests/wind_profile_with_units.csv"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)
@@ -212,7 +212,7 @@ def test_atmos_wind_field_from_file():
     input_dict["scene"]["atmosphere"]["V_wind"] = "test/scene_tests/wind_field.csv"
 
     altered_input_name = "input.json"
-    with open("input.json", 'w') as json_handle:
+    with open(altered_input_name, 'w') as json_handle:
         json.dump(input_dict,json_handle)
 
     scene = MX.Scene(altered_input_name)

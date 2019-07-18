@@ -37,7 +37,7 @@ class Airplane:
         self.ID = ID
         self._unit_sys = unit_system
         
-        self._wing_segments = []
+        self._wing_segments = {}
 
         self._load_params(filename)
         self._initialize_state(state)
@@ -116,16 +116,19 @@ class Airplane:
         IOError
             If the input is improperly specified.
         """
+        
+        if wing_segment_name in self._wing_segments.keys():
+            raise IOError("Wing segment {0} already exists in this airplane.".format(wing_segment_name))
 
         side = input_dict.get("side")
         if not (side == "left" or side == "right" or side == "both"):
             raise IOError("{0} is not a proper side designation.".format(side))
 
         if side == "left" or side == "both":
-            self._wing_segments.append(self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys))
+            self._wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys)
 
         if side == "right" or side == "both":
-            self._wing_segments.append(self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys))
+            self._wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys)
 
 
     def _load_wing_segments(self):
@@ -155,3 +158,7 @@ class Airplane:
         """
         #TODO: Do this
         pass
+
+    def _get_wing_segment(self, wing_segment_name):
+        # Returns a reference to the specified wing segment. ONLY FOR TESTING!
+        return self._origin_segment._get_attached_wing_segment(wing_segment_name)

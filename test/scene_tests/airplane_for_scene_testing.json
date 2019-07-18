@@ -1,0 +1,13 @@
+{
+    "name" : "Airplane1",
+    "CG" : [0,0,0],
+    "weight" : 100.0,
+    "reference" : {
+        "area" : 0,
+        "longitudinal_length" : 0,
+        "lateral_length" : 0
+    },
+    "airfoils" : "test/scene_tests/airfoils_for_testing.json",
+    "wings" : {
+    }
+}

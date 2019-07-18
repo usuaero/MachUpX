@@ -94,7 +94,7 @@ class WingSegment:
         sweep_data = _import_value("sweep", self._input_dict, self._unit_sys, 0)
         self.get_sweep = self._build_getter_f_of_span(sweep_data, "sweep")
 
-        chord_data = _import_value("chord", self._input_dict, self._unit_sys, 0)
+        chord_data = _import_value("chord", self._input_dict, self._unit_sys, 1.0)
         self.get_chord = self._build_getter_f_of_span(chord_data, "chord")
 
 
@@ -108,7 +108,7 @@ class WingSegment:
         
         else: # Array
             def getter(span):
-                return np.interp(span, self._getter_data[name][0], self._getter_data[name][1])
+                return np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
                 
         return getter
 
@@ -126,13 +126,13 @@ class WingSegment:
         if self.ID == 0:
             return self._origin
         else:
-            return self.get_root_loc()+self.get_quarter_chord_loc(1.0)
+            return self.get_quarter_chord_loc(1.0)
 
 
     def get_quarter_chord_loc(self, span):
         # Returns the location of the quarter-chord at the specified span fraction
         ds = np.zeros(3)
-        ds[0] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s)))*np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
+        ds[0] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
         if self._side == "left":
             ds[1] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
         else:
@@ -169,5 +169,20 @@ class WingSegment:
 
             if self.ID == 0 and not result:
                 raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(wing_segment_name))
+
+            return result
+
+    def _get_attached_wing_segment(self, wing_segment_name):
+        # Returns a reference to the specified wing segment. ONLY FOR TESTING!
+        try:
+            # See if it is attached to this wing segment
+            return self._attached_segments[wing_segment_name]
+        except KeyError:
+            # Otherwise
+            result = False
+            for key in self._attached_segments:
+                result = self._attached_segments[key]._get_attached_wing_segment(wing_segment_name)
+                if result:
+                    break
 
             return result

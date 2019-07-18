@@ -1,0 +1,38 @@
+{
+    "tag" : "Ideal MachUpX input file.",
+    "run" : {
+        "forces" : "",
+        "stl" : "",
+        "aero_derivatives" : ""
+    },
+    "solver" : {
+        "type" : "linear",
+        "convergence" : 0.000001,
+        "relaxation" : 0.9
+    },
+    "units" : "English",
+    "scene" : {
+        "atmosphere" : {
+
+        },
+        "aircraft" : {
+            "test_plane" : {
+                "file" : "test/airplane_tests/airplane_for_airplane_testing.json",
+                "state" : {
+                    "type" : "aerodynamic",
+                    "position" : [0, 0, 1000],
+                    "angular_rates" : [0.0, 0.0, 0.0],
+                    "velocity" : 100,
+                    "alpha" : 0.0,
+                    "beta" : 0.0
+                },
+                "control_state" : {
+                    "elevator" : [0.0, "deg"],
+                    "rudder" : [0.0, "deg"],
+                    "aileron" : [0.0, "deg"],
+                    "flap" : [0.0, "deg"]
+                }
+            }
+        }
+    }
+}

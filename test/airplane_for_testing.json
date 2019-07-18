@@ -7,7 +7,6 @@
         "longitudinal_length" : 0,
         "lateral_length" : 0
     },
-    "controls" : [ "elevator", "rudder", "aileron", "flap"],
     "airfoils" : "test/airfoils_for_testing.json",
     "wings" : {
         "main_wing_inside" : {
@@ -15,40 +14,9 @@
             "ID" : 1,
             "is_main" : true,
             "side" : "both",
-            "connect_to" : {
-                "ID" : 0,
-                "location" : "tip",
-                "dx" : 0,
-                "dy" : 0,
-                "dz" : 0,
-                "y_offset" : 0
-            },
-            "span" : [4,"ft"],
-            "twist" : 0.0,
-            "dihedral" : [[0.0,0.0],
-                          [0.5,5.0],
-                          [1.0,10.0],
-                          ["-","deg"]],
-            "sweep" : 0.0,
-            "chord" : [1.0,"ft"],
-            "airfoil" : [[0.0,"NACA_2410"],
-                         [1.0,"NACA_0010"]],
-            "grid" : 40,
-            "control_mixing" : {
-                "root_span" : 0.2,
-                "tip_span" : 0.8,
-                "chord_fraction" : 0.25,
-                "control_mixing" : {
-                    "flap" : {
-                        "symmetric" : true,
-                        "mix" : 1.0
-                    },
-                    "aileron" : {
-                        "symmetric" : false,
-                        "mix" : 1.0
-                    }
-                }
-            }
+            "span" : 8.0,
+            "airfoil" : "NACA_2410",
+            "grid" : 40
         },
         "main_wing_outside" : {
             "name" : "main_wing_outside",
@@ -56,20 +24,10 @@
             "is_main" : true,
             "side" : "both",
             "connect_to" : {
-                "ID" : 1,
-                "location" : "tip",
-                "dx" : 0,
-                "dy" : 0,
-                "dz" : 0,
-                "y_offset" : 0
+                "ID" : 1
             },
-            "span" : [4,"ft"],
-            "twist" : "twist_file.txt",
-            "dihedral" : [15.0,"deg"],
-            "sweep" : [20.0,"deg"],
-            "chord" : [[0.0,1.0,"ft"],
-                      [1.0,0.5,"ft"]],
-            "airfoil" : "NACA_0010",
+            "span" : 8.0,
+            "airfoil" : "NACA_2410",
             "grid" : 40
         }
     }
