@@ -37,7 +37,7 @@ if __name__=="__main__":
     wing_dict = scene.airplanes["test_plane"]._wing_segments
     spans = np.arange(11)/10
     for key in wing_dict:
-        print(wing_dict[key].get_section_ac_loc(spans))
+        print(wing_dict[key].get_node_locs())
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])

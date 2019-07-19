@@ -251,7 +251,7 @@ class WingSegment:
             Location of the section aerodynamic center.
         """
         loc = self.get_quarter_chord_loc(span)
-        loc[0] += self._get_ac_offset(span)
+        loc[0,:] += self._get_ac_offset(span)
         return loc
 
 
@@ -443,9 +443,11 @@ class WingSegment:
         Returns
         -------
         ndarray
-            Array of horseshoe vortex node pairs. First index is the vortex, second
-            index is which node, and third index is the position components.
+            Array of horseshoe vortex node pairs. First index is the position 
+            components, second index is the node, and third index is the vortex.
         """
-        node_spans = np.asarray([self._node_span_locs[:-1],self._node_span_locs[1:]])
+        node_locs = np.zeros((3,2,self.N))
+        node_locs[:,0,:] = self.get_section_ac_loc(self._node_span_locs[:-1])
+        node_locs[:,1,:] = self.get_section_ac_loc(self._node_span_locs[1:])
 
-        return self.get_section_ac_loc(node_spans)
+        return node_locs
