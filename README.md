@@ -16,11 +16,25 @@ Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
 ## Features
 
+Can be run from the command line or imported as a module in a python script.
+
+### Command Line
+
+Simply execute:
+
+`python -m machupX <YOUR_INPUT_FILE>`
+
+### Module API
+
 ## Documentation
 
 For help on creating input files, see How_To_Create_Input_Files.
 
 ## Installation
+
+Navigate to the root directory and execute:
+
+`python setup.py install`.
 
 ### Prerequisites
 

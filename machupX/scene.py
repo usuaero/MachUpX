@@ -53,7 +53,7 @@ class Scene:
             state = self._input_dict["scene"]["aircraft"][airplane_name].get("state",{})
             control_state = self._input_dict["scene"]["aircraft"][airplane_name].get("control_state",{})
 
-            self.airplanes[airplane_name] = Airplane(airplane_name, i, airplane_file, self._unit_sys, state=state, control_state=control_state)
+            self.add_aircraft(airplane_name, i, airplane_file, state=state, control_state=control_state)
 
         # Setup atmospheric property getter functions
         self._get_density = self._initialize_density_getter()
@@ -167,3 +167,36 @@ class Scene:
             raise IOError("Wind velocity improperly specified as {0}".format(V_wind))
 
         return wind_getter
+
+    
+    def add_aircraft(self, airplane_name, ID, airplane_file, state={}, control_state={}):
+        """Inserts an aircraft into the scene
+
+        Parameters
+        ----------
+        airplane_name : str
+            Name of the airplane to be added.
+
+        ID : int
+            ID of the airplane in the scene.
+        
+        airplane_file : str
+            Path to the JSON object describing the airplane.
+
+        state : dict
+            Dictionary describing the state of the airplane.
+
+        control_state : dict
+            Dictionary describing the state of the controls.
+
+        Returns
+        -------
+
+        Raises
+        ------
+        IOError
+            If the input is invalid.
+
+        """
+
+        self.airplanes[airplane_name] = Airplane(airplane_name, ID, airplane_file, self._unit_sys, state=state, control_state=control_state)

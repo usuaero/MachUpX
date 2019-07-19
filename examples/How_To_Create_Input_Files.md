@@ -371,6 +371,11 @@ Describes an aircraft.
             "chord" : (float, array, or string, optional)
                 Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 1.0.
 
+            "ac_offset" : (float, array, or string, optional)
+                Gives the offset of the section aerodynamic center from the quarter chord as a fraction 
+                of the chord. A positive value puts the aerodynamic center in front of the quarter shord.
+                Defined the same as "twist". Defaults to 0.
+
             "airfoil" : (string or array, optional)
                 Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined
                 under "airfoils" in this object. If specified as an array, the array gives the airfoil

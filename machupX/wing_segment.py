@@ -3,6 +3,7 @@ from .helpers import _check_filepath,_vectorized_convert_units,_import_value
 import json
 import numpy as np
 import scipy.integrate as integ
+import scipy.interpolate as interp
 
 class WingSegment:
     """A class defining a segment of a lifting surface.
@@ -53,7 +54,7 @@ class WingSegment:
             raise IOError("Wing segment ID may not be 0.")
 
         if self.ID != 0: # These do not need to be run for the origin segment
-            self._getter_data = {}
+            self._splines = {}
             self._initialize_params()
             self._initialize_getters()
             self._initialize_airfoils(airfoil_dict)
@@ -90,31 +91,29 @@ class WingSegment:
         # Sets getters for functions which are a function of span
 
         twist_data = _import_value("twist", self._input_dict, self._unit_sys, 0)
-        self.get_twist = self._build_getter_f_of_span(twist_data, "twist")
+        self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist")
 
         dihedral_data = _import_value("dihedral", self._input_dict, self._unit_sys, 0)
-        self.get_dihedral = self._build_getter_f_of_span(dihedral_data, "dihedral")
+        self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral")
 
         sweep_data = _import_value("sweep", self._input_dict, self._unit_sys, 0)
-        self.get_sweep = self._build_getter_f_of_span(sweep_data, "sweep")
+        self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep")
 
         chord_data = _import_value("chord", self._input_dict, self._unit_sys, 1.0)
-        self.get_chord = self._build_getter_f_of_span(chord_data, "chord")
+        self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
+
+        ac_offset_data = _import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+        self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
 
-    def _build_getter_f_of_span(self, data, name):
+    def _build_getter_linear_f_of_span(self, data, name):
         # Defines a getter function for data which is a function of span
-        self._getter_data[name] = data
 
         if isinstance(data, float): # Constant
-            def getter(span):
-                return self._getter_data[name]
+            return interp.interp1d(np.asarray([0.0, 1.0]), np.asarray([data, data]), kind="linear")
         
         else: # Array
-            def getter(span):
-                return np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
-                
-        return getter
+            return interp.interp1d(data[:,0], data[:,1], kind="linear")
 
 
     def _initialize_airfoils(self, airfoil_dict):
@@ -210,6 +209,24 @@ class WingSegment:
         ds[2] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
 
         return self.get_root_loc()+ds
+
+
+    def get_section_ac_loc(self, span):
+        """Returns the location of the section aerodynamic center at the given span fraction.
+
+        Parameters
+        ----------
+        span : float
+            Span location as a fraction of the total span starting at the root.
+
+        Returns
+        -------
+        ndarray
+            Location of the section aerodynamic center.
+        """
+        loc = self.get_quarter_chord_loc(span)
+        loc[0] += self._get_ac_offset(span)
+        return loc
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
@@ -397,3 +414,20 @@ class WingSegment:
             Cm = Cm0 + span*(Cm1-Cm0)/(s1-s0)
 
         return Cm
+
+
+    def get_node_locs(self):
+        """Returns the location of all horseshoe vortex node pairs on the segment.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        ndarray
+            Array of horseshoe vortex node pairs. First index is the vortex, second
+            index is which node, and third index is the position components.
+        """
+        node_spans = np.asarray([self._node_span_locs[:-1],self._node_span_locs[1:]])
+
+        return self.get_section_ac_loc(node_spans)

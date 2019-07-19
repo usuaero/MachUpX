@@ -16,7 +16,7 @@
 
         },
         "aircraft" : {
-            "airplane0" : {
+            "test_plane" : {
                 "file" : "test/airplane_for_testing.json",
                 "state" : {
                     "type" : "aerodynamic",
