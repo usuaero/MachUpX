@@ -1,6 +1,7 @@
 from .helpers import _check_filepath, _vectorized_convert_units, _import_value
 
 import numpy as np
+import json
 
 class Airfoil:
     """A class defining an airfoil.
