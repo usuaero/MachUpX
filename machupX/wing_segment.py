@@ -45,7 +45,7 @@ class WingSegment:
         self._input_dict = input_dict
         self._unit_sys = unit_sys
         self._side = side
-        self._origin = np.asarray(origin)
+        self._origin = np.asarray(origin).reshape((3,1))
 
         self._attached_segments = {}
         
@@ -68,7 +68,7 @@ class WingSegment:
         self.N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 
-        self._delta_origin = np.zeros(3)
+        self._delta_origin = np.zeros((3,1))
         connect_dict = self._input_dict.get("connect_to", {})
         self._delta_origin[0] = connect_dict.get("dx", 0.0)
         self._delta_origin[1] = connect_dict.get("dy", 0.0)
@@ -89,7 +89,6 @@ class WingSegment:
 
     def _initialize_getters(self):
         # Sets getters for functions which are a function of span
-
         twist_data = _import_value("twist", self._input_dict, self._unit_sys, 0)
         self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist")
 
@@ -104,6 +103,25 @@ class WingSegment:
 
         ac_offset_data = _import_value("ac_offset", self._input_dict, self._unit_sys, 0)
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
+
+        # Setup quarter-chord position getters
+        num_samples = 100
+        x_samples = np.zeros(100)
+        y_samples = np.zeros(100)
+        z_samples = np.zeros(100)
+        span_locs = np.linspace(0.0, 1.0, num_samples)
+
+        for i, span in enumerate(span_locs):
+            x_samples[i] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
+            if self._side == "left":
+                y_samples[i] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+            else:
+                y_samples[i] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+            z_samples[i] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+
+        self._get_qc_dx_loc = interp.interp1d(span_locs, x_samples, kind="cubic")
+        self._get_qc_dy_loc = interp.interp1d(span_locs, y_samples, kind="cubic")
+        self._get_qc_dz_loc = interp.interp1d(span_locs, z_samples, kind="cubic")
 
 
     def _build_getter_linear_f_of_span(self, data, name):
@@ -126,6 +144,7 @@ class WingSegment:
 
         self._airfoils = []
         self._airfoil_spans = []
+        self._num_airfoils = 0
 
         # Setup data table
         if isinstance(airfoil, str): # Constant airfoil
@@ -134,6 +153,10 @@ class WingSegment:
                 raise IOError("'{0}' must be specified in 'airfoils'.".format(airfoil))
 
             self._airfoils.append(airfoil_dict[airfoil])
+            self._airfoils.append(airfoil_dict[airfoil])
+            self._airfoil_spans.append(0.0)
+            self._airfoil_spans.append(1.0)
+            self._num_airfoils = 2
 
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
             self._airfoil_data = np.empty((airfoil.shape[0], airfoil.shape[1]+1), dtype=None)
@@ -148,6 +171,7 @@ class WingSegment:
                     raise IOError("'{0}' must be specified in 'airfoils'.".format(name))
 
                 self._airfoil_spans.append(float(row[0]))
+                self._num_airfoils += 1
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
@@ -200,13 +224,15 @@ class WingSegment:
         ndarray
             Location of the quarter-chord.
         """
-        ds = np.zeros(3)
-        ds[0] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
-        if self._side == "left":
-            ds[1] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
         else:
-            ds[1] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-        ds[2] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+            span_array = np.asarray(span)
+
+        ds = np.zeros((3,span_array.shape[0]))
+        ds[0] = self._get_qc_dx_loc(span_array)
+        ds[1] = self._get_qc_dy_loc(span_array)
+        ds[2] = self._get_qc_dz_loc(span_array)
 
         return self.get_root_loc()+ds
 
@@ -330,22 +356,14 @@ class WingSegment:
         float
             Coefficient of lift
         """
-        if len(self._airfoils) == 1:
-            CL = self._airfoils[0].get_CL(*args)
-        
-        else:
-            for i in range(len(self._airfoils)):
-                if span >= self._airfoil_spans[i] and span <= self._airfoil_spans[i+1]:
-                    break
 
-            s0 = self._airfoil_spans[i]
-            CL0 = self._airfoils[i].get_CL(*args)
-            s1 = self._airfoil_spans[i+1]
-            CL1 = self._airfoils[i+1].get_CL(*args)
+        CLs_for_spline = np.zeros(self._num_airfoils)
+        for i in range(self._num_airfoils):
+            CLs_for_spline[i] = self._airfoils[i].get_CL(*args)
 
-            CL = CL0 + span*(CL1-CL0)/(s1-s0)
+        CL_spline = interp.interp1d(self._airfoil_spans, CLs_for_spline, kind="linear")
 
-        return CL
+        return CL_spline(span)
 
 
     def get_CD(self, span, *args):

@@ -35,7 +35,7 @@ if __name__=="__main__":
     scene = MX.Scene(altered_input_name)
 
     wing_dict = scene.airplanes["test_plane"]._wing_segments
-    spans = np.arange(10)/10
+    spans = np.arange(11)/10
     for key in wing_dict:
         print(wing_dict[key].get_section_ac_loc(spans))
 

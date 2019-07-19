@@ -99,7 +99,7 @@ def test_compute_straight_wing_root_location():
     wing_dict = scene.airplanes["test_plane"]._wing_segments
     for key in wing_dict:
         root_loc = wing_dict[key].get_root_loc()
-        assert np.allclose(root_loc, correct_locations[key], rtol=0, atol=1e-10)
+        assert np.allclose(root_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])
@@ -148,7 +148,7 @@ def test_compute_straight_wing_tip_location():
     wing_dict = scene.airplanes["test_plane"]._wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
-        assert np.allclose(tip_loc, correct_locations[key], rtol=0, atol=1e-10)
+        assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])
@@ -197,7 +197,7 @@ def test_compute_constant_swept_dihedral_wing_tip_location():
     wing_dict = scene.airplanes["test_plane"]._wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
-        assert np.allclose(tip_loc, correct_locations[key], rtol=0, atol=1e-10)
+        assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])
@@ -248,7 +248,7 @@ def test_compute_variable_swept_dihedral_wing_tip_location():
     wing_dict = scene.airplanes["test_plane"]._wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
-        assert np.allclose(tip_loc, correct_locations[key], rtol=0, atol=1e-10)
+        assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])
