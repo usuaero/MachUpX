@@ -127,3 +127,35 @@ def _import_value(key, dict_of_vals, system, default_value):
             return_value = np.asarray(val)
 
     return return_value
+
+
+def _quaternion_transform(q, v):
+    # Transforms the vector v from the global frame to a frame having an orientation described by q.
+    T = np.zeros(4)
+    T[0] = -v[0]*q[1] - v[1]*q[2] - v[2]*q[3]
+    T[1] = v[0]*q[0] + v[1]*q[3] - v[2]*q[2]
+    T[2] = -v[0]*q[3] + v[1]*q[0] + v[2]*q[1]
+    T[3] = v[0]*q[2] - v[1]*q[1] + v[2]*q[0]
+
+    v_trans = np.zeros(3)
+    v_trans[0] = q[0]*T[1] - q[1]*T[0] - q[2]*T[3] + q[3]*T[2]
+    v_trans[1] = q[0]*T[2] + q[1]*T[3] - q[2]*T[0] - q[3]*T[1]
+    v_trans[2] = q[0]*T[3] - q[1]*T[2] + q[2]*T[1] - q[3]*T[0]
+
+    return v_trans
+
+
+def _quaternion_inverse_transform(q, v):
+    # Transforms the vector v from a frame having an orientation described by q to the global frame.
+    T = np.zeros(4)
+    T[0] = v[0]*q[1] + v[1]*q[2] + v[2]*q[3]
+    T[1] = v[0]*q[0] - v[1]*q[3] + v[2]*q[2]
+    T[2] = v[0]*q[3] + v[1]*q[0] - v[2]*q[1]
+    T[3] = -v[0]*q[2] + v[1]*q[1] + v[2]*q[0]
+
+    v_trans = np.zeros(3)
+    v_trans[0] = q[0]*T[1] + q[1]*T[0] + q[2]*T[3] - q[3]*T[2]
+    v_trans[1] = q[0]*T[2] - q[1]*T[3] + q[2]*T[0] + q[3]*T[1]
+    v_trans[2] = q[0]*T[3] + q[1]*T[2] - q[2]*T[1] + q[3]*T[0]
+
+    return v_trans

@@ -1,4 +1,4 @@
-from .helpers import _check_filepath,_convert_units,_vectorized_convert_units,_import_value
+from .helpers import _check_filepath, _convert_units, _vectorized_convert_units, _import_value, _quaternion_transform, _quaternion_inverse_transform
 from .airplane import Airplane
 
 import json
@@ -216,25 +216,45 @@ class Scene:
         dS = np.zeros(self._N)
         P0 = np.zeros(self._N)
         P1 = np.zeros(self._N)
-        u_inf = np.zeros((3, self._N))
+        v_inf = np.zeros((3, self._N))
+        V_inf = np.zeros((3, self._N))
 
         index = 0
+
+        # Loop through airplanes
         for i, airplane_name, airplane_object in enumerate(self.airplanes.items()):
             airplanes.append(airplane_name)
             segments.append([])
 
+            # Loop through segments
             for segment_name, segment_object in airplane_object._wing_segments.items():
                 segments[i].append(segment_name)
                 num_cps = segment_object._N
+                cur_slice = slice(index, index+num_cps)
 
-                c_bar[index:index+num_cps] = segment_object.get_cp_avg_chord_lengths()
-                dS[index:index+num_cps] = segment_object.get_array_of_dS()
+                # Geometries
+                c_bar[cur_slice] = segment_object.get_cp_avg_chord_lengths()
+                dS[cur_slice] = segment_object.get_array_of_dS()
 
                 node_points = segment_object.get_node_locs()
-                P0[index:index+num_cps] = node_points[:-1]
-                P1[index:index+num_cps] = node_points[1:]
+                P0[cur_slice] = node_points[:-1]
+                P1[cur_slice] = node_points[1:]
 
-                #u_inf[:,index:index+num_cps] =
+                # Freestream velocity
+                # Due to aircraft motion
+                if airplane_object.state_type == "aerodynamic":
+                    v_trans = airplane_object.v
+                else:
+                    v_trans = _quaternion_transform(airplane_object.q, airplane_object.v)
+
+                # Due to wind
+                v_wind = _quaternion_transform(airplane_object.q, self._get_wind(airplane_object.p + _quaternion_inverse_transform(segment_object.get_cp_locs())))
+
+                # Due to aircraft rotation
+                v_rot = np.cross(airplane_object.w.T, segment_object.get_cp_locs().T)
+
+                v_inf[:,cur_slice] = v_trans+v_wind+v_rot
+                V_inf[:,cur_slice] = np.norm(v_inf[:,cur_slice], axis=0)
 
                 index += num_cps
 

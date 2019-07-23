@@ -1,4 +1,4 @@
-from .helpers import _check_filepath, _import_value
+from .helpers import _check_filepath, _import_value, _quaternion_transform
 from .wing_segment import WingSegment
 from .airfoil import Airfoil
 
@@ -70,28 +70,40 @@ class Airplane:
 
         self.state_type = _import_value("type", state, self._unit_sys, -1)
         self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 1000]).reshape((3,1))
-        self.q = _import_value("orientation", state, self._unit_sys, [1, 0, 0, 0])
         self.w = _import_value("angular_rates", state, self._unit_sys, [0, 0, 0]).reshape((3,1))
 
-        # Set up orientation quaternion
-        if self.q.shape[0] == 3: # Euler angles
-            pass
-        elif self.q.shape[0] == 4: # Quaternion
-
-            # Check magnitude
-            if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
-                raise IOError("Magnitude of orientation quaternion must be 1.0.")
-
-            self.q = self.q.reshape((4,1))
-        else:
-            raise IOError("{0} is not an allowable orientation definition.".format(self.q))
-
-        # Velocity
         # Rigid-body definition
         if self.state_type == "rigid-body":
             if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
                 raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
 
+            # Set up orientation quaternion
+            self.q = _import_value("orientation", state, self._unit_sys, [1, 0, 0, 0])
+            if self.q.shape[0] == 3: # Euler angles
+                C_phi = np.cos(self.q[0]/2)
+                S_phi = np.cos(self.q[0]/2)
+                C_theta = np.cos(self.q[1]/2)
+                S_theta = np.cos(self.q[1]/2)
+                C_psi = np.cos(self.q[2]/2)
+                S_psi = np.cos(self.q[2]/2)
+
+                self.q = np.zeros((4,1))
+                self.q[0] = C_phi*C_theta*C_psi + S_phi*S_theta*S_psi
+                self.q[1] = S_phi*C_theta*C_psi - C_phi*S_theta*S_psi
+                self.q[2] = C_phi*S_theta*C_psi + S_phi*C_theta*S_psi
+                self.q[3] = C_phi*C_theta*S_psi - S_phi*S_theta*C_psi
+
+            elif self.q.shape[0] == 4: # Quaternion
+
+                # Check magnitude
+                if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
+                    raise IOError("Magnitude of orientation quaternion must be 1.0.")
+
+                self.q = self.q.reshape((4,1))
+            else:
+                raise IOError("{0} is not an allowable orientation definition.".format(self.q))
+
+            # Set up velocity
             try:
                 self.v = _import_value("velocity", state, self._unit_sys, -1).reshape((3,1))
             except AttributeError: # The value can't be reshaped, therefore it is not a numpy array and has been improperly specified.
@@ -102,6 +114,7 @@ class Airplane:
             if "orientation" in list(state.keys()):
                 raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
 
+            # Set up velocity
             v_value = _import_value("velocity", state, self._unit_sys, -1)
             if isinstance(v_value, float): # Velocity magnitude
                 alpha = _import_value("alpha", state, self._unit_sys, 0.0)
