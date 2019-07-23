@@ -6,7 +6,7 @@ import subprocess as sp
 
 if __name__=="__main__":
 
-    input_file = "test/input_for_testing.json"
+    input_file = "test/airplane_tests/input_for_airplane_testing.json"
 
     # Alter input
     with open(input_file, 'r') as input_handle:
@@ -14,12 +14,6 @@ if __name__=="__main__":
 
     with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
         airplane_dict = json.load(airplane_file_handle)
-
-    for key in airplane_dict["wings"]:
-        airplane_dict["wings"][key].pop("sweep", None)
-        if "vertical" not in key:
-            airplane_dict["wings"][key].pop("dihedral", None)
-        airplane_dict["wings"][key].pop("twist", None)
 
     altered_airplane_name = "airplane.json"
     input_dict["scene"]["aircraft"]["test_plane"]["file"] = altered_airplane_name
@@ -33,11 +27,7 @@ if __name__=="__main__":
 
     # Load scene
     scene = MX.Scene(altered_input_name)
-
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
-    spans = np.arange(11)/10
-    for key in wing_dict:
-        print(wing_dict[key].get_node_locs())
+    scene.display_wireframe(show_legend=True)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])

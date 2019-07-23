@@ -63,9 +63,10 @@ The following measurements can be defined with the accompanying units:
 | Weight:                       | "lbf", "N"                        |
 
 Except for angular measurements, the first unit listed is the default for "English" units. The second is 
-the default for "SI". For measurements of state and control deflections, the default is always degrees. 
-For airfoil parameters, measurements may only be expressed in radians. When specifying units in an array 
-and one of the measurements is dimensionless (e.g. chord fraction), "-" should be used.
+the default for "SI". For measurements of state and control deflections, as well as airframe geometry, 
+the default is always degrees. For airfoil parameters, measurements may only be expressed in radians. 
+When specifying units in an array and one of the measurements is dimensionless (e.g. span fraction), "-" 
+should be used.
 
 ### Scene Object
 The following are keys which can be specified in the scene JSON object. NOTE: all keys not marked as
@@ -381,7 +382,7 @@ Describes an aircraft.
 
             "ac_offset" : (float, array, or string, optional)
                 Gives the offset of the section aerodynamic center from the quarter chord as a fraction 
-                of the chord. A positive value puts the aerodynamic center in front of the quarter shord.
+                of the chord. A positive value puts the aerodynamic center behind of the quarter chord.
                 Defined the same as "twist". Defaults to 0.
 
             "airfoil" : (string or array, optional)

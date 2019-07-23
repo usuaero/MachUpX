@@ -23,7 +23,7 @@ def test_unspecified_wind():
 
     for i in range(5): # Test 5 random positions
         position = np.random.random(3)*10000
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, [0,0,0], rtol=0.0, atol=1e-10) == True
 
     del scene
@@ -45,7 +45,7 @@ def test_specified_english_wind_with_SI_units():
 
     for i in range(5): # Test 5 random positions
         position = np.random.random(3)*10000
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, [51.4444444, 51.4444444, 51.4444444], rtol=0.0, atol=1e-10) == True
 
     del scene
@@ -67,7 +67,7 @@ def test_specified_SI_wind_with_english_units():
 
     for i in range(5): # Test 5 random positions
         position = np.random.random(3)*10000
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, [91.13444, 91.13444, 91.13444], rtol=0.0, atol=1e-10) == True
 
     del scene
@@ -102,7 +102,7 @@ def test_wind_array_atmos_profile():
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
         position[2] = alt
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
     del scene
@@ -138,7 +138,7 @@ def test_wind_array_atmos_profile_with_unit_conversion():
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
         position[2] = alt
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
     del scene
@@ -168,7 +168,7 @@ def test_wind_array_atmos_profile_from_file():
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
         position[2] = alt
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
 def test_wind_array_atmos_profile_from_file_with_units():
@@ -196,7 +196,7 @@ def test_wind_array_atmos_profile_from_file_with_units():
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
         position[2] = alt
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
     del scene
@@ -226,7 +226,7 @@ def test_atmos_wind_field_from_file():
              [100,100,100]]
 
     for position, correct_wind in zip(positions,winds):
-        wind = scene._get_wind(position)
+        wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0, atol=1e-10)
 
     del scene

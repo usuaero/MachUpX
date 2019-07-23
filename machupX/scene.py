@@ -5,6 +5,8 @@ import json
 from skaero.atmosphere import coesa
 import numpy as np
 import scipy.interpolate as sinterp
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
@@ -133,7 +135,7 @@ class Scene:
         if isinstance(V_wind, np.ndarray):
 
             if V_wind.shape == (3,): # Constant wind vector
-                self._constant_wind = V_wind
+                self._constant_wind = np.asarray(V_wind).reshape((3,1))
 
                 def wind_getter(position):
                     return self._constant_wind
@@ -151,7 +153,9 @@ class Scene:
                         Vx = self._wind_field_x_interpolator(position)
                         Vy = self._wind_field_y_interpolator(position)
                         Vz = self._wind_field_z_interpolator(position)
-                        return np.asarray([Vx, Vy, Vz])
+                        return np.asarray([[Vx],
+                                           [Vy],
+                                           [Vz]])
 
                 elif self._wind_data.shape[1] is 4: # wind profile
 
@@ -159,7 +163,9 @@ class Scene:
                         Vx =  np.interp(position[2], self._wind_data[:,0], self._wind_data[:,1])
                         Vy =  np.interp(position[2], self._wind_data[:,0], self._wind_data[:,2])
                         Vz =  np.interp(position[2], self._wind_data[:,0], self._wind_data[:,3])
-                        return np.asarray([Vx, Vy, Vz])
+                        return np.asarray([[Vx],
+                                           [Vy],
+                                           [Vz]])
 
                 else:
                     raise IOError("Wind array has the wrong number of columns.")
@@ -214,15 +220,15 @@ class Scene:
         segments = []
         c_bar = np.zeros(self._N)
         dS = np.zeros(self._N)
-        P0 = np.zeros(self._N)
-        P1 = np.zeros(self._N)
+        P0 = np.zeros((3,self._N))
+        P1 = np.zeros((3,self._N))
         v_inf = np.zeros((3, self._N))
         V_inf = np.zeros((3, self._N))
 
         index = 0
 
         # Loop through airplanes
-        for i, airplane_name, airplane_object in enumerate(self.airplanes.items()):
+        for i, (airplane_name, airplane_object) in enumerate(self.airplanes.items()):
             airplanes.append(airplane_name)
             segments.append([])
 
@@ -237,8 +243,8 @@ class Scene:
                 dS[cur_slice] = segment_object.get_array_of_dS()
 
                 node_points = segment_object.get_node_locs()
-                P0[cur_slice] = node_points[:-1]
-                P1[cur_slice] = node_points[1:]
+                P0[:,cur_slice] = node_points[:,:-1]
+                P1[:,cur_slice] = node_points[:,1:]
 
                 # Freestream velocity
                 # Due to aircraft motion
@@ -248,13 +254,14 @@ class Scene:
                     v_trans = -_quaternion_transform(airplane_object.q, airplane_object.v)
 
                 # Due to wind
-                v_wind = _quaternion_transform(airplane_object.q, self._get_wind(airplane_object.p + _quaternion_inverse_transform(segment_object.get_cp_locs())))
+                global_cp_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, segment_object.get_cp_locs())
+                v_wind = _quaternion_transform(airplane_object.q, self._get_wind(global_cp_locs))
 
                 # Due to aircraft rotation
-                v_rot = -np.cross(airplane_object.w.T, segment_object.get_cp_locs().T)
+                v_rot = -np.cross(airplane_object.w, segment_object.get_cp_locs(), axis=0)
 
                 v_inf[:,cur_slice] = v_trans+v_wind+v_rot
-                V_inf[:,cur_slice] = np.norm(v_inf[:,cur_slice], axis=0)
+                V_inf[:,cur_slice] = np.linalg.norm(v_inf[:,cur_slice], axis=0)
 
                 index += num_cps
 
@@ -264,3 +271,55 @@ class Scene:
         # Nonlinear improvement
         if self._nonlinear_solver:
             pass
+
+
+    def solve_forces(self, non_dimensional=False):
+        """Solves the NLL equations to determine the forces and moments on the aircraft.
+
+        Parameters
+        ----------
+        non_dimensional : bool
+            If this is set to True, the results will be returned as nondimensional coefficients.
+            Defaults to False.
+
+        Returns
+        -------
+        dict:
+            Dictionary of forces and moments acting on each wing segment.
+        """
+        self._compute_vortex_strengths()
+
+
+    def display_wireframe(self, show_legend=False):
+        """Displays a 3D wireframe plot of the scene.
+
+        Parameters
+        ----------
+        show_legend : bool
+            If this is set to True, a legend will appear detailing which color corresponds to which wing segment
+        """
+
+        segment_names = []
+
+        fig = plt.figure(figsize=plt.figaspect(1.0))
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
+
+        # Loop through airplanes
+        for airplane_name, airplane_object in self.airplanes.items():
+
+            # Loop through segments
+            for segment_name, segment_object in airplane_object._wing_segments.items():
+                segment_names.append(segment_name)
+
+                points = segment_object.get_outline_points()
+                ax.plot(points[0,:], points[1,:], points[2,:], '-')
+
+
+        if show_legend:
+            ax.legend(segment_names)
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
+
+        plt.show()

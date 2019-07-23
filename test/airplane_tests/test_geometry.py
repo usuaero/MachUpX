@@ -284,13 +284,14 @@ def test_twist_as_f_of_span():
     # Load scene
     scene = MX.Scene(altered_input_name)
 
-    spans = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-    twists = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 3.0, 1.0, -1.0, -3.0, -5.0]
+    spans = [0.0, 0.1, 0.2]
+    twists = [0.0, 0.017453292519943295, 0.03490658503988659]
 
     wing_dict = scene.airplanes["test_plane"]._wing_segments
     for key in wing_dict:
         for span, correct_twist in zip(spans, twists):
-            twist = wing_dict[key].get_twist(span)
+            twist = wing_dict[key].get_twist(span).item()
+            print(twist)
             assert np.allclose(twist, correct_twist, rtol=0.0, atol=1e-10)
 
     sp.run(["rm", altered_airplane_name])

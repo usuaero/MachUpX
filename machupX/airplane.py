@@ -137,6 +137,11 @@ class Airplane:
             else:
                 raise IOError("{0} is not an allowable velocity definition.", v_value)
 
+            self.q = np.asarray([[1.0],
+                                 [0.0],
+                                 [0.0],
+                                 [0.0]])
+
         else:
             raise IOError("{0} is not an acceptable state type.".format(state_type))
 

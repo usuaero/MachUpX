@@ -91,13 +91,13 @@ class WingSegment:
     def _initialize_getters(self):
         # Sets getters for functions which are a function of span
         twist_data = _import_value("twist", self._input_dict, self._unit_sys, 0)
-        self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist")
+        self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True)
 
         dihedral_data = _import_value("dihedral", self._input_dict, self._unit_sys, 0)
-        self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral")
+        self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True)
 
         sweep_data = _import_value("sweep", self._input_dict, self._unit_sys, 0)
-        self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep")
+        self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True)
 
         chord_data = _import_value("chord", self._input_dict, self._unit_sys, 1.0)
         self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
@@ -126,11 +126,14 @@ class WingSegment:
         #self._get_qc_dz_loc = interp.interp1d(span_locs, z_samples, kind="cubic")
 
 
-    def _build_getter_linear_f_of_span(self, data, name):
+    def _build_getter_linear_f_of_span(self, data, name, angular_data=False):
         # Defines a getter function for data which is a function of span
 
         if isinstance(data, float): # Constant
-            self._getter_data[name] = data
+            if angular_data:
+                self._getter_data[name] = np.radians(data).item()
+            else:
+                self._getter_data[name] = data
 
             def getter(span):
                 converted = False
@@ -153,7 +156,10 @@ class WingSegment:
                     converted = True
                     span = np.asarray(span)[np.newaxis]
 
-                data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
+                if angular_data:
+                    data = np.interp(span, self._getter_data[name][:,0], np.radians(self._getter_data[name][:,1]))
+                else:
+                    data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
                 if converted:
                     span = span.item()
 
@@ -202,6 +208,93 @@ class WingSegment:
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
+
+
+    def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+        """Attaches a wing segment to the current segment or one of its children.
+        
+        Parameters
+        ----------
+        wing_segment_name : str
+            Name of the wing segment to attach.
+
+        input_dict : dict
+            Dictionary describing the wing segment to attach.
+
+        side : str
+            Which side this wing segment goes on. Can only be "left" or "right"
+
+        unit_sys : str
+            The unit system being used. "English" or "SI".
+
+        airfoil_dict : dict
+            Dictionary of airfoil objects the wing segment uses to initialize its own airfoils.
+
+        Returns
+        -------
+        WingSegment
+            Returns a newly created wing segment.
+
+        Raises
+        ------
+        RuntimeError
+            If the segment could not be added.
+
+        """
+
+        # This can only be called by the origin segment
+        if self.ID != 0:
+            raise RuntimeError("Please add segments only at the origin segment.")
+
+        else:
+            return self._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+
+
+    def _attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+        # Recursive function for attaching a wing segment.
+
+        parent_ID = input_dict.get("connect_to", {}).get("ID", 0)
+        if self.ID == parent_ID: # The new segment is supposed to attach to this one
+
+            # Determine the connection point
+            if input_dict.get("connect_to", {}).get("location", "tip") == "root":
+                attachment_point = self.get_root_loc()
+            else:
+                attachment_point = self.get_tip_loc()
+
+            self._attached_segments[wing_segment_name] = WingSegment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
+
+            return self._attached_segments[wing_segment_name] # Return reference to newly created wing segment
+
+        else: # We need to recurse deeper
+            result = False
+            for key in self._attached_segments:
+                if side not in key: # A right segment only ever attaches to a right segment and same with left
+                    continue
+                result = self._attached_segments[key]._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+                if result is not False:
+                    break
+
+            if self.ID == 0 and not result:
+                raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(wing_segment_name))
+
+            return result
+
+
+    def _get_attached_wing_segment(self, wing_segment_name):
+        # Returns a reference to the specified wing segment. ONLY FOR TESTING!
+        try:
+            # See if it is attached to this wing segment
+            return self._attached_segments[wing_segment_name]
+        except KeyError:
+            # Otherwise
+            result = False
+            for key in self._attached_segments:
+                result = self._attached_segments[key]._get_attached_wing_segment(wing_segment_name)
+                if result:
+                    break
+
+            return result
 
 
     def get_root_loc(self):
@@ -258,12 +351,12 @@ class WingSegment:
 
         ds = np.zeros((3,span_array.shape[0]))
         for i, span in enumerate(span_array):
-            ds[0,i] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
+            ds[0,i] = integ.quad(lambda s : -np.tan(self.get_sweep(s)), 0, span)[0]*self.b
             if self._side == "left":
-                ds[1,i] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+                ds[1,i] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
             else:
-                ds[1,i] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-            ds[2,i] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+                ds[1,i] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
+            ds[2,i] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
         #ds[0] = self._get_qc_dx_loc(span_array)
         #ds[1] = self._get_qc_dy_loc(span_array)
         #ds[2] = self._get_qc_dz_loc(span_array)
@@ -285,93 +378,23 @@ class WingSegment:
             Location of the section aerodynamic center.
         """
         loc = self.get_quarter_chord_loc(span)
-        loc[0,:] += self._get_ac_offset(span)
+        loc += self._get_ac_offset(span)*self._get_axial_vec(span)
         return loc
 
 
-    def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
-        """Attaches a wing segment to the current segment or one of its children.
-        
-        Parameters
-        ----------
-        wing_segment_name : str
-            Name of the wing segment to attach.
-
-        input_dict : dict
-            Dictionary describing the wing segment to attach.
-
-        side : str
-            Which side this wing segment goes on. Can only be "left" or "right"
-
-        unit_sys : str
-            The unit system being used. "English" or "SI".
-
-        airfoil_dict : dict
-            Dictionary of airfoil objects the wing segment uses to initialize its own airfoils.
-
-        Returns
-        -------
-        WingSegment
-            Returns a newly created wing segment.
-
-        Raises
-        ------
-        RuntimeError
-            If the segment could not be added.
-
-        """
-
-        # This can only be called by the origin segment
-        if self.ID != 0:
-            raise RuntimeError("Please add segments only at the origin segment.")
-
+    def _get_axial_vec(self, span):
+        # Returns the axial vector at the given span locations
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
         else:
-            return self._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+            span_array = np.asarray(span)
 
-    def _attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
-        # Recursive function for attaching a wing segment.
+        twist = self.get_twist(span_array)
+        
+        C_twist = np.cos(twist)
+        S_twist = np.sin(twist)
 
-        parent_ID = input_dict.get("connect_to", {}).get("ID", 0)
-        if self.ID == parent_ID: # The new segment is supposed to attach to this one
-
-            # Determine the connection point
-            if input_dict.get("connect_to", {}).get("location", "tip") == "root":
-                attachment_point = self.get_root_loc()
-            else:
-                attachment_point = self.get_tip_loc()
-
-            self._attached_segments[wing_segment_name] = WingSegment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
-
-            return self._attached_segments[wing_segment_name] # Return reference to newly created wing segment
-
-        else: # We need to recurse deeper
-            result = False
-            for key in self._attached_segments:
-                if side not in key: # A right segment only ever attaches to a right segment and same with left
-                    continue
-                result = self._attached_segments[key]._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
-                if result is not False:
-                    break
-
-            if self.ID == 0 and not result:
-                raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(wing_segment_name))
-
-            return result
-
-    def _get_attached_wing_segment(self, wing_segment_name):
-        # Returns a reference to the specified wing segment. ONLY FOR TESTING!
-        try:
-            # See if it is attached to this wing segment
-            return self._attached_segments[wing_segment_name]
-        except KeyError:
-            # Otherwise
-            result = False
-            for key in self._attached_segments:
-                result = self._attached_segments[key]._get_attached_wing_segment(wing_segment_name)
-                if result:
-                    break
-
-            return result
+        return np.asarray([-C_twist, np.zeros(span_array.shape[0]), S_twist])
 
 
     def get_CL(self, span, *args):
@@ -535,12 +558,7 @@ class WingSegment:
             Array of axial vectors. First index is the vector component and second 
             index is the control point index.
         """
-        twist = self.get_twist(self._cp_span_locs)
-        
-        C_twist = np.cos(twist)
-        S_twist = np.sin(twist)
-
-        return np.asarray([-C_twist, np.zeros(self._N), S_twist])
+        return self._get_axial_vec(self._cp_span_locs)
 
     
     def get_cp_span_vecs(self):
@@ -585,3 +603,33 @@ class WingSegment:
         """
         ds = (self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
         return self.get_cp_avg_chord_lengths()*ds
+
+
+    def get_outline_points(self):
+        """Returns a set of points that represents the outline of the wing segment.
+        
+        Returns
+        -------
+        ndarray
+            Array of outline points.
+        """
+        num_span_locs = 50
+        spans = np.linspace(0, 1, num_span_locs)
+        qc_points = self.get_quarter_chord_loc(spans)
+        chords = self.get_chord(spans)
+        print(chords)
+        axial_vecs = self._get_axial_vec(spans)
+
+        points = np.zeros((3,num_span_locs*2+1))
+
+        # Leading edge
+        points[:,:num_span_locs] = qc_points-axial_vecs*0.25*chords
+
+        # Trailing edge
+        points[:,-2:num_span_locs-1:-1] = qc_points+axial_vecs*0.75*chords
+
+        # Complete the circle
+        points[:,-1] = points[:,0]
+        print(points)
+
+        return points
