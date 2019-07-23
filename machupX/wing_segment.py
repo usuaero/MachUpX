@@ -542,11 +542,9 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        T_matrix = np.asarray([[C_twist, S_twist*S_dihedral, -S_twist*C_dihedral],
-                               [0.0, C_dihedral, S_dihedral],
-                               [S_twist, -C_twist*S_dihedral, C_twist*C_dihedral]])
+        normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, C_twist*C_dihedral])
 
-        return np.sum(T_matrix, axis=1)
+        return normal_vecs
 
 
     def get_cp_axial_vecs(self):
