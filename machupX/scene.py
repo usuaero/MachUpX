@@ -222,8 +222,10 @@ class Scene:
         dS = np.zeros(self._N)
         P0 = np.zeros((3,self._N))
         P1 = np.zeros((3,self._N))
-        v_inf = np.zeros((3, self._N))
-        V_inf = np.zeros((3, self._N))
+        v_inf = np.zeros((3,self._N))
+        V_inf = np.zeros((3,self._N))
+        u_a = np.zeros((3,self._N))
+        u_n = np.zeros((3,self._N))
 
         index = 0
 
@@ -245,6 +247,9 @@ class Scene:
                 node_points = segment_object.get_node_locs()
                 P0[:,cur_slice] = node_points[:,:-1]
                 P1[:,cur_slice] = node_points[:,1:]
+
+                u_a[:,cur_slice] = segment_object.get_cp_axial_vecs()
+                u_n[:,cur_slice] = segment_object.get_cp_normal_vecs()
 
                 # Freestream velocity
                 # Due to aircraft motion
