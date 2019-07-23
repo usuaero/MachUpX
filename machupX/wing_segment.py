@@ -48,6 +48,7 @@ class WingSegment:
         self._origin = np.asarray(origin).reshape((3,1))
 
         self._attached_segments = {}
+        self._getter_data = {}
         
         self.ID = self._input_dict.get("ID")
         if self.ID == 0 and name != "origin":
@@ -104,35 +105,61 @@ class WingSegment:
         ac_offset_data = _import_value("ac_offset", self._input_dict, self._unit_sys, 0)
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
-        # Setup quarter-chord position getters
-        num_samples = 100
-        x_samples = np.zeros(100)
-        y_samples = np.zeros(100)
-        z_samples = np.zeros(100)
-        span_locs = np.linspace(0.0, 1.0, num_samples)
+        ## Setup quarter-chord position getters
 
-        for i, span in enumerate(span_locs):
-            x_samples[i] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
-            if self._side == "left":
-                y_samples[i] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-            else:
-                y_samples[i] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-            z_samples[i] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        #num_samples = 10
+        #x_samples = np.zeros(num_samples)
+        #y_samples = np.zeros(num_samples)
+        #z_samples = np.zeros(num_samples)
+        #span_locs = np.linspace(0.0, 1.0, num_samples)
 
-        self._get_qc_dx_loc = interp.interp1d(span_locs, x_samples, kind="cubic")
-        self._get_qc_dy_loc = interp.interp1d(span_locs, y_samples, kind="cubic")
-        self._get_qc_dz_loc = interp.interp1d(span_locs, z_samples, kind="cubic")
+        #for i, span in enumerate(span_locs):
+        #    x_samples[i] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
+        #    if self._side == "left":
+        #        y_samples[i] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        #    else:
+        #        y_samples[i] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        #    z_samples[i] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+
+        #self._get_qc_dx_loc = interp.interp1d(span_locs, x_samples, kind="cubic")
+        #self._get_qc_dy_loc = interp.interp1d(span_locs, y_samples, kind="cubic")
+        #self._get_qc_dz_loc = interp.interp1d(span_locs, z_samples, kind="cubic")
 
 
     def _build_getter_linear_f_of_span(self, data, name):
         # Defines a getter function for data which is a function of span
 
         if isinstance(data, float): # Constant
-            return interp.interp1d(np.asarray([0.0, 1.0]), np.asarray([data, data]), kind="linear")
+            self._getter_data[name] = data
+
+            def getter(span):
+                converted = False
+                if isinstance(span, float):
+                    converted = True
+                    span = np.asarray(span)[np.newaxis]
+
+                data = np.full(span.shape, self._getter_data[name])
+                if converted:
+                    span = span.item()
+
+                return data
         
         else: # Array
-            return interp.interp1d(data[:,0], data[:,1], kind="linear")
+            self._getter_data[name] = data
 
+            def getter(span):
+                converted = False
+                if isinstance(span, float):
+                    converted = True
+                    span = np.asarray(span)[np.newaxis]
+
+                data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
+                if converted:
+                    span = span.item()
+
+                return data
+
+        return getter
 
     def _initialize_airfoils(self, airfoil_dict):
         # Picks out the airfoils used in this wing segment and stores them. Also 
@@ -230,9 +257,16 @@ class WingSegment:
             span_array = np.asarray(span)
 
         ds = np.zeros((3,span_array.shape[0]))
-        ds[0] = self._get_qc_dx_loc(span_array)
-        ds[1] = self._get_qc_dy_loc(span_array)
-        ds[2] = self._get_qc_dz_loc(span_array)
+        for i, span in enumerate(span_array):
+            ds[0,i] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
+            if self._side == "left":
+                ds[1,i] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+            else:
+                ds[1,i] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+            ds[2,i] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
+        #ds[0] = self._get_qc_dx_loc(span_array)
+        #ds[1] = self._get_qc_dy_loc(span_array)
+        #ds[2] = self._get_qc_dz_loc(span_array)
 
         return self.get_root_loc()+ds
 

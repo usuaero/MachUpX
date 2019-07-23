@@ -88,7 +88,7 @@ class Airfoil:
 
 
     def _generate_database(self):
-        # Generates a database of airfoil parameters from the scetion geometry
+        # Generates a database of airfoil parameters from the section geometry
         #TODO: Implement this
         pass
 
@@ -108,7 +108,10 @@ class Airfoil:
         """
 
         if self._type == "linear":
-            return self._CLa*(args[0]-self._aL0)
+            CL = self._CLa*(args[0]-self._aL0)
+            if CL > self._CL_max or CL < -self._CL_max:
+                CL = np.sign(CL)*self._CL_max
+            return CL
 
 
     def get_CD(self, *args):
@@ -144,3 +147,27 @@ class Airfoil:
         """
         if self._type == "linear":
             return self._Cma*args[0]+self._CmL0
+
+
+    def get_CLa(self):
+        """Returns the lift slope.
+
+        Returns
+        -------
+        float
+            Lift slope in 1/radians.
+        """
+        if self._type == "linear":
+            return self._CLa
+
+
+    def get_a_L0(self):
+        """Returns the zero-lift angle of attack.
+
+        Returns
+        -------
+        float
+            Zero-lift angle of attack in radians.
+        """
+        if self._type == "linear":
+            return self._aL0
