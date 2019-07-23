@@ -172,7 +172,8 @@ deterimined by the user.
                     Describes the state of the aircraft.
 
                     "type" : (string)
-                        Specifies which definition of state is to be used. If given as "rigid_body", then "position", "velocity", "orientation", and "angular_rates" can be  specified as 
+                        Specifies which definition of state is to be used. If given as "rigid_body", then 
+                        "position", "velocity", "orientation", and "angular_rates" can be  specified as 
                         well. If given as "aerodynamic", then "position", "velocity", "angular_rates", 
                         "alpha", and "beta" can be specified as well. Specifying both "rigid_body" and 
                         "aerodynamic" state variables will throw an input error.
@@ -193,8 +194,9 @@ deterimined by the user.
                     "orientation" : (vector, optional)
                         Orientation of the aircraft in flat-earth coordinates. If this is a 3-element 
                         vector it is assumed the Euler angle formulation is used (i.e. [phi, theta, psi]).  
-                        If this is a 4-element vector it is assumed the quaternion formulation is used. 
-                        Defaults to [1.0, 0.0, 0.0, 0.0].
+                        If this is a 4-element vector it is assumed the quaternion formulation is used 
+                        where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to 
+                        [1.0, 0.0, 0.0, 0.0].
 
                     "angular_rates" : (vector, optional)
                         Angular rate of the aircraft in flat-earth coordinates. Defaults to [0,0,0]

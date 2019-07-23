@@ -104,9 +104,9 @@ def _import_value(key, dict_of_vals, system, default_value):
             try:
                 return_value = converted_val.item() # Float
             except ValueError:
-                return_value = converted_val # Vector
+                return_value = converted_val # Vector or quaternion
 
-        elif len(val) == 3: # Vector without units
+        elif len(val) == 3 or len(val) == 4: # Vector or quaternion without units
             return_value = np.asarray(val)
 
         else:

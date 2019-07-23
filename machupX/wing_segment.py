@@ -66,7 +66,7 @@ class WingSegment:
         # Set global params
         self.is_main = self._input_dict.get("is_main")
         self.b = _import_value("span", self._input_dict, self._unit_sys, -1)
-        self.N = self._input_dict.get("grid", 40)
+        self._N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 
         self._delta_origin = np.zeros((3,1))
@@ -81,11 +81,11 @@ class WingSegment:
             self._delta_origin[1] += connect_dict.get("y_offset", 0.0)
 
         if self._use_clustering:
-            self._node_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self.N+1)))/2
-            self._cp_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self.N)+np.pi/(2*self.N)))/2
+            self._node_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self._N+1)))/2
+            self._cp_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self._N)+np.pi/(2*self._N)))/2
         else:
-            self._node_span_locs = np.linspace(0.0, 1.0, self.N+1)
-            self._cp_span_locs = np.linspace(1/(2*self.N), 1.0-1/(2*self.N), self.N)
+            self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
+            self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
 
 
     def _initialize_getters(self):
@@ -540,15 +540,48 @@ class WingSegment:
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
 
-        return np.asarray([-C_twist, np.zeros(self.N), S_twist])
+        return np.asarray([-C_twist, np.zeros(self._N), S_twist])
 
-
-    def get_cp_chord_lengths(self):
-        """Returns the local chord length at each control point on the segment.
+    
+    def get_cp_span_vecs(self):
+        """Returns the local spanwise vector at each control point on the segment.
 
         Returns
-        ----------
+        -------
+        ndarray
+            Array of span vectors. First index is the vector compoenent and second 
+            index is the control point index.
+        """
+        dihedral = self.get_dihedral(self._cp_span_locs)
+
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+
+        if self._side == "left":
+            return np.asarray([np.zeros(self._N), -C_dihedral, -S_dihedral])
+        else:
+            return np.asarray([np.zeros(self._N), C_dihedral, -S_dihedral])
+
+
+    def get_cp_avg_chord_lengths(self):
+        """Returns the average local chord length at each control point on the segment.
+
+        Returns
+        -------
         ndarray
             Array of chord lengths corresponding to each control point.
         """
-        return self.get_chord(self._cp_span_locs)
+        node_chords = self.get_chord(self._node_span_locs)
+        return (node_chords[1:]+node_chords[:-1])/2
+
+
+    def get_array_of_dS(self):
+        """Returns the differential elements of area.
+
+        Returns
+        -------
+        ndarray
+            Array of area differential elements.
+        """
+        ds = (self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
+        return self.get_cp_avg_chord_lengths()*ds

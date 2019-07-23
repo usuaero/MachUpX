@@ -3,6 +3,7 @@ from .wing_segment import WingSegment
 from .airfoil import Airfoil
 
 import json
+import numpy as np
 
 class Airplane:
     """A class defining an airplane.
@@ -32,14 +33,14 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, ID, filename, unit_system, state={}, control_state={}):
+    def __init__(self, name, filename, unit_system, state={}, control_state={}):
 
         self.name = name
-        self.ID = ID
         self._unit_sys = unit_system
         
         self._wing_segments = {}
         self._airfoil_database = {}
+        self._N = 0
 
         self._load_params(filename)
         self._initialize_state(state)
@@ -66,7 +67,65 @@ class Airplane:
 
     def _initialize_state(self, state):
         # Sets the state vector from the provided dictionary
-        pass
+
+        self.state_type = _import_value("type", state, self._unit_sys, -1)
+        self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 1000]).reshape((3,1))
+        self.q = _import_value("orientation", state, self._unit_sys, [1, 0, 0, 0])
+        self.w = _import_value("angular_rates", state, self._unit_sys, [0, 0, 0]).reshape((3,1))
+
+        # Set up orientation quaternion
+        if self.q.shape[0] == 3: # Euler angles
+            pass
+        elif self.q.shape[0] == 4: # Quaternion
+
+            # Check magnitude
+            if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
+                raise IOError("Magnitude of orientation quaternion must be 1.0.")
+
+            self.q = self.q.reshape((4,1))
+        else:
+            raise IOError("{0} is not an allowable orientation definition.".format(self.q))
+
+        # Velocity
+        # Rigid-body definition
+        if self.state_type == "rigid-body":
+            if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
+                raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
+
+            try:
+                self.v = _import_value("velocity", state, self._unit_sys, -1).reshape((3,1))
+            except AttributeError: # The value can't be reshaped, therefore it is not a numpy array and has been improperly specified.
+                raise IOError("For a rigid-body state definition, 'velocity' must be a 3-element vector.")
+
+        # Aerodynamic definition
+        elif self.state_type == "aerodynamic":
+            if "orientation" in list(state.keys()):
+                raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
+
+            v_value = _import_value("velocity", state, self._unit_sys, -1)
+            if isinstance(v_value, float): # Velocity magnitude
+                alpha = _import_value("alpha", state, self._unit_sys, 0.0)
+                beta = _import_value("beta", state, self._unit_sys, 0.0)
+
+                C_a = np.cos(np.radians(alpha))
+                S_a = np.sin(np.radians(alpha))
+                C_B = np.cos(np.radians(beta))
+                S_B = np.sin(np.radians(beta))
+
+                self.v = np.zeros((3,1))
+                denom = np.sqrt(1-S_a**2*S_B**2)
+                self.v[0] = v_value*C_a*C_B/denom
+                self.v[1] = v_value*C_a*S_B/denom
+                self.v[2] = v_value*S_a*C_B/denom
+
+            elif isinstance(v_value, np.ndarray):
+                self.v = v_value.reshape((3,1))
+
+            else:
+                raise IOError("{0} is not an allowable velocity definition.", v_value)
+
+        else:
+            raise IOError("{0} is not an acceptable state type.".format(state_type))
 
 
     def _initialize_controls(self, control_state):
@@ -129,9 +188,11 @@ class Airplane:
 
         if side == "left" or side == "both":
             self._wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys, self._airfoil_database)
+            self._N += self._wing_segments[wing_segment_name+"_left"]._N
 
         if side == "right" or side == "both":
             self._wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
+            self._N += self._wing_segments[wing_segment_name+"_right"]._N
 
 
     def _load_wing_segments(self):
@@ -191,3 +252,14 @@ class Airplane:
 
         for key in airfoil_dict:
             self._airfoil_database[key] = Airfoil(key, airfoil_dict[key])
+
+
+    def get_num_cps(self):
+        """Returns the total number of control points on the aircraft.
+
+        Returns
+        -------
+        int
+            Number of control points on the aircraft.
+        """
+        return self._N

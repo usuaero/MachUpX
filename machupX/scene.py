@@ -28,6 +28,7 @@ class Scene:
     def __init__(self, input_filename):
 
         self.airplanes = {}
+        self._N = 0
 
         _check_filepath(input_filename,".json")
         self._load_params(input_filename)
@@ -53,7 +54,7 @@ class Scene:
             state = self._input_dict["scene"]["aircraft"][airplane_name].get("state",{})
             control_state = self._input_dict["scene"]["aircraft"][airplane_name].get("control_state",{})
 
-            self.add_aircraft(airplane_name, i, airplane_file, state=state, control_state=control_state)
+            self.add_aircraft(airplane_name, airplane_file, state=state, control_state=control_state)
 
         # Setup atmospheric property getter functions
         self._get_density = self._initialize_density_getter()
@@ -169,7 +170,7 @@ class Scene:
         return wind_getter
 
     
-    def add_aircraft(self, airplane_name, ID, airplane_file, state={}, control_state={}):
+    def add_aircraft(self, airplane_name, airplane_file, state={}, control_state={}):
         """Inserts an aircraft into the scene
 
         Parameters
@@ -199,4 +200,46 @@ class Scene:
 
         """
 
-        self.airplanes[airplane_name] = Airplane(airplane_name, ID, airplane_file, self._unit_sys, state=state, control_state=control_state)
+        self.airplanes[airplane_name] = Airplane(airplane_name, airplane_file, self._unit_sys, state=state, control_state=control_state)
+        self._N += self.airplanes[airplane_name].get_num_cps()
+
+
+    def _compute_vortex_strengths(self):
+        # Determines the vortex strengths of all horseshoe vortices in the scene
+
+        # Start with linear solver
+
+        # Gather necessary variables
+        airplanes = []
+        segments = []
+        c_bar = np.zeros(self._N)
+        dS = np.zeros(self._N)
+        P0 = np.zeros(self._N)
+        P1 = np.zeros(self._N)
+        u_inf = np.zeros((3, self._N))
+
+        index = 0
+        for i, airplane_name, airplane_object in enumerate(self.airplanes.items()):
+            airplanes.append(airplane_name)
+            segments.append([])
+
+            for segment_name, segment_object in airplane_object._wing_segments.items():
+                segments[i].append(segment_name)
+                num_cps = segment_object._N
+
+                c_bar[index:index+num_cps] = segment_object.get_cp_avg_chord_lengths()
+                dS[index:index+num_cps] = segment_object.get_array_of_dS()
+
+                node_points = segment_object.get_node_locs()
+                P0[index:index+num_cps] = node_points[:-1]
+                P1[index:index+num_cps] = node_points[1:]
+
+                #u_inf[:,index:index+num_cps] =
+
+                index += num_cps
+
+        dl = P1 - P0
+
+        # Nonlinear improvement
+        if self._nonlinear_solver:
+            pass
