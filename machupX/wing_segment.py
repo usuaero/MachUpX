@@ -437,17 +437,84 @@ class WingSegment:
     def get_node_locs(self):
         """Returns the location of all horseshoe vortex node pairs on the segment.
 
-        Parameters
-        ----------
-
         Returns
         -------
         ndarray
             Array of horseshoe vortex node pairs. First index is the position 
-            components, second index is the node, and third index is the vortex.
+            components, second index is the node.
         """
-        node_locs = np.zeros((3,2,self.N))
-        node_locs[:,0,:] = self.get_section_ac_loc(self._node_span_locs[:-1])
-        node_locs[:,1,:] = self.get_section_ac_loc(self._node_span_locs[1:])
+        return self.get_section_ac_loc(self._node_span_locs)
 
-        return node_locs
+
+    def get_cp_locs(self):
+        """Returns the location of all control points on the segment.
+
+        Returns
+        -------
+        ndarray
+            Array of control points placed on the quarter-chord.
+        """
+        return self.get_section_ac_loc(self._cp_span_locs)
+
+
+    def get_cp_chord_lengths(self):
+        """Returns the local chord length at each control point on the segment.
+
+        Returns
+        -------
+        ndarray
+            Array of chord lengths corresponding to each control point.
+        """
+        return self.get_chord(self._cp_span_locs)
+
+
+    def get_cp_normal_vecs(self):
+        """Returns the local normal vector at each control point on the segment.
+
+        Returns
+        ----------
+        ndarray
+            Array of normal vectors. First index is the vector component and second 
+            index is the control point index.
+        """
+        twist = self.get_twist(self._cp_span_locs)
+        dihedral = self.get_dihedral(self._cp_span_locs)
+        
+        C_twist = np.cos(twist)
+        S_twist = np.sin(twist)
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+
+        T_matrix = np.asarray([[C_twist, S_twist*S_dihedral, -S_twist*C_dihedral],
+                               [0.0, C_dihedral, S_dihedral],
+                               [S_twist, -C_twist*S_dihedral, C_twist*C_dihedral]])
+
+        return np.sum(T_matrix, axis=1)
+
+
+    def get_cp_axial_vecs(self):
+        """Returns the local axial vector at each control point on the segment.
+
+        Returns
+        ----------
+        ndarray
+            Array of axial vectors. First index is the vector component and second 
+            index is the control point index.
+        """
+        twist = self.get_twist(self._cp_span_locs)
+        
+        C_twist = np.cos(twist)
+        S_twist = np.sin(twist)
+
+        return np.asarray([-C_twist, np.zeros(self.N), S_twist])
+
+
+    def get_cp_chord_lengths(self):
+        """Returns the local chord length at each control point on the segment.
+
+        Returns
+        ----------
+        ndarray
+            Array of chord lengths corresponding to each control point.
+        """
+        return self.get_chord(self._cp_span_locs)
