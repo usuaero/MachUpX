@@ -243,13 +243,19 @@ Describes an aircraft.
         "lateral_length" : (float)
             Lateral reference length.
 
-    "controls" : (list, optional)
+    "controls" : (dict, optional)
         Defines the controls of the aircraft. The number and names of controls are arbitrary and may be 
         specified by the user. A simple aircraft, such as a chuck glider may have no controls, whereas a 
         more complex aircraft may have controls for aileron, elevator, rudder, throttle, and multiple 
         flaps. Defining the controls here can be thought of as deciding which control knobs/switches/
-        sticks you want to make available to the pilot. Later in the object, when defining the wings, you 
-        will define how each control affects the deflection of each control surface.
+        sticks you want to make available to the pilot.
+
+        "<CONTROL_NAME>" : (dict)
+
+            "is_symmetric" : (bool)
+                Specifies whether this control causes symmetric or asymmetric control surface deflections 
+                (e.g. for a typical aircraft, the elevator control causes symmetric deflections whereas 
+                the aileron causes asymmetric deflections).
 
     "airfoils" : (dict)
         Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of 
@@ -415,16 +421,7 @@ Describes an aircraft.
                     Determines which control inputs move this control surface. A control surface can be
                     affected by any number of controls.
 
-                    "<CONTROL_NAME>" : (dict)
-                        Corresponds to one of the controls listed in "controls".
-
-                        "symmetric" : (bool)
-                            Specifies whether this control causes the control surface to deflect
-                            symmetrically (e.g. when using elevons, the elevator control should
-                            deflect the control surfaces symmetrically, whereas the aileron control
-                            should not).
-
-                        "mix" : (float)
+                    "<CONTROL_NAME>" : (float)
                             Linearly maps the control deflection to the control surface deflection. The
                             control deflection will be multiplied by this value and then applied to the
                             control surface.

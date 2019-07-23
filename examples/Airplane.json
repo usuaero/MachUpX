@@ -7,7 +7,20 @@
         "longitudinal_length" : 0,
         "lateral_length" : 0
     },
-    "controls" : [ "elevator", "rudder", "aileron", "flap"], !i think this is where you want to handle symmetry/asymmetry. Not within the wing.
+    "controls" : {
+        "elevator" : {
+            "is_symmetric" : true
+        },
+        "rudder" : {
+            "is_symmetric" : false
+        },
+        "aileron" : {
+            "is_symmetric" : false
+        },
+        "flap" : {
+            "is_symmetric" : true
+        }
+    },
     "airfoils" : "./Airfoils.json",
     "wings" : {
         "main_wing_inside" : {
@@ -38,16 +51,10 @@
                 "tip_span" : 0.8,
                 "chord_fraction" : [[0.0,0.25],
                                     [0.5,0.24],
-                                    [1.0,0.20]], !we need a way to have a different chord fraction at the root and tip. How's this?
-                "control_mixing" : { !Im a little confused at how you're planning to handle controls...
-                    "flap" : {
-                        "symmetric" : true,
-                        "mix" : 1.0
-                    },
-                    "aileron" : {
-                        "symmetric" : false,
-                        "mix" : 1.0
-                    }
+                                    [1.0,0.20]],
+                "control_mixing" : {
+                    "flap" : 1.0,
+                    "aileron" : 1.0
                 }
             }
         },

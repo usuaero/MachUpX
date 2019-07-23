@@ -245,13 +245,13 @@ class Scene:
                 if airplane_object.state_type == "aerodynamic":
                     v_trans = airplane_object.v
                 else:
-                    v_trans = _quaternion_transform(airplane_object.q, airplane_object.v)
+                    v_trans = -_quaternion_transform(airplane_object.q, airplane_object.v)
 
                 # Due to wind
                 v_wind = _quaternion_transform(airplane_object.q, self._get_wind(airplane_object.p + _quaternion_inverse_transform(segment_object.get_cp_locs())))
 
                 # Due to aircraft rotation
-                v_rot = np.cross(airplane_object.w.T, segment_object.get_cp_locs().T)
+                v_rot = -np.cross(airplane_object.w.T, segment_object.get_cp_locs().T)
 
                 v_inf[:,cur_slice] = v_trans+v_wind+v_rot
                 V_inf[:,cur_slice] = np.norm(v_inf[:,cur_slice], axis=0)
@@ -259,6 +259,7 @@ class Scene:
                 index += num_cps
 
         dl = P1 - P0
+        u_inf = v_inf/V_inf
 
         # Nonlinear improvement
         if self._nonlinear_solver:
