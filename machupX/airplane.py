@@ -126,9 +126,9 @@ class Airplane:
 
                 self.v = np.zeros(3)
                 denom = np.sqrt(1-S_a**2*S_B**2)
-                self.v[0] = v_value*C_a*C_B/denom
+                self.v[0] = -v_value*C_a*C_B/denom
                 self.v[1] = v_value*C_a*S_B/denom
-                self.v[2] = v_value*S_a*C_B/denom
+                self.v[2] = -v_value*S_a*C_B/denom
 
             elif isinstance(v_value, np.ndarray):
                 self.v = v_value

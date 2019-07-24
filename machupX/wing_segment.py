@@ -615,7 +615,11 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, C_twist*C_dihedral]).T
+        if self._side == "left":
+            normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, -C_twist*C_dihedral]).T
+        else:
+            normal_vecs = np.asarray([-S_twist*C_dihedral, -S_dihedral, -C_twist*C_dihedral]).T
+
 
         return normal_vecs
 

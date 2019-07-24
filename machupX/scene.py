@@ -319,8 +319,8 @@ class Scene:
         P1_u_inf = P1_v_inf/P1_V_inf[:,np.newaxis]
 
         # Spatial node vectors
-        r0 = PC[:,np.newaxis] - P0
-        r1 = PC[:,np.newaxis] - P1
+        r0 = PC-P0[:,np.newaxis]
+        r1 = PC-P1[:,np.newaxis]
         r0_mag = np.sqrt(np.einsum('ijk,ijk->ij', r0, r0))
         r1_mag = np.sqrt(np.einsum('ijk,ijk->ij', r1, r1))
         r0_r1_mag = r0_mag*r1_mag
@@ -344,16 +344,22 @@ class Scene:
 
         # A matrix
         A = np.zeros((self._N,self._N))
+        print(V_ji)
+        print(np.einsum('ijk,ijk->ij', V_ji, u_n[:,np.newaxis]))
         A[:,:] = -(cp_V_inf**2)[:,np.newaxis]*c_bar[:,np.newaxis]*CLa[:,np.newaxis]*dS[:np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, u_n[:,np.newaxis])
+        print(A)
         diag_ind = np.diag_indices(self._N)
         v_inf_cross_dl = np.cross(cp_v_inf, dl)
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', v_inf_cross_dl, v_inf_cross_dl))
+        print(A)
 
         # b vector
         b = cp_V_inf**2*c_bar*CLa*(np.einsum('ij,ij->i', cp_v_inf, u_n)-aL0)*dS
+        print(b)
 
         # Solve
         self._Gamma = np.linalg.solve(A, b)
+        print(self._Gamma)
 
         # Nonlinear improvement
         if self._nonlinear_solver:
@@ -364,7 +370,7 @@ class Scene:
 
         # Calculate force differential elements
         induced_vels = (self._Gamma/c_bar)[np.newaxis,:,np.newaxis]*V_ji
-        V = cp_v_inf*np.sum(induced_vels, axis=1)
+        V = cp_v_inf+np.sum(induced_vels, axis=1)
         dF = (rho*self._Gamma)[:,np.newaxis]*np.cross(V, dl)
 
         # Calculate moment differential elements

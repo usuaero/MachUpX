@@ -6,7 +6,7 @@ import subprocess as sp
 
 if __name__=="__main__":
 
-    input_file = "test/airplane_tests/input_for_airplane_testing.json"
+    input_file = "test/NLL_tests/input_for_NLL_testing.json"
 
     # Alter input
     with open(input_file, 'r') as input_handle:
@@ -27,7 +27,7 @@ if __name__=="__main__":
 
     # Load scene
     scene = MX.Scene(altered_input_name)
-    #scene.display_wireframe()
+    #scene.display_wireframe(show_legend=True)
     scene.solve_forces()
 
     sp.run(["rm", altered_airplane_name])
