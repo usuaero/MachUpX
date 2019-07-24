@@ -27,7 +27,8 @@ if __name__=="__main__":
 
     # Load scene
     scene = MX.Scene(altered_input_name)
-    scene.display_wireframe(show_legend=True)
+    #scene.display_wireframe()
+    scene.solve_forces()
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])

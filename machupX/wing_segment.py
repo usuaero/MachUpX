@@ -39,13 +39,13 @@ class WingSegment:
         If the input is improperly specified.
     """
 
-    def __init__(self, name, input_dict, side, unit_sys, airfoil_dict, origin=[0,0,0]):
+    def __init__(self, name, input_dict, side, unit_sys, airfoil_dict, origin=[0.0, 0.0, 0.0]):
 
         self.name = name
         self._input_dict = input_dict
         self._unit_sys = unit_sys
         self._side = side
-        self._origin = np.asarray(origin).reshape((3,1))
+        self._origin = np.asarray(origin)
 
         self._attached_segments = {}
         self._getter_data = {}
@@ -69,7 +69,7 @@ class WingSegment:
         self._N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 
-        self._delta_origin = np.zeros((3,1))
+        self._delta_origin = np.zeros(3)
         connect_dict = self._input_dict.get("connect_to", {})
         self._delta_origin[0] = connect_dict.get("dx", 0.0)
         self._delta_origin[1] = connect_dict.get("dy", 0.0)
@@ -191,6 +191,7 @@ class WingSegment:
             self._airfoil_spans.append(1.0)
             self._num_airfoils = 2
 
+
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
             self._airfoil_data = np.empty((airfoil.shape[0], airfoil.shape[1]+1), dtype=None)
 
@@ -208,6 +209,71 @@ class WingSegment:
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
+
+        self._CLa = []
+        self._aL0 = []
+        for airfoil in self._airfoils:
+            self._CLa.append(airfoil.get_CLa())
+            self._aL0.append(airfoil.get_aL0())
+
+        self._CLa = np.asarray(self._CLa)
+        self._aL0 = np.asarray(self._aL0)
+
+
+    def get_CLa(self, span):
+        """Returns the lift slope as a function of span. Used for the linear 
+        solution to NLL.
+
+        Parameters
+        ----------
+        span : float
+            Span location(s)
+
+        Returns
+        -------
+        float
+            Lift slope
+        """
+        return np.interp(span, self._airfoil_spans, self._CLa)
+
+
+    def get_aL0(self, span):
+        """Returns the zero-lift angle of attack as a function of span. Used for the linear 
+        solution to NLL.
+
+        Parameters
+        ----------
+        span : float
+            Span location(s)
+
+        Returns
+        -------
+        float
+            Zero lift angle of attack
+        """
+        return np.interp(span, self._airfoil_spans, self._aL0)
+
+    
+    def get_cp_CLa(self):
+        """Returns the lift slope at each control point.
+
+        Returns
+        -------
+        ndarray
+            Array of lift slopes at each control point.
+        """
+        return self.get_CLa(self._cp_span_locs)
+
+    
+    def get_cp_aL0(self):
+        """Returns the zero-lift angle of attack at each control point.
+
+        Returns
+        -------
+        ndarray
+            Array of zero-lift angles of attack at each control point.
+        """
+        return self.get_aL0(self._cp_span_locs)
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
@@ -345,23 +411,30 @@ class WingSegment:
             Location of the quarter-chord.
         """
         if isinstance(span, float):
+            converted = True
             span_array = np.asarray(span)[np.newaxis]
         else:
+            converted = False
             span_array = np.asarray(span)
 
-        ds = np.zeros((3,span_array.shape[0]))
+        ds = np.zeros((span_array.shape[0],3))
         for i, span in enumerate(span_array):
-            ds[0,i] = integ.quad(lambda s : -np.tan(self.get_sweep(s)), 0, span)[0]*self.b
+            ds[i,0] = integ.quad(lambda s : -np.tan(self.get_sweep(s)), 0, span)[0]*self.b
             if self._side == "left":
-                ds[1,i] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
+                ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
             else:
-                ds[1,i] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
-            ds[2,i] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
+                ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
+            ds[i,2] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
+
         #ds[0] = self._get_qc_dx_loc(span_array)
         #ds[1] = self._get_qc_dy_loc(span_array)
         #ds[2] = self._get_qc_dz_loc(span_array)
 
-        return self.get_root_loc()+ds
+        qc_loc = self.get_root_loc()+ds
+        if converted:
+            qc_loc = qc_loc.flatten()
+
+        return qc_loc
 
 
     def get_section_ac_loc(self, span):
@@ -378,7 +451,7 @@ class WingSegment:
             Location of the section aerodynamic center.
         """
         loc = self.get_quarter_chord_loc(span)
-        loc += self._get_ac_offset(span)*self._get_axial_vec(span)
+        loc += self._get_ac_offset(span)[:,np.newaxis]*self._get_axial_vec(span)
         return loc
 
 
@@ -394,7 +467,7 @@ class WingSegment:
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
 
-        return np.asarray([-C_twist, np.zeros(span_array.shape[0]), S_twist])
+        return np.asarray([-C_twist, np.zeros(span_array.shape[0]), S_twist]).T
 
 
     def get_CL(self, span, *args):
@@ -497,8 +570,8 @@ class WingSegment:
         Returns
         -------
         ndarray
-            Array of horseshoe vortex node pairs. First index is the position 
-            components, second index is the node.
+            Array of horseshoe vortex node pairs. First index is the node and 
+            second index is the position component.
         """
         return self.get_section_ac_loc(self._node_span_locs)
 
@@ -531,8 +604,8 @@ class WingSegment:
         Returns
         ----------
         ndarray
-            Array of normal vectors. First index is the vector component and second 
-            index is the control point index.
+            Array of normal vectors. First index is the control point index and second 
+            index is the vector component.
         """
         twist = self.get_twist(self._cp_span_locs)
         dihedral = self.get_dihedral(self._cp_span_locs)
@@ -542,7 +615,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, C_twist*C_dihedral])
+        normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, C_twist*C_dihedral]).T
 
         return normal_vecs
 
@@ -553,8 +626,8 @@ class WingSegment:
         Returns
         ----------
         ndarray
-            Array of axial vectors. First index is the vector component and second 
-            index is the control point index.
+            Array of axial vectors. First index is the control point index and second 
+            index is the vector component.
         """
         return self._get_axial_vec(self._cp_span_locs)
 
@@ -565,8 +638,8 @@ class WingSegment:
         Returns
         -------
         ndarray
-            Array of span vectors. First index is the vector compoenent and second 
-            index is the control point index.
+            Array of span vectors. First index is the control point index and second 
+            index is the vector component.
         """
         dihedral = self.get_dihedral(self._cp_span_locs)
 
@@ -574,9 +647,9 @@ class WingSegment:
         S_dihedral = np.sin(dihedral)
 
         if self._side == "left":
-            return np.asarray([np.zeros(self._N), -C_dihedral, -S_dihedral])
+            return np.asarray([np.zeros(self._N), -C_dihedral, -S_dihedral]).T
         else:
-            return np.asarray([np.zeros(self._N), C_dihedral, -S_dihedral])
+            return np.asarray([np.zeros(self._N), C_dihedral, -S_dihedral]).T
 
 
     def get_cp_avg_chord_lengths(self):
@@ -611,23 +684,21 @@ class WingSegment:
         ndarray
             Array of outline points.
         """
-        num_span_locs = 50
+        num_span_locs = 10
         spans = np.linspace(0, 1, num_span_locs)
         qc_points = self.get_quarter_chord_loc(spans)
         chords = self.get_chord(spans)
-        print(chords)
         axial_vecs = self._get_axial_vec(spans)
 
-        points = np.zeros((3,num_span_locs*2+1))
+        points = np.zeros((num_span_locs*2+1,3))
 
         # Leading edge
-        points[:,:num_span_locs] = qc_points-axial_vecs*0.25*chords
+        points[:num_span_locs,:] = qc_points - 0.25*(axial_vecs*chords[:,np.newaxis])
 
         # Trailing edge
-        points[:,-2:num_span_locs-1:-1] = qc_points+axial_vecs*0.75*chords
+        points[-2:num_span_locs-1:-1,:] = qc_points - 0.75*(axial_vecs*chords[:,np.newaxis])
 
         # Complete the circle
-        points[:,-1] = points[:,0]
-        print(points)
+        points[-1,:] = points[0,:]
 
         return points

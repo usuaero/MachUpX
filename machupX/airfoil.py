@@ -161,7 +161,7 @@ class Airfoil:
             return self._CLa
 
 
-    def get_a_L0(self):
+    def get_aL0(self):
         """Returns the zero-lift angle of attack.
 
         Returns

@@ -69,8 +69,8 @@ class Airplane:
         # Sets the state vector from the provided dictionary
 
         self.state_type = _import_value("type", state, self._unit_sys, -1)
-        self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 1000]).reshape((3,1))
-        self.w = _import_value("angular_rates", state, self._unit_sys, [0, 0, 0]).reshape((3,1))
+        self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 1000])
+        self.w = _import_value("angular_rates", state, self._unit_sys, [0, 0, 0])
 
         # Rigid-body definition
         if self.state_type == "rigid-body":
@@ -87,7 +87,7 @@ class Airplane:
                 C_psi = np.cos(self.q[2]/2)
                 S_psi = np.cos(self.q[2]/2)
 
-                self.q = np.zeros((4,1))
+                self.q = np.zeros(4)
                 self.q[0] = C_phi*C_theta*C_psi + S_phi*S_theta*S_psi
                 self.q[1] = S_phi*C_theta*C_psi - C_phi*S_theta*S_psi
                 self.q[2] = C_phi*S_theta*C_psi + S_phi*C_theta*S_psi
@@ -99,7 +99,6 @@ class Airplane:
                 if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
                     raise IOError("Magnitude of orientation quaternion must be 1.0.")
 
-                self.q = self.q.reshape((4,1))
             else:
                 raise IOError("{0} is not an allowable orientation definition.".format(self.q))
 
@@ -125,22 +124,19 @@ class Airplane:
                 C_B = np.cos(np.radians(beta))
                 S_B = np.sin(np.radians(beta))
 
-                self.v = np.zeros((3,1))
+                self.v = np.zeros(3)
                 denom = np.sqrt(1-S_a**2*S_B**2)
                 self.v[0] = v_value*C_a*C_B/denom
                 self.v[1] = v_value*C_a*S_B/denom
                 self.v[2] = v_value*S_a*C_B/denom
 
             elif isinstance(v_value, np.ndarray):
-                self.v = v_value.reshape((3,1))
+                self.v = v_value
 
             else:
                 raise IOError("{0} is not an allowable velocity definition.", v_value)
 
-            self.q = np.asarray([[1.0],
-                                 [0.0],
-                                 [0.0],
-                                 [0.0]])
+            self.q = np.asarray([1.0, 0.0, 0.0, 0.0])
 
         else:
             raise IOError("{0} is not an acceptable state type.".format(state_type))
@@ -240,6 +236,7 @@ class Airplane:
         """
         #TODO: Do this
         pass
+
 
     def _get_wing_segment(self, wing_segment_name):
         # Returns a reference to the specified wing segment. ONLY FOR TESTING!
