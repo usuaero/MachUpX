@@ -1,0 +1,20 @@
+{
+    "CG" : [0,0,0],
+    "weight" : 100.0,
+    "reference" : {
+        "area" : 0,
+        "longitudinal_length" : 0,
+        "lateral_length" : 0
+    },
+    "airfoils" : "test/NLL_tests/airfoils_for_NLL_testing.json",
+    "wings" : {
+        "main_wing" : {
+            "ID" : 1,
+            "is_main" : true,
+            "side" : "both",
+            "span" : 4.0,
+            "airfoil" : "NACA_0010",
+            "grid" : 3
+        }
+    }
+}

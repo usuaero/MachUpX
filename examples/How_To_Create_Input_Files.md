@@ -369,7 +369,8 @@ Describes an aircraft.
                 to 1.0. The second column gives the twist at that span location. If specified as a string, 
                 this string must contain the path to a csv file containing the twist data formatted in 
                 columns, as with the array. For properties as a function of span, MachUp will linearly 
-                interpolate intermediate values. Defaults to 0.
+                interpolate intermediate values. Note that this parameter also determines the mounting 
+                angle and washout of the wing segment. Defaults to 0.
 
             "dihedral" : (float, array, or string, optional)
                 Gives the dihedral of the wing segment. Defined the same as "twist". Defaults to 0.

@@ -326,40 +326,40 @@ class Scene:
         r0_r1_mag = r0_mag*r1_mag
 
         # Influence of vortex segment 0
-        denom = (r0_mag*(r0_mag-np.einsum('ijk,ijk->ij', P0_u_inf[:,np.newaxis], r0)))
+        denom = (r0_mag*(r0_mag-np.einsum('ijk,ijk->ij', P0_u_inf[np.newaxis], r0)))
         V_ji_due_to_0 = -np.cross(P0_u_inf, r0)/denom[:,:,np.newaxis]
 
         # Influence of vortex segment 1
-        denom = (r1_mag*(r1_mag-np.einsum('ijk,ijk->ij', P1_u_inf[:,np.newaxis], r1)))
+        denom = (r1_mag*(r1_mag-np.einsum('ijk,ijk->ij', P1_u_inf[np.newaxis], r1)))
         V_ji_due_to_1 = np.cross(P1_u_inf, r1)/denom[:,:,np.newaxis]
 
         # Influence of bound vortex segment
         with np.errstate(divide='ignore', invalid='ignore'):
-            denom = (r0_mag*r1_mag)[:,:,np.newaxis]*((r0_mag*r1_mag)[:,:,np.newaxis]+np.cross(r0, r1))
-            V_ji_due_to_bound = ((r0_mag+r1_mag)[:,:,np.newaxis]*np.cross(r0, r1))/denom
+            numer = ((r0_mag+r1_mag)[:,:,np.newaxis]*np.cross(r0, r1))
+            denom = r0_r1_mag*(r0_r1_mag+np.einsum('ijk,ijk->ij', r0, r1))
+            print(np.einsum('ijk,ijk->ij', r0, r1))
+            print(r0_r1_mag)
+            print(denom)
+            V_ji_due_to_bound = np.true_divide(numer, denom[:,:,np.newaxis])
             diag_ind = np.diag_indices(self._N)
-            V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero, as it should
+            V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
+            print(V_ji_due_to_bound)
 
         V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + V_ji_due_to_bound + V_ji_due_to_1)
 
         # A matrix
         A = np.zeros((self._N,self._N))
-        print(V_ji)
-        print(np.einsum('ijk,ijk->ij', V_ji, u_n[:,np.newaxis]))
-        A[:,:] = -(cp_V_inf**2)[:,np.newaxis]*c_bar[:,np.newaxis]*CLa[:,np.newaxis]*dS[:np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, u_n[:,np.newaxis])
-        print(A)
+        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', V_ji.transpose((1,0,2)), u_n[:,np.newaxis])
+        A[:,:] = -(CLa*dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
-        v_inf_cross_dl = np.cross(cp_v_inf, dl)
-        A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', v_inf_cross_dl, v_inf_cross_dl))
-        print(A)
+        u_inf_x_dl = np.cross(cp_u_inf, dl)
+        A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = cp_V_inf**2*c_bar*CLa*(np.einsum('ij,ij->i', cp_v_inf, u_n)-aL0)*dS
-        print(b)
+        b = cp_V_inf*CLa*dS*(np.einsum('ij,ij->i', cp_u_inf, u_n)-aL0)
 
         # Solve
         self._Gamma = np.linalg.solve(A, b)
-        print(self._Gamma)
 
         # Nonlinear improvement
         if self._nonlinear_solver:

@@ -77,15 +77,23 @@ class WingSegment:
 
         if self._side == "left":
             self._delta_origin[1] -= connect_dict.get("y_offset", 0.0)
+
+            if self._use_clustering: # Cosine clustering
+                self._node_span_locs = (1-np.cos(np.linspace(np.pi, 0.0, self._N+1)))/2
+                self._cp_span_locs = (1-np.cos(np.linspace(np.pi, np.pi/self._N, self._N)-np.pi/(2*self._N)))/2
+            else: # Linear distribution
+                self._node_span_locs = np.linspace(1.0, 0.0, self._N+1)
+                self._cp_span_locs = np.linspace(1.0-1/(2*self._N), 1/(2*self._N), self._N)
+
         else:
             self._delta_origin[1] += connect_dict.get("y_offset", 0.0)
 
-        if self._use_clustering:
-            self._node_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self._N+1)))/2
-            self._cp_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self._N)+np.pi/(2*self._N)))/2
-        else:
-            self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
-            self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
+            if self._use_clustering:
+                self._node_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self._N+1)))/2
+                self._cp_span_locs = (1-np.cos(np.linspace(np.pi/self._N, np.pi, self._N)+np.pi/(2*self._N)))/2
+            else:
+                self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
+                self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
 
 
     def _initialize_getters(self):
@@ -676,7 +684,7 @@ class WingSegment:
         ndarray
             Array of area differential elements.
         """
-        ds = (self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
+        ds = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
         return self.get_cp_avg_chord_lengths()*ds
 
 

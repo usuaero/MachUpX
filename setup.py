@@ -3,7 +3,7 @@
 from setuptools import setup
 import os
 
-setup(name = 'MachUp_Py',
+setup(name = 'MachUpX',
       version = '0.1',
       description = "MachUpX: A new implementation of Phillips' numerical lifting-line algorigthm, cobining the best of MachUp Pro and MachUp_Py",
       url = 'https://github.com/usuaero/MachUpX',
