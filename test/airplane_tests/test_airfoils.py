@@ -35,7 +35,7 @@ def test_constant_airfoil_section_get_lift():
     alphas = np.radians([0,1,2,3,4,5])
     CLs = [0.0, 0.10532189371159782, 0.21064378742319564, 0.3159656811347935, 0.4212875748463913, 0.5266094685579891]
 
-    wing_segments = scene.airplanes["test_plane"]._wing_segments
+    wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_CL in zip(alphas, CLs):
         for i in range(5):
             span = np.random.random()
@@ -72,7 +72,7 @@ def test_constant_airfoil_section_get_drag():
     alphas = np.radians([0,1,2,3,4,5])
     CDs = [0.002, 0.0021331124155399652, 0.002532449662159861, 0.003198011739859688, 0.004129798648639445, 0.005327810388499133]
 
-    wing_segments = scene.airplanes["test_plane"]._wing_segments
+    wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_CD in zip(alphas, CDs):
         for i in range(5):
             span = np.random.random()
@@ -109,7 +109,7 @@ def test_constant_airfoil_section_get_moment():
     alphas = np.radians([0,1,2,3,4,5])
     Cms = [0.0, 1.74532925e-05, 3.49065850e-05, 5.23598776e-05, 6.98131701e-05, 8.72664626e-05]
 
-    wing_segments = scene.airplanes["test_plane"]._wing_segments
+    wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_Cm in zip(alphas, Cms):
         for i in range(5):
             span = np.random.random()
@@ -153,7 +153,7 @@ def test_variable_airfoil_section_get_lift():
                       [0.6607457828864023, 0.5410166788663968, 0.4212875748463913],
                       [0.7689143086080029, 0.647761888582996, 0.5266094685579891]])
 
-    wing_segments = scene.airplanes["test_plane"]._wing_segments
+    wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
         for j, span in enumerate(spans):
             for key in wing_segments:
@@ -196,7 +196,7 @@ def test_variable_airfoil_section_get_drag():
                       [0.0072571278688737025, 0.005693463258756574, 0.004129798648639445],
                       [0.008378669436678067, 0.0068532399125886, 0.005327810388499133]])
 
-    wing_segments = scene.airplanes["test_plane"]._wing_segments
+    wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
         for j, span in enumerate(spans):
             for key in wing_segments:
@@ -239,7 +239,7 @@ def test_variable_airfoil_section_get_moment():
                       [-0.050224090655399393, -0.02507713874265981, 6.98131701e-05],
                       [-0.04965511331924924, -0.02478392342832476, 8.72664626e-05]])
 
-    wing_segments = scene.airplanes["test_plane"]._wing_segments
+    wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
         for j, span in enumerate(spans):
             for key in wing_segments:

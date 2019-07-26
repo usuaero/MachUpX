@@ -7,7 +7,7 @@ import subprocess as sp
 
 input_file = "test/airplane_tests/input_for_airplane_testing.json"
 
-def test_all_wing_segments_get_added():
+def test_allwing_segments_get_added():
     # Tests that all wing segments have been added and are available through 
     # both the tree and the dict.
 
@@ -28,7 +28,7 @@ def test_all_wing_segments_get_added():
     scene = MX.Scene(input_file)
 
     # Check for each wing segment in both the tree and the dict
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for segment_name, segment_side in zip(wing_segments, wing_segment_sides):
 
         if segment_side == "left" or segment_side == "both":
@@ -96,7 +96,7 @@ def test_compute_straight_wing_root_location():
         "vertical_stabilizer_right" : [-10, 0, 0]
     }
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         root_loc = wing_dict[key].get_root_loc()
         assert np.allclose(root_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -145,7 +145,7 @@ def test_compute_straight_wing_tip_location():
         "vertical_stabilizer_right" : [-10, 0, -6]
     }
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
         assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -194,7 +194,7 @@ def test_compute_constant_swept_dihedral_wing_tip_location():
         "vertical_stabilizer_right" : [-13.4641016151377544, 0, -6]
     }
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
         assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -245,7 +245,7 @@ def test_compute_variable_swept_dihedral_wing_tip_location():
         "vertical_stabilizer_right" : [-12.2905284852343923, 0, -6]
     }
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
         assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -287,7 +287,7 @@ def test_twist_as_f_of_span():
     spans = [0.0, 0.1, 0.2]
     twists = [0.0, 0.017453292519943295, 0.03490658503988659]
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         for span, correct_twist in zip(spans, twists):
             twist = wing_dict[key].get_twist(span).item()
@@ -326,7 +326,7 @@ def test_node_generation():
     # Load scene
     scene = MX.Scene(altered_input_name)
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         print(wing_dict[key].get_node_locs())
 
@@ -362,7 +362,7 @@ def test_cp_generation():
     # Load scene
     scene = MX.Scene(altered_input_name)
 
-    wing_dict = scene.airplanes["test_plane"]._wing_segments
+    wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
         print(wing_dict[key].get_cp_locs())
 

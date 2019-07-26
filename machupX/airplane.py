@@ -38,7 +38,7 @@ class Airplane:
         self.name = name
         self._unit_sys = unit_system
         
-        self._wing_segments = {}
+        self.wing_segments = {}
         self._airfoil_database = {}
         self._N = 0
 
@@ -193,7 +193,7 @@ class Airplane:
             If the input is improperly specified.
         """
         
-        if wing_segment_name in self._wing_segments.keys():
+        if wing_segment_name in self.wing_segments.keys():
             raise IOError("Wing segment {0} already exists in this airplane.".format(wing_segment_name))
 
         side = input_dict.get("side")
@@ -201,12 +201,12 @@ class Airplane:
             raise IOError("{0} is not a proper side designation.".format(side))
 
         if side == "left" or side == "both":
-            self._wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys, self._airfoil_database)
-            self._N += self._wing_segments[wing_segment_name+"_left"]._N
+            self.wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys, self._airfoil_database)
+            self._N += self.wing_segments[wing_segment_name+"_left"]._N
 
         if side == "right" or side == "both":
-            self._wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
-            self._N += self._wing_segments[wing_segment_name+"_right"]._N
+            self.wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
+            self._N += self.wing_segments[wing_segment_name+"_right"]._N
 
 
     def _load_wing_segments(self):
@@ -278,3 +278,19 @@ class Airplane:
             Number of control points on the aircraft.
         """
         return self._N
+
+
+    def get_v_inf(self):
+        """Returns the freestream velocity acting on the airplane due to its translation.
+
+        Returns
+        -------
+        ndarray
+            Vector of freestream velocity.
+        """
+        if self.state_type == "aerodynamic":
+            v_trans = self.v
+        else:
+            v_trans = -_quaternion_transform(self.q, self.v)
+
+        return v_trans

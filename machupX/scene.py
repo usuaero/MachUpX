@@ -31,6 +31,8 @@ class Scene:
     def __init__(self, input_filename):
 
         self.airplanes = {}
+        self._airplane_names = []
+        self._segment_names = []
         self._N = 0
 
         _check_filepath(input_filename,".json")
@@ -205,10 +207,73 @@ class Scene:
 
         self.airplanes[airplane_name] = Airplane(airplane_name, airplane_file, self._unit_sys, state=state, control_state=control_state)
         self._N += self.airplanes[airplane_name].get_num_cps()
+        self._perform_geometry_calculations()
 
 
-    def _solve(self):
-        # Determines the vortex strengths of all horseshoe vortices in the scene and integrates
+    def _perform_geometry_calculations(self):
+        # Performs calculations necessary for solving NLL which are only dependent on geometry.
+        # This speeds up repeated calls to _solve(). This method should be called any time the 
+        # geometry is updated.
+
+        # Geometry
+        self._c_bar = np.zeros(self._N)
+        self._dS = np.zeros(self._N)
+        self._PC = np.zeros((self._N,3))
+        self._P0 = np.zeros((self._N,3))
+        self._P1 = np.zeros((self._N,3))
+        self._u_a = np.zeros((self._N,3))
+        self._u_n = np.zeros((self._N,3))
+
+        index = 0
+
+        # Loop through airplanes
+        for i, (airplane_name, airplane_object) in enumerate(self.airplanes.items()):
+            # Store airplane and segment names to make sure they are always accessed in the same order
+            self._airplane_names.append(airplane_name)
+            self._segment_names.append([])
+
+            # Loop through segments
+            for segment_name, segment_object in airplane_object.wing_segments.items():
+                self._segment_names[i].append(segment_name)
+                num_cps = segment_object._N
+                cur_slice = slice(index, index+num_cps)
+
+                # Geometries
+                body_cp_locs = segment_object.get_cp_locs()
+                self._PC[cur_slice,:] = body_cp_locs
+                self._c_bar[cur_slice] = segment_object.get_cp_avg_chord_lengths()
+                self._dS[cur_slice] = segment_object.get_array_of_dS()
+
+                node_points = segment_object.get_node_locs()
+                self._P0[cur_slice,:] = node_points[:-1,:]
+                self._P1[cur_slice,:] = node_points[1:,:]
+
+                self._u_a[cur_slice,:] = segment_object.get_cp_axial_vecs()
+                self._u_n[cur_slice,:] = segment_object.get_cp_normal_vecs()
+
+                index += num_cps
+
+        # Differential length vectors
+        self._dl = self._P1 - self._P0
+
+        # Spatial node vectors
+        self._rj0i = self._PC-self._P0[:,np.newaxis]
+        self._rj1i = self._PC-self._P1[:,np.newaxis]
+        self._rj0i_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._rj0i, self._rj0i))
+        self._rj1i_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._rj1i, self._rj1i))
+        self._rj0i_rj1i_mag = self._rj0i_mag*self._rj1i_mag
+
+        # Influence of bound vortex segment
+        with np.errstate(divide='ignore', invalid='ignore'):
+            numer = ((self._rj0i_mag+self._rj1i_mag)[:,:,np.newaxis]*np.cross(self._rj0i, self._rj1i))
+            denom = self._rj0i_rj1i_mag*(self._rj0i_rj1i_mag+np.einsum('ijk,ijk->ij', self._rj0i, self._rj1i))
+            self._V_ji_due_to_bound = np.true_divide(numer, denom[:,:,np.newaxis])
+            diag_ind = np.diag_indices(self._N)
+            self._V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
+
+
+    def _solve_linear(self):
+        # Determines the vortex strengths of all horseshoe vortices in the scene
 
         # Start with linear solver
         start_time = time.time()
@@ -218,16 +283,7 @@ class Scene:
         segments = []
 
         # Atmosphere
-        rho = np.zeros(self._N)
-
-        # Geometry
-        c_bar = np.zeros(self._N)
-        dS = np.zeros(self._N)
-        PC = np.zeros((self._N,3))
-        P0 = np.zeros((self._N,3))
-        P1 = np.zeros((self._N,3))
-        u_a = np.zeros((self._N,3))
-        u_n = np.zeros((self._N,3))
+        self._rho = np.zeros(self._N)
 
         # Airfoil parameters
         CLa = np.zeros(self._N)
@@ -238,56 +294,41 @@ class Scene:
         P1_v_inf = np.zeros((self._N,3))
 
         # Velocities at control points
-        cp_v_inf = np.zeros((self._N,3))
+        self._cp_v_inf = np.zeros((self._N,3))
 
         index = 0
 
         # Loop through airplanes
-        for i, (airplane_name, airplane_object) in enumerate(self.airplanes.items()):
-            airplanes.append(airplane_name)
-            segments.append([])
+        for i, airplane_name in enumerate(self._airplane_names):
+            airplane_object = self.airplanes[airplane_name]
+
+            # Determine freestream velocity due to airplane translation
+            v_trans = airplane_object.get_v_inf()
 
             # Loop through segments
-            for segment_name, segment_object in airplane_object._wing_segments.items():
-                segments[i].append(segment_name)
+            for segment_name in self._segment_names[i]:
+                segment_object = airplane_object.wing_segments[segment_name]
                 num_cps = segment_object._N
                 cur_slice = slice(index, index+num_cps)
-
-                # Geometries
-                body_cp_locs = segment_object.get_cp_locs()
-                PC[cur_slice,:] = body_cp_locs
-                c_bar[cur_slice] = segment_object.get_cp_avg_chord_lengths()
-                dS[cur_slice] = segment_object.get_array_of_dS()
-
-                node_points = segment_object.get_node_locs()
-                P0[cur_slice,:] = node_points[:-1,:]
-                P1[cur_slice,:] = node_points[1:,:]
-
-                u_a[cur_slice,:] = segment_object.get_cp_axial_vecs()
-                u_n[cur_slice,:] = segment_object.get_cp_normal_vecs()
 
                 # Airfoil parameters
                 CLa[cur_slice] = segment_object.get_cp_CLa()
                 aL0[cur_slice] = segment_object.get_cp_aL0()
 
                 # Freestream velocity at control points
-                # Due to aircraft motion
-                if airplane_object.state_type == "aerodynamic":
-                    v_trans = airplane_object.v
-                else:
-                    v_trans = -_quaternion_transform(airplane_object.q, airplane_object.v)
 
                 # Due to wind
+                body_cp_locs = segment_object.get_cp_locs()
                 global_cp_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, body_cp_locs)
                 cp_v_wind = _quaternion_transform(airplane_object.q, self._get_wind(global_cp_locs))
 
                 # Due to aircraft rotation
                 cp_v_rot = -np.cross(airplane_object.w, body_cp_locs)
 
-                cp_v_inf[cur_slice,:] = v_trans+cp_v_wind+cp_v_rot
+                self._cp_v_inf[cur_slice,:] = v_trans+cp_v_wind+cp_v_rot
 
                 # Atmospheric density
-                rho[cur_slice] = self._get_density(global_cp_locs)
+                self._rho[cur_slice] = self._get_density(global_cp_locs)
 
                 # Freestream velocity at vortex nodes
                 # Due to wind
@@ -304,12 +345,9 @@ class Scene:
 
                 index += num_cps
 
-        # Differential length vectors
-        dl = P1 - P0
-
         # Control point velocities
-        cp_V_inf = np.linalg.norm(cp_v_inf, axis=1)
-        cp_u_inf = cp_v_inf/cp_V_inf[:,np.newaxis]
+        cp_V_inf = np.linalg.norm(self._cp_v_inf, axis=1)
+        cp_u_inf = self._cp_v_inf/cp_V_inf[:,np.newaxis]
 
         # Vortex node velocities
         P0_V_inf = np.linalg.norm(P0_v_inf, axis=1)
@@ -318,74 +356,85 @@ class Scene:
         P1_V_inf = np.linalg.norm(P1_v_inf, axis=1)
         P1_u_inf = P1_v_inf/P1_V_inf[:,np.newaxis]
 
-        # Spatial node vectors
-        r0 = PC-P0[:,np.newaxis]
-        r1 = PC-P1[:,np.newaxis]
-        print(r0)
-        print(r1)
-        r0_mag = np.sqrt(np.einsum('ijk,ijk->ij', r0, r0))
-        r1_mag = np.sqrt(np.einsum('ijk,ijk->ij', r1, r1))
-        r0_r1_mag = r0_mag*r1_mag
-
         # Influence of vortex segment 0
-        denom = (r0_mag*(r0_mag-np.einsum('ijk,ijk->ij', P0_u_inf[np.newaxis], r0)))
-        V_ji_due_to_0 = -np.cross(P0_u_inf, r0)/denom[:,:,np.newaxis]
+        denom = (self._rj0i_mag*(self._rj0i_mag-np.einsum('ijk,ijk->ij', P0_u_inf[np.newaxis], self._rj0i)))
+        V_ji_due_to_0 = -np.cross(P0_u_inf, self._rj0i)/denom[:,:,np.newaxis]
 
         # Influence of vortex segment 1
-        denom = (r1_mag*(r1_mag-np.einsum('ijk,ijk->ij', P1_u_inf[np.newaxis], r1)))
-        V_ji_due_to_1 = np.cross(P1_u_inf, r1)/denom[:,:,np.newaxis]
+        denom = (self._rj1i_mag*(self._rj1i_mag-np.einsum('ijk,ijk->ij', P1_u_inf[np.newaxis], self._rj1i)))
+        V_ji_due_to_1 = np.cross(P1_u_inf, self._rj1i)/denom[:,:,np.newaxis]
 
-        # Influence of bound vortex segment
-        with np.errstate(divide='ignore', invalid='ignore'):
-            numer = ((r0_mag+r1_mag)[:,:,np.newaxis]*np.cross(r0, r1))
-            denom = r0_r1_mag*(r0_r1_mag+np.einsum('ijk,ijk->ij', r0, r1))
-            print(np.einsum('ijk,ijk->ij', r0, r1))
-            print(r0_r1_mag)
-            print(denom)
-            V_ji_due_to_bound = np.true_divide(numer, denom[:,:,np.newaxis])
-            diag_ind = np.diag_indices(self._N)
-            V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
-            print(V_ji_due_to_bound)
-
-        V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + V_ji_due_to_bound + V_ji_due_to_1)
+        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + self._V_ji_due_to_bound + V_ji_due_to_1)
 
         # A matrix
         A = np.zeros((self._N,self._N))
-        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', V_ji.transpose((1,0,2)), u_n[:,np.newaxis])
-        A[:,:] = -(CLa*dS)[:,np.newaxis]*V_ji_dot_u_n
+        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji.transpose((1,0,2)), self._u_n[:,np.newaxis])
+        A[:,:] = -(CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
-        u_inf_x_dl = np.cross(cp_u_inf, dl)
+        u_inf_x_dl = np.cross(cp_u_inf, self._dl)
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = cp_V_inf*CLa*dS*(np.einsum('ij,ij->i', cp_u_inf, u_n)-aL0)
+        b = cp_V_inf*CLa*self._dS*(np.einsum('ij,ij->i', cp_u_inf, self._u_n)-aL0)
 
         # Solve
         self._Gamma = np.linalg.solve(A, b)
 
-        # Nonlinear improvement
-        if self._nonlinear_solver:
-            pass
+        end_time = time.time()
+        return end_time-start_time
+
+
+    def _solve_nonlinear(self):
+        # Nonlinear improvement to the vector of gammas already determined
+        start_time = time.time()
 
         end_time = time.time()
-        print("Execution time: {0} s".format(end_time-start_time))
+        return end_time-start_time
+
+
+    def _integrate_forces_and_moments(self):
+        # Determines the forces and moments on each lifting surface
+        start_time = time.time()
 
         # Calculate force differential elements
-        induced_vels = (self._Gamma/c_bar)[np.newaxis,:,np.newaxis]*V_ji
-        V = cp_v_inf+np.sum(induced_vels, axis=1)
-        dF = (rho*self._Gamma)[:,np.newaxis]*np.cross(V, dl)
+        induced_vels = self._Gamma[:,np.newaxis,np.newaxis]*self._V_ji
+        v = self._cp_v_inf+np.sum(induced_vels, axis=0)
+        V = np.sqrt(np.einsum('ij,ij->i', v, v))
+        u = v/V[:,np.newaxis]
+        dF_inv = (self._rho*self._Gamma)[:,np.newaxis]*np.cross(v, self._dl)
+
+        # Calculate conditions for determining viscid contributions
+        alpha = np.arctan2(np.inner(v, self._u_n), np.inner(v, self._u_a))
+        q_inf = 0.5*self._rho*V**2
 
         # Calculate moment differential elements
 
         index = 0
 
-        FM = {}
+        self._FM = {}
 
         # Loop through airplanes
-        for i, airplane_name in enumerate(airplanes):
+        for i, airplane_name in enumerate(self._airplane_names):
+            airplane_object = self.airplanes[airplane_name]
             FM_airplane_total = np.zeros(6)
-            FM[airplane_name] = {
+            self._FM[airplane_name] = {
                 "inviscid" : {
+                    "Fx" : {},
+                    "Fy" : {},
+                    "Fz" : {},
+                    "Mx" : {},
+                    "My" : {},
+                    "Mz" : {}
+                },
+                "viscid" : {
+                    "Fx" : {},
+                    "Fy" : {},
+                    "Fz" : {},
+                    "Mx" : {},
+                    "My" : {},
+                    "Mz" : {}
+                },
+                "total" : {
                     "Fx" : {},
                     "Fy" : {},
                     "Fz" : {},
@@ -395,33 +444,70 @@ class Scene:
                 }
             }
 
+            # Determine freestream vector
+            v_trans = airplane_object.get_v_inf()
+            v_wind = _quaternion_transform(airplane_object.q, self._get_wind(airplane_object.p_bar))
+            v_inf = v_trans + v_wind
+            u_inf = v_inf/np.linalg.norm(v_inf)
+
             # Loop through segments
-            for segment_name in segments[i]:
-                num_cps = self.airplanes[airplane_name]._wing_segments[segment_name]._N
+            for segment_name in self._segment_names[i]:
+                num_cps = airplane_object.wing_segments[segment_name]._N
                 cur_slice = slice(index, index+num_cps)
 
-                F_segment = np.sum(dF[cur_slice], axis=0)
-                FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_segment[0].item()
-                FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_segment[1].item()
-                FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_segment[2].item()
-                FM_airplane_total[:3] += F_segment
+                # Determine viscid force
+                #CD = self.airplanes[airplane_name].wing_segments[segment_name].get_CD(alpha)
+                #D = q_inf[cur_slice]*dS[cur_slice]*CD
+                #F_b_visc = np.sum(D*u, axis=0)
+                #FM[airplane_name]["viscid"]["Fx"][segment_name] = F_b_visc[0].item()
+                #FM[airplane_name]["viscid"]["Fy"][segment_name] = F_b_visc[1].item()
+                #FM[airplane_name]["viscid"]["Fz"][segment_name] = F_b_visc[2].item()
+
+                # Inviscid
+                F_b_inv = np.sum(dF_inv[cur_slice], axis=0)
+                self._FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_b_inv[0].item()
+                self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
+                self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
+
+                #TODO: Lift, drag, and sideforce
+
+                FM_airplane_total[:3] += F_b_inv
                 
                 index += num_cps
 
-            FM[airplane_name]["inviscid"]["Fx"]["total"] = FM_airplane_total[0].item()
-            FM[airplane_name]["inviscid"]["Fy"]["total"] = FM_airplane_total[1].item()
-            FM[airplane_name]["inviscid"]["Fz"]["total"] = FM_airplane_total[2].item()
+            self._FM[airplane_name]["inviscid"]["Fx"]["total"] = FM_airplane_total[0].item()
+            self._FM[airplane_name]["inviscid"]["Fy"]["total"] = FM_airplane_total[1].item()
+            self._FM[airplane_name]["inviscid"]["Fz"]["total"] = FM_airplane_total[2].item()
+            self._FM[airplane_name]["inviscid"]["Mx"]["total"] = FM_airplane_total[3].item()
+            self._FM[airplane_name]["inviscid"]["My"]["total"] = FM_airplane_total[4].item()
+            self._FM[airplane_name]["inviscid"]["Mz"]["total"] = FM_airplane_total[5].item()
 
-        print(json.dumps(FM, indent=4))
+            self._FM[airplane_name]["total"]["Fx"] = self._FM[airplane_name]["inviscid"]["Fx"]["total"]
+            self._FM[airplane_name]["total"]["Fy"] = self._FM[airplane_name]["inviscid"]["Fy"]["total"]
+            self._FM[airplane_name]["total"]["Fz"] = self._FM[airplane_name]["inviscid"]["Fz"]["total"]
+            self._FM[airplane_name]["total"]["Mx"] = self._FM[airplane_name]["inviscid"]["Mx"]["total"]
+            self._FM[airplane_name]["total"]["My"] = self._FM[airplane_name]["inviscid"]["My"]["total"]
+            self._FM[airplane_name]["total"]["Mz"] = self._FM[airplane_name]["inviscid"]["Mz"]["total"]
+
+        end_time = time.time()
+        return end_time-start_time
 
 
-    def solve_forces(self, non_dimensional=False):
+    def solve_forces(self, filename=None, non_dimensional=False, verbose=False):
         """Solves the NLL equations to determine the forces and moments on the aircraft.
 
         Parameters
         ----------
+        filename : str
+            File to export the force and moment results to. Should be of .json. If not specified, 
+            results will not be exported to a file.
+
         non_dimensional : bool
             If this is set to True, the results will be returned as nondimensional coefficients.
+            Defaults to False.
+
+        verbose : bool
+            Display the time it took to complete each portion of the calculation. 
             Defaults to False.
 
         Returns
@@ -429,7 +515,24 @@ class Scene:
         dict:
             Dictionary of forces and moments acting on each wing segment.
         """
-        self._solve()
+        linear_time = self._solve_linear()
+        nonlinear_time = 0.0
+        if self._nonlinear_solver:
+            nonlinear_time = self._solve_nonlinear()
+        integrate_time = self._integrate_forces_and_moments()
+
+        if verbose:
+            print("Time to compute linear solution: {0} s".format(linear_time))
+            print("Time to compute nonlinear solution: {0} s".format(nonlinear_time))
+            print("Time to integrate forces: {0} s".format(integrate_time))
+            print("Solution rate: {0} Hz".format(1/(linear_time+nonlinear_time+integrate_time)))
+
+        # Output to file
+        if filename is not None:
+            with open(filename, 'w') as json_file_handle:
+                json.dump(self._FM, json_file_handle, indent=4)
+
+        return self._FM
 
 
     def display_wireframe(self, show_legend=False):
@@ -452,7 +555,7 @@ class Scene:
         for airplane_name, airplane_object in self.airplanes.items():
 
             # Loop through segments
-            for segment_name, segment_object in airplane_object._wing_segments.items():
+            for segment_name, segment_object in airplane_object.wing_segments.items():
                 segment_names.append(segment_name)
 
                 points = segment_object.get_outline_points()

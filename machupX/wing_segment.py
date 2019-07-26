@@ -96,10 +96,9 @@ class WingSegment:
             self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
             self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
 
-        #TODO: Looking at the NLL equations, this shouldn't actually matter. But if this reversal is not 
-        #TODO: included, the answer to the linear system of equations fails to be reasonable. Determine 
-        #TODO: if this is actually necessary or if there's a formulation issue elsewhere.
-        if self._side == "left": # Reverse these so that all horseshoe vortices have the same orientation.
+        # In order to follow the airfoil sign convention (i.e. positive vorticity creates positive lift) 
+        # node and control point locations must always proceed from left to right.
+        if self._side == "left":
             self._node_span_locs = self._node_span_locs[::-1]
             self._cp_span_locs = self._cp_span_locs[::-1]
 

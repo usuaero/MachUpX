@@ -87,13 +87,20 @@ deterimined by the user.
             "output_file" : (string, optional)
                 File to store the results in. Defaults to the input filename + "_forces".
 
-            "dimensional" : (boolean, optional)
-                Whether results should be returned as dimensional or nondimensional. If 1, will return
+            "non_dimensional" : (boolean, optional)
+                Whether results should be returned as dimensional or nondimensional. If false, will return
                 forces and moments in "lbf" and "ft-lbf" or "N" and "Nm", depending on how "units" is 
-                specified. Defaults to 1.
+                specified. Defaults to false.
 
-        "view" : ()
+            "verbose" : (boolean, optional)
+                Defaults to false
+
+        "view" : (dict, optional)
             Displays a wireframe of the geometry of the scene/aircraft.
+
+            "show_legend" : (boolean, optional)
+                If set to true, a legend will be included with the wireframe detailing which color 
+                corresponds to which wing segment. Defaults to false.
 
         "stl" : ()
             Outputs an stl file of the geometry of the scene/aircraft.

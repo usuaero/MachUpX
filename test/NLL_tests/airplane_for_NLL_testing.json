@@ -14,7 +14,7 @@
             "side" : "both",
             "span" : 4.0,
             "airfoil" : "NACA_0010",
-            "grid" : 3
+            "grid" : 40
         }
     }
 }

@@ -1,9 +1,9 @@
 {
     "tag" : "Ideal MachUpX input file.",
     "run" : {
-        "forces" : "",
-        "stl" : "",
-        "aero_derivatives" : ""
+        "forces" : {},
+        "stl" : {},
+        "aero_derivatives" : {}
     },
     "solver" : {
         "type" : "linear",
