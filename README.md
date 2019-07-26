@@ -16,7 +16,7 @@ Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
 ## Features
 
-Can be run from the command line or imported as a module in a python script.
+MachUpX can be run from the command line or imported as a module in a python script.
 
 ### Command Line
 
@@ -26,9 +26,27 @@ Simply execute:
 
 ### Module API
 
+Here is an example of using the API:
+
+```python
+import machupX as MX
+
+input_file = "test_input.json"
+
+# Initialize MachUpX
+scene = MX.Scene(input_file)
+
+# Display a wireframe of the aircraft
+scene.display_wireframe()
+
+# Determine the forces and moments at the given state
+FM = scene.solve_forces()
+print(FM)
+```
+
 ## Documentation
 
-For help on creating input files, see How_To_Create_Input_Files.
+For help on creating input files, see examples/How_To_Create_Input_Files.
 
 ## Installation
 

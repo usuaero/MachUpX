@@ -23,9 +23,13 @@ class Scene:
     IOError
         If input filepath or filename is invalid
 
-    Examples
-    --------
+    Methods
+    -------
+    add_aircraft()
 
+    solve_forces()
+
+    display_wireframe()
     """
 
     def __init__(self, input_filename):
