@@ -321,6 +321,8 @@ class Scene:
         # Spatial node vectors
         r0 = PC-P0[:,np.newaxis]
         r1 = PC-P1[:,np.newaxis]
+        print(r0)
+        print(r1)
         r0_mag = np.sqrt(np.einsum('ijk,ijk->ij', r0, r0))
         r1_mag = np.sqrt(np.einsum('ijk,ijk->ij', r1, r1))
         r0_r1_mag = r0_mag*r1_mag

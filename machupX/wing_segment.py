@@ -69,6 +69,7 @@ class WingSegment:
         self._N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 
+        # Set origin offset
         self._delta_origin = np.zeros(3)
         connect_dict = self._input_dict.get("connect_to", {})
         self._delta_origin[0] = connect_dict.get("dx", 0.0)
@@ -78,22 +79,29 @@ class WingSegment:
         if self._side == "left":
             self._delta_origin[1] -= connect_dict.get("y_offset", 0.0)
 
-            if self._use_clustering: # Cosine clustering
-                self._node_span_locs = (1-np.cos(np.linspace(np.pi, 0.0, self._N+1)))/2
-                self._cp_span_locs = (1-np.cos(np.linspace(np.pi, np.pi/self._N, self._N)-np.pi/(2*self._N)))/2
-            else: # Linear distribution
-                self._node_span_locs = np.linspace(1.0, 0.0, self._N+1)
-                self._cp_span_locs = np.linspace(1.0-1/(2*self._N), 1/(2*self._N), self._N)
-
         else:
             self._delta_origin[1] += connect_dict.get("y_offset", 0.0)
 
-            if self._use_clustering:
-                self._node_span_locs = (1-np.cos(np.linspace(0.0, np.pi, self._N+1)))/2
-                self._cp_span_locs = (1-np.cos(np.linspace(np.pi/self._N, np.pi, self._N)+np.pi/(2*self._N)))/2
-            else:
-                self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
-                self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
+        # Create arrays of span locations used to generate nodes and control points
+        if self._use_clustering: # Cosine clustering
+            #Nodes
+            node_theta_space = np.linspace(0.0, np.pi, self._N+1)
+            self._node_span_locs = (1-np.cos(node_theta_space))/2
+
+            # Control points
+            cp_theta_space = np.linspace(np.pi/self._N, np.pi, self._N)-np.pi/(2*self._N)
+            self._cp_span_locs = (1-np.cos(cp_theta_space))/2
+
+        else: # Linear spacing
+            self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
+            self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
+
+        #TODO: Looking at the NLL equations, this shouldn't actually matter. But if this reversal is not 
+        #TODO: included, the answer to the linear system of equations fails to be reasonable. Determine 
+        #TODO: if this is actually necessary or if there's a formulation issue elsewhere.
+        if self._side == "left": # Reverse these so that all horseshoe vortices have the same orientation.
+            self._node_span_locs = self._node_span_locs[::-1]
+            self._cp_span_locs = self._cp_span_locs[::-1]
 
 
     def _initialize_getters(self):
