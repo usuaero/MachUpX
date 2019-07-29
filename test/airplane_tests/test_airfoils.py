@@ -39,7 +39,7 @@ def test_constant_airfoil_section_get_lift():
     for alpha, correct_CL in zip(alphas, CLs):
         spans = np.random.random(5)
         for key in wing_segments:
-            CL = wing_segments[key].get_CL(spans, np.repeat(alphas[np.newaxis], 5, axis=0))
+            CL = wing_segments[key].get_CL(spans, np.repeat(alpha[np.newaxis], 5))
             assert np.allclose(CL, correct_CL, rtol=0.0, atol=1e-10)
 
 def test_constant_airfoil_section_get_drag():
@@ -73,11 +73,10 @@ def test_constant_airfoil_section_get_drag():
 
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_CD in zip(alphas, CDs):
-        for i in range(5):
-            span = np.random.random()
-            for key in wing_segments:
-                CD = wing_segments[key].get_CD(span, np.asarray(alpha))
-                assert np.allclose(CD, correct_CD, rtol=0.0, atol=1e-10)
+        spans = np.random.random(5)
+        for key in wing_segments:
+            CD = wing_segments[key].get_CD(spans, np.repeat(alpha[np.newaxis], 5))
+            assert np.allclose(CD, correct_CD, rtol=0.0, atol=1e-10)
 
 def test_constant_airfoil_section_get_moment():
     # Tests the moment coefficient is properly given for a constant airfoil section
@@ -110,11 +109,10 @@ def test_constant_airfoil_section_get_moment():
 
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_Cm in zip(alphas, Cms):
-        for i in range(5):
-            span = np.random.random()
-            for key in wing_segments:
-                Cm = wing_segments[key].get_Cm(span, np.asarray(alpha))
-                assert np.allclose(Cm, correct_Cm, rtol=0.0, atol=1e-10)
+        spans = np.random.random(5)
+        for key in wing_segments:
+            Cm = wing_segments[key].get_Cm(spans, np.repeat(alpha[np.newaxis], 5))
+            assert np.allclose(Cm, correct_Cm, rtol=0.0, atol=1e-10)
 
 def test_variable_airfoil_section_get_lift():
     # Tests the lift coefficient is properly given for a variable airfoil section
@@ -144,7 +142,7 @@ def test_variable_airfoil_section_get_lift():
     scene = MX.Scene(altered_input_name)
 
     alphas = np.radians([0,1,2,3,4,5])
-    spans = [0.0, 0.5, 1.0]
+    spans = np.asarray([0.0, 0.5, 1.0])
     CLs = np.asarray([[0.22807168, 0.11403584, 0.0],
                       [0.33624020572160057, 0.2207810497165992, 0.10532189371159782],
                       [0.44440873144320114, 0.3275262594331984, 0.210643787423195641],
@@ -154,10 +152,9 @@ def test_variable_airfoil_section_get_lift():
 
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
-        for j, span in enumerate(spans):
-            for key in wing_segments:
-                CL = wing_segments[key].get_CL(span, np.asarray(alpha))
-                assert np.allclose(CL, CLs[i,j], rtol=0.0, atol=1e-10)
+        for key in wing_segments:
+            CL = wing_segments[key].get_CL(spans, np.repeat(alpha[np.newaxis], 3))
+            assert np.allclose(CL, CLs[i], rtol=0.0, atol=1e-10)
 
 def test_variable_airfoil_section_get_drag():
     # Tests the drag coefficient is properly given for a variable airfoil section
@@ -187,7 +184,7 @@ def test_variable_airfoil_section_get_drag():
     scene = MX.Scene(altered_input_name)
 
     alphas = np.radians([0,1,2,3,4,5])
-    spans = [0.0, 0.5, 1.0]
+    spans = np.asarray([0.0, 0.5, 1.0])
     CDs = np.asarray([[0.005204651028667432, 0.003602325514333716, 0.002],
                       [0.005352716824067322, 0.0037429146198036433, 0.0021331124155399652],
                       [0.00574415156256833, 0.004138300612364095, 0.002532449662159861],
@@ -197,10 +194,9 @@ def test_variable_airfoil_section_get_drag():
 
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
-        for j, span in enumerate(spans):
-            for key in wing_segments:
-                CD = wing_segments[key].get_CD(span, alpha)
-                assert np.allclose(CD, CDs[i,j], rtol=0.0, atol=1e-10)
+        for key in wing_segments:
+            CD = wing_segments[key].get_CD(spans, np.repeat(alpha[np.newaxis], 3))
+            assert np.allclose(CD, CDs[i], rtol=0.0, atol=1e-10)
 
 def test_variable_airfoil_section_get_moment():
     # Tests the moment coefficient is properly given for a variable airfoil section
@@ -230,7 +226,7 @@ def test_variable_airfoil_section_get_moment():
     scene = MX.Scene(altered_input_name)
 
     alphas = np.radians([0,1,2,3,4,5])
-    spans = [0.0, 0.5, 1.0]
+    spans = np.asarray([0.0, 0.5, 1.0])
     Cms = np.asarray([[-0.0525, -0.02625, 0.0],
                       [-0.05193102266384984, -0.02595678468566495, 1.74532925e-05],
                       [-0.051362045327699696, -0.025663569371329905, 3.49065850e-05],
@@ -240,7 +236,6 @@ def test_variable_airfoil_section_get_moment():
 
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
-        for j, span in enumerate(spans):
-            for key in wing_segments:
-                Cm = wing_segments[key].get_Cm(span, alpha)
-                assert np.allclose(Cm, Cms[i,j], rtol=0.0, atol=1e-10)
+        for key in wing_segments:
+            Cm = wing_segments[key].get_Cm(spans, np.repeat(alpha[np.newaxis], 3))
+            assert np.allclose(Cm, Cms[i], rtol=0.0, atol=1e-10)

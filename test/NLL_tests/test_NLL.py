@@ -12,4 +12,4 @@ def test_NLL():
 
     # Create scene
     scene = MX.Scene(input_file)
-    scene.solve_forces()
+    FM = scene.solve_forces()

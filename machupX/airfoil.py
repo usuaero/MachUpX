@@ -100,9 +100,10 @@ class Airfoil:
     def _define_vectorized_getters(self):
         # Creates vecotrized functions to return CL, CD, and Cm
 
-        def CL(self, inputs):
+        # Lift coefficient getter
+        def CL(inputs):
             if self._type == "linear":
-                CL = self._CLa*(inputs[0]-self._aL0)
+                CL = self._CLa*(inputs-self._aL0)
                 if CL > self._CL_max or CL < -self._CL_max:
                     CL = np.sign(CL)*self._CL_max
                 return CL
@@ -120,11 +121,12 @@ class Airfoil:
             Lift coefficient.
         """
 
-        self.get_CL = np.vectorize(CL, doc=CL_docstring, excluded={0})
+        self.get_CL = np.vectorize(CL, doc=CL_docstring)
         
-        def CD(self, inputs):
+        # Drag coefficient getter
+        def CD(inputs):
             if self._type == "linear":
-                CL = self.get_CL(*args)
+                CL = self.get_CL(inputs)
                 return self._CD0+self._CD1*CL+self._CD2*CL**2
 
         CD_docstring = """Returns the coefficient of drag as a function of args.
@@ -142,9 +144,10 @@ class Airfoil:
 
         self.get_CD = np.vectorize(CD, doc=CD_docstring, excluded={0})
 
-        def Cm(self, inputs):
+        # Moment coefficient getter
+        def Cm(inputs):
             if self._type == "linear":
-                return self._Cma*args[0]+self._CmL0
+                return self._Cma*inputs+self._CmL0
         
         Cm_docstring = """Returns the coefficient of moment as a function of args.
 
