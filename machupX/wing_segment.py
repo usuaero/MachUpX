@@ -52,7 +52,7 @@ class WingSegment:
         
         self.ID = self._input_dict.get("ID")
         if self.ID == 0 and name != "origin":
-            raise IOError("Wing segment ID may not be 0.")
+            raise IOError("Wing segment ID for {0} may not be 0.".format(name))
 
         if self.ID != 0: # These do not need to be run for the origin segment
             self._splines = {}
@@ -485,30 +485,40 @@ class WingSegment:
         return np.asarray([-C_twist, np.zeros(span_array.shape[0]), S_twist]).T
 
 
-    def get_CL(self, span, *args):
+    def get_CL(self, span, inputs):
         """Returns the coefficient of lift at the given span location as a function of *args.
 
         Parameters
         ----------
-        span : float
+        span : float or ndarray
             Span location as a fraction of the total span, starting at the root.
 
-        *args : floats
-            Airfoil parameters. The first is always angle of attack in radians.
+        inputs : ndarray
+            Airfoil parameters. The first is always angle of attack in radians. If a 2D 
+            array, specifies the airfoil parameters at each given span location.
 
         Returns
         -------
-        float
+        float or ndarray
             Coefficient of lift
         """
 
-        CLs_for_spline = np.zeros(self._num_airfoils)
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
+            input_array = inputs[np.newaxis]
+        else:
+            if span.shape[0] != inputs.shape[0]:
+                raise ValueError("""span and inputs must have the same first dimension. Could 
+                                    not match dimensions {0} and {1}.""".format(span.shape, inputs.shape))
+            span_array = np.copy(span)
+            input_array = np.copy(inputs)
+
+        print(span_array.shape)
+        CLs = np.zeros((span_array.shape[0],self._num_airfoils))
         for i in range(self._num_airfoils):
-            CLs_for_spline[i] = self._airfoils[i].get_CL(*args)
+            CLs[:,i] = self._airfoils[i].get_CL(input_array)
 
-        CL_spline = interp.interp1d(self._airfoil_spans, CLs_for_spline, kind="linear")
-
-        return CL_spline(span)
+        return np.interp(span_array[np.newaxis], self._airfoil_spans[np.newaxis], CLs)
 
 
     def get_CD(self, span, *args):

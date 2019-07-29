@@ -14,13 +14,14 @@ class Airfoil:
     input_dict : dict
         Dictionary describing the airfoil.
 
-    args_list : str
+    input_list : str
         List of argument names the airfoil parameters can be a function of. The 
         first element of this list must always be "alpha" (i.e. angle of 
         attack). An arbitrary number of the following arguments be specified 
         (must be in this order):
 
         "Rey" : Reynolds number NOT IMPLEMENTED
+        "M" : Mach number NOT IMPLEMENTED
 
     Returns
     -------
@@ -33,15 +34,18 @@ class Airfoil:
         If the input is invalid.
     """
 
-    def __init__(self, name, input_dict, args_list=["alpha"]):
+    def __init__(self, name, input_dict, input_list=["alpha"]):
 
         self.name = name
         self._input_dict = input_dict
         self._type = _import_value("type", self._input_dict, "SI", -1) # Unit system doesn't matter for these
 
         #TODO: Implement mapping of args
+        if input_list[0] != "alpha":
+            raise IOError("Don't do that!")
 
         self._initialize_data()
+        self._define_vectorized_getters()
 
     
     def _initialize_data(self):
@@ -92,14 +96,23 @@ class Airfoil:
         #TODO: Implement this
         pass
 
-    
-    def get_CL(self, *args):
-        """Returns the coefficient of lift as a function of args.
+
+    def _define_vectorized_getters(self):
+        # Creates vecotrized functions to return CL, CD, and Cm
+
+        def CL(self, inputs):
+            if self._type == "linear":
+                CL = self._CLa*(inputs[0]-self._aL0)
+                if CL > self._CL_max or CL < -self._CL_max:
+                    CL = np.sign(CL)*self._CL_max
+                return CL
+
+        CL_docstring = """Returns the coefficient of lift as a function of args.
 
         Parameters
         ----------
-        *args : floats
-            Arbitrary airfoil parameters. The first is always angle of attack in radians
+        inputs : ndarray
+            Arbitrary airfoil parameters. The first is always angle of attack in radians.
 
         Returns
         -------
@@ -107,33 +120,33 @@ class Airfoil:
             Lift coefficient.
         """
 
-        if self._type == "linear":
-            CL = self._CLa*(args[0]-self._aL0)
-            if CL > self._CL_max or CL < -self._CL_max:
-                CL = np.sign(CL)*self._CL_max
-            return CL
+        self.get_CL = np.vectorize(CL, doc=CL_docstring, excluded={0})
+        
+        def CD(self, inputs):
+            if self._type == "linear":
+                CL = self.get_CL(*args)
+                return self._CD0+self._CD1*CL+self._CD2*CL**2
 
-
-    def get_CD(self, *args):
-        """Returns the coefficient of drag as a function of args.
+        CD_docstring = """Returns the coefficient of drag as a function of args.
 
         Parameters
         ----------
-        *args : floats
-            Arbitrary airfoil parameters. The first is always angle of attack in radians
+        inputs : ndarray
+            Arbitrary airfoil parameters. The first is always angle of attack in radians.
 
         Returns
         -------
         float
             Drag coefficient.
         """
-        if self._type == "linear":
-            CL = self.get_CL(*args)
-            return self._CD0+self._CD1*CL+self._CD2*CL**2
 
+        self.get_CD = np.vectorize(CD, doc=CD_docstring, excluded={0})
 
-    def get_Cm(self, *args):
-        """Returns the coefficient of moment as a function of args.
+        def Cm(self, inputs):
+            if self._type == "linear":
+                return self._Cma*args[0]+self._CmL0
+        
+        Cm_docstring = """Returns the coefficient of moment as a function of args.
 
         Parameters
         ----------
@@ -145,8 +158,8 @@ class Airfoil:
         float
             Moment coefficient.
         """
-        if self._type == "linear":
-            return self._Cma*args[0]+self._CmL0
+
+        self.get_Cm = np.vectorize(Cm, doc=Cm_docstring, excluded={0})
 
 
     def get_CLa(self):

@@ -37,11 +37,10 @@ def test_constant_airfoil_section_get_lift():
 
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_CL in zip(alphas, CLs):
-        for i in range(5):
-            span = np.random.random()
-            for key in wing_segments:
-                CL = wing_segments[key].get_CL(span, alpha)
-                assert np.allclose(CL, correct_CL, rtol=0.0, atol=1e-10)
+        spans = np.random.random(5)
+        for key in wing_segments:
+            CL = wing_segments[key].get_CL(spans, np.repeat(alphas[np.newaxis], 5, axis=0))
+            assert np.allclose(CL, correct_CL, rtol=0.0, atol=1e-10)
 
 def test_constant_airfoil_section_get_drag():
     # Tests the drag coefficient is properly given for a constant airfoil section
@@ -77,7 +76,7 @@ def test_constant_airfoil_section_get_drag():
         for i in range(5):
             span = np.random.random()
             for key in wing_segments:
-                CD = wing_segments[key].get_CD(span, alpha)
+                CD = wing_segments[key].get_CD(span, np.asarray(alpha))
                 assert np.allclose(CD, correct_CD, rtol=0.0, atol=1e-10)
 
 def test_constant_airfoil_section_get_moment():
@@ -114,7 +113,7 @@ def test_constant_airfoil_section_get_moment():
         for i in range(5):
             span = np.random.random()
             for key in wing_segments:
-                Cm = wing_segments[key].get_Cm(span, alpha)
+                Cm = wing_segments[key].get_Cm(span, np.asarray(alpha))
                 assert np.allclose(Cm, correct_Cm, rtol=0.0, atol=1e-10)
 
 def test_variable_airfoil_section_get_lift():
@@ -157,7 +156,7 @@ def test_variable_airfoil_section_get_lift():
     for i, alpha in enumerate(alphas):
         for j, span in enumerate(spans):
             for key in wing_segments:
-                CL = wing_segments[key].get_CL(span, alpha)
+                CL = wing_segments[key].get_CL(span, np.asarray(alpha))
                 assert np.allclose(CL, CLs[i,j], rtol=0.0, atol=1e-10)
 
 def test_variable_airfoil_section_get_drag():
