@@ -405,15 +405,16 @@ class Scene:
         # Calculate force differential elements
         induced_vels = self._Gamma[:,np.newaxis,np.newaxis]*self._V_ji
         v = self._cp_v_inf+np.sum(induced_vels, axis=0)
-        V = np.sqrt(np.einsum('ij,ij->i', v, v))
-        u = v/V[:,np.newaxis]
         dF_inv = (self._rho*self._Gamma)[:,np.newaxis]*np.cross(v, self._dl)
 
         # Calculate conditions for determining viscid contributions
+        V = np.sqrt(np.einsum('ij,ij->i', v, v))
+        u = v/V[:,np.newaxis]
         alpha = np.arctan2(np.einsum('ij,ij->i', v, self._u_n), np.einsum('ij,ij->i', v, self._u_a))
         q_inf = 0.5*self._rho*V**2
-
-        # Calculate moment differential elements
+        
+        # Calculate moment differential elements due to vortex lift
+        dM_vortex = np.cross(self._PC, dF_inv)
 
         index = 0
 
@@ -464,8 +465,8 @@ class Scene:
 
                 # Determine viscid force
                 CD = self.airplanes[airplane_name].wing_segments[segment_name].get_cp_CD(alpha[cur_slice])
-                D = q_inf[cur_slice]*self._dS[cur_slice]*CD
-                dF_b_visc = D[:,np.newaxis]*u[cur_slice]
+                dD = q_inf[cur_slice]*self._dS[cur_slice]*CD
+                dF_b_visc = dD[:,np.newaxis]*u[cur_slice]
                 F_b_visc = np.sum(dF_b_visc, axis=0)
                 self._FM[airplane_name]["viscous"]["Fx"][segment_name] = F_b_visc[0].item()
                 self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
@@ -479,27 +480,25 @@ class Scene:
 
                 # Determine viscid moment
                 Cm = self.airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(alpha[cur_slice])
-                dm = q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*Cm
-                dM_section = -dm[:,np.newaxis]*self._u_s[cur_slice]
-                dM_vortex = np.cross(self._PC[cur_slice], dF_b_visc)
-                M_b_visc = np.sum(dM_section+dM_vortex, axis=0)
+                dM_visc = dD[:,np.newaxis]*np.cross(self._PC[cur_slice], u[cur_slice])
+                M_b_visc = np.sum(dM_visc, axis=0)
                 self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
                 self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
                 self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
 
                 # Determine inviscid moment
-                M_b_inv = np.sum(np.cross(self._PC[cur_slice], dF_inv[cur_slice]), axis=0)
+                dM_section = -(q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*Cm)[:,np.newaxis]*self._u_s[cur_slice] # Due to section moment coef
+                M_b_inv = np.sum(dM_section+dM_vortex[cur_slice], axis=0)
                 self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
                 self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
                 self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
 
-                #TODO: Lift, drag, and sideforce
+                #TODO: Lift, drag, L/D, and sideforce
 
                 FM_inv_airplane_total[:3] += F_b_inv
                 FM_vis_airplane_total[:3] += F_b_visc
                 FM_inv_airplane_total[3:] += M_b_inv
                 FM_vis_airplane_total[3:] += M_b_visc
-                
                 
                 index += num_cps
 
@@ -517,15 +516,16 @@ class Scene:
             self._FM[airplane_name]["viscous"]["My"]["total"] = FM_vis_airplane_total[4].item()
             self._FM[airplane_name]["viscous"]["Mz"]["total"] = FM_vis_airplane_total[5].item()
 
-            self._FM[airplane_name]["total"]["Fx"] = self._FM[airplane_name]["inviscid"]["Fx"]["total"] + self._FM[airplane_name]["viscous"]["Fx"]["total"]
-            self._FM[airplane_name]["total"]["Fy"] = self._FM[airplane_name]["inviscid"]["Fy"]["total"] + self._FM[airplane_name]["viscous"]["Fy"]["total"]
-            self._FM[airplane_name]["total"]["Fz"] = self._FM[airplane_name]["inviscid"]["Fz"]["total"] + self._FM[airplane_name]["viscous"]["Fz"]["total"]
-            self._FM[airplane_name]["total"]["Mx"] = self._FM[airplane_name]["inviscid"]["Mx"]["total"] + self._FM[airplane_name]["viscous"]["Mx"]["total"]
-            self._FM[airplane_name]["total"]["My"] = self._FM[airplane_name]["inviscid"]["My"]["total"] + self._FM[airplane_name]["viscous"]["My"]["total"]
-            self._FM[airplane_name]["total"]["Mz"] = self._FM[airplane_name]["inviscid"]["Mz"]["total"] + self._FM[airplane_name]["viscous"]["Mz"]["total"]
+            FM_airplane_total = FM_vis_airplane_total+FM_inv_airplane_total
+
+            self._FM[airplane_name]["total"]["Fx"] = FM_airplane_total[0].item()
+            self._FM[airplane_name]["total"]["Fy"] = FM_airplane_total[1].item()
+            self._FM[airplane_name]["total"]["Fz"] = FM_airplane_total[2].item()
+            self._FM[airplane_name]["total"]["Mx"] = FM_airplane_total[3].item()
+            self._FM[airplane_name]["total"]["My"] = FM_airplane_total[4].item()
+            self._FM[airplane_name]["total"]["Mz"] = FM_airplane_total[5].item()
 
         end_time = time.time()
-        print("lasdfjlaksjdf")
         return end_time-start_time
 
 
@@ -535,7 +535,7 @@ class Scene:
         Parameters
         ----------
         filename : str
-            File to export the force and moment results to. Should be of .json. If not specified, 
+            File to export the force and moment results to. Should be .json. If not specified, 
             results will not be exported to a file.
 
         non_dimensional : bool
@@ -561,7 +561,9 @@ class Scene:
             print("Time to compute linear solution: {0} s".format(linear_time))
             print("Time to compute nonlinear solution: {0} s".format(nonlinear_time))
             print("Time to integrate forces: {0} s".format(integrate_time))
-            print("Solution rate: {0} Hz".format(1/(linear_time+nonlinear_time+integrate_time)))
+            total_time = linear_time+nonlinear_time+integrate_time
+            print("Total time: {0} s".format(total_time))
+            print("Solution rate: {0} Hz".format(1/(total_time)))
 
         # Output to file
         if filename is not None:

@@ -20,11 +20,13 @@ MachUpX can be run from the command line or imported as a module in a python scr
 
 ### Command Line
 
+#### Run Analyses from input file
+
 Simply execute:
 
 `python -m machupX <YOUR_INPUT_FILE>`
 
-### Module API
+### Python API
 
 Here is an example of using the API:
 
@@ -47,6 +49,8 @@ print(FM)
 ## Documentation
 
 For help on creating input files, see examples/How_To_Create_Input_Files.
+
+Specific help with API functions can be found in the docstrings.
 
 ## Installation
 

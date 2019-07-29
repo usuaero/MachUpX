@@ -13,3 +13,9 @@ def test_NLL():
     # Create scene
     scene = MX.Scene(input_file)
     FM = scene.solve_forces()
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.3218660582470263)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+16.372019206586774)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"])<1e-10
+    assert abs(FM["test_plane"]["total"]["My"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
