@@ -60,6 +60,12 @@ Navigate to the root directory and execute:
 
 ### Prerequisites
 
+The following Python packages are required:
+
+numpy
+scipy
+scikit-aero (available at [https://github.com/AeroPython/scikit-aero](https://github.com/AeroPython/scikit-aero))
+
 ### Getting the Source Code
 
 You can either download the source as a ZIP file and extract the contents, or 
