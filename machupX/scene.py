@@ -332,7 +332,6 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Freestream velocity at control points
-
                 # Due to wind
                 body_cp_locs = segment_object.get_cp_locs()
                 global_cp_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, body_cp_locs)

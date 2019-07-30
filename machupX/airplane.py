@@ -1,4 +1,4 @@
-from .helpers import _check_filepath, _import_value, _quaternion_transform
+from .helpers import _check_filepath, _import_value, _quaternion_transform, _quaternion_inverse_transform
 from .wing_segment import WingSegment
 from .airfoil import Airfoil
 
@@ -48,6 +48,7 @@ class Airplane:
         self._create_airfoil_database()
         self._create_origin_segment()
         self._load_wing_segments()
+        self._check_reference_params()
 
 
     def _load_params(self, filename):
@@ -58,10 +59,10 @@ class Airplane:
 
         # Set airplane global params
         self.CG = _import_value("CG", self._input_dict, self._unit_sys, [0,0,0])
-        self.W = _import_value("weight", self._input_dict, self._unit_sys, -1)
-        self.S_w = _import_value("area", self._input_dict.get("reference", {}), self._unit_sys, None)
-        self.l_ref_lon = _import_value("longitudinal_length", self._input_dict.get("reference", {}), self._unit_sys, None)
-        self.l_ref_lat = _import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, None)
+        self.W = _import_value("weight", self._input_dict, self._unit_sys, None)
+        self.S_w = _import_value("area", self._input_dict.get("reference", {}), self._unit_sys, -1)
+        self.l_ref_lon = _import_value("longitudinal_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
+        self.l_ref_lat = _import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
         self._control_names = self._input_dict.get("controls", [])
 
 
@@ -113,6 +114,8 @@ class Airplane:
             if "orientation" in list(state.keys()):
                 raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
 
+            self.q = np.asarray([1.0, 0.0, 0.0, 0.0])
+
             # Set up velocity
             v_value = _import_value("velocity", state, self._unit_sys, -1)
             if isinstance(v_value, float): # Velocity magnitude
@@ -124,19 +127,19 @@ class Airplane:
                 C_B = np.cos(np.radians(beta))
                 S_B = np.sin(np.radians(beta))
 
-                self.v = np.zeros(3)
+                v_inf = np.zeros(3)
                 denom = np.sqrt(1-S_a**2*S_B**2)
-                self.v[0] = -v_value*C_a*C_B/denom
-                self.v[1] = v_value*C_a*S_B/denom
-                self.v[2] = -v_value*S_a*C_B/denom
+                v_inf[0] = -v_value*C_a*C_B/denom
+                v_inf[1] = v_value*C_a*S_B/denom
+                v_inf[2] = -v_value*S_a*C_B/denom
+                
+                self.v = -_quaternion_inverse_transform(self.q, v_inf)
 
             elif isinstance(v_value, np.ndarray):
                 self.v = v_value
 
             else:
                 raise IOError("{0} is not an allowable velocity definition.", v_value)
-
-            self.q = np.asarray([1.0, 0.0, 0.0, 0.0])
 
         else:
             raise IOError("{0} is not an acceptable state type.".format(state_type))
@@ -215,6 +218,28 @@ class Airplane:
             self.add_wing_segment(key, self._input_dict["wings"][key])
 
 
+    def _check_reference_params(self):
+        # If the reference area and lengths have not been set, this takes care of that.
+
+        # Reference area
+        if self.S_w == -1:
+            self.S_w = 0.0
+            for (_, wing_segment) in self.wing_segments.items():
+                if wing_segment.is_main:
+                    self.S_w += np.sum(wing_segment.get_array_of_dS())
+
+        # Lateral reference length
+        if self.l_ref_lat == -1:
+            self.l_ref_lat = 0.0
+            for (_, wing_segment) in self.wing_segments.items():
+                if wing_segment.is_main and wing_segment._side == "right":
+                    self.l_ref_lat += wing_segment.b
+
+        # Longitudinal reference length
+        if self.l_ref_lon == -1:
+            self.l_ref_lon = self.S_w/(2*self.l_ref_lat)
+
+
     def delete_wing_segment(self, wing_segment_name):
         """Removes the specified wing segment from the airplane. Removes both sides.
 
@@ -288,9 +313,42 @@ class Airplane:
         ndarray
             Vector of freestream velocity.
         """
-        if self.state_type == "aerodynamic":
-            v_trans = self.v
-        else:
-            v_trans = -_quaternion_transform(self.q, self.v)
+        return -_quaternion_transform(self.q, self.v)
 
-        return v_trans
+
+    def update_state(self, **kwargs):
+        """Updates the state of the aircraft by the given deltas.
+
+        Parameters
+        ----------
+        delta_position : ndarray
+            Change in position in flat-earth coordinates.
+
+        delta_velocity : ndarray
+            Change in velocity in flat-earth coordinates.
+
+        delta_q : ndarray
+            Change in the orientation quaternion.
+
+        delta_euler_angles : ndarray
+            Change in the Euler angles.
+
+        delta_omega : ndarray
+            Change in the angular velocity vector.
+
+        delta_alpha : float
+            Change in angle of attack.
+
+        delta_beta : float
+            Change in sideslip angle.
+        """
+        self.p_bar += _import_value("delta_position", kwargs, self._unit_sys, [0, 0, 0])
+        self.w += _import_value("delta_omega", kwargs, self._unit_sys, [0, 0, 0])
+
+        dq = _import_value("delta_q", kwargs, self._unit_sys, None)
+        if dq is None:
+            deuler = _import_value("delta_euler_angles", kwargs, self._unit_sys, None)
+            if deuler is not None:
+                pass
+        else:
+            self.q += dq

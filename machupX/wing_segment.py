@@ -65,8 +65,8 @@ class WingSegment:
     def _initialize_params(self):
 
         # Set global params
-        self.is_main = self._input_dict.get("is_main")
-        self.b = _import_value("span", self._input_dict, self._unit_sys, -1)
+        self.is_main = self._input_dict.get("is_main", None)
+        self.b = _import_value("span", self._input_dict, self._unit_sys, None)
         self._N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 

@@ -1,11 +1,6 @@
 {
     "CG" : [0,0,0],
     "weight" : 100.0,
-    "reference" : {
-        "area" : 0,
-        "longitudinal_length" : 0,
-        "lateral_length" : 0
-    },
     "airfoils" : "test/NLL_tests/airfoils_for_NLL_testing.json",
     "wings" : {
         "main_wing" : {
@@ -13,6 +8,34 @@
             "is_main" : true,
             "side" : "both",
             "span" : 4.0,
+            "airfoil" : "NACA_0010",
+            "grid" : 40
+        },
+        "h_stab" : {
+            "ID" : 2,
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "dx" : -3.0,
+                "location" : "root"
+            },
+            "side" : "both",
+            "twist" : -1.0,
+            "span" : 2.0,
+            "airfoil" : "NACA_0010",
+            "grid" : 40
+        },
+        "v_stab" : {
+            "ID" : 3,
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "dx" : -3.0,
+                "location" : "root"
+            },
+            "side" : "right",
+            "dihedral" : 90.0,
+            "span" : 2.0,
             "airfoil" : "NACA_0010",
             "grid" : 40
         }

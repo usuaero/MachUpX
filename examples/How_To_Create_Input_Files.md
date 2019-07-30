@@ -210,7 +210,7 @@ deterimined by the user.
                         [1.0, 0.0, 0.0, 0.0].
 
                     "angular_rates" : (vector, optional)
-                        Angular rate of the aircraft in flat-earth coordinates. Defaults to [0,0,0]
+                        Angular rate of the aircraft in body-fixed coordinates. Defaults to [0,0,0]
 
                     "alpha" : (float, optional)
                         Aerodynamic angle of attack. Defaults to 0.

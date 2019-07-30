@@ -38,7 +38,7 @@ class Airfoil:
 
         self.name = name
         self._input_dict = input_dict
-        self._type = _import_value("type", self._input_dict, "SI", -1) # Unit system doesn't matter for these
+        self._type = _import_value("type", self._input_dict, "SI", None) # Unit system doesn't matter for these
 
         #TODO: Implement mapping of args
         if input_list[0] != "alpha":
@@ -67,14 +67,14 @@ class Airfoil:
                 params = self._input_dict
 
             # Save params
-            self._aL0 = _import_value("aL0", params, "SI", -1) # Again, the unit system doesn't matter
-            self._CLa = _import_value("CLa", params, "SI", -1)
-            self._CmL0 = _import_value("CmL0", params, "SI", -1)
-            self._Cma = _import_value("Cma", params, "SI", -1)
-            self._CD0 = _import_value("CD0", params, "SI", -1)
-            self._CD1 = _import_value("CD1", params, "SI", -1)
-            self._CD2 = _import_value("CD2", params, "SI", -1)
-            self._CL_max = _import_value("CL_max", params, "SI", -1)
+            self._aL0 = _import_value("aL0", params, "SI", None) # Again, the unit system doesn't matter
+            self._CLa = _import_value("CLa", params, "SI", None)
+            self._CmL0 = _import_value("CmL0", params, "SI", None)
+            self._Cma = _import_value("Cma", params, "SI", None)
+            self._CD0 = _import_value("CD0", params, "SI", None)
+            self._CD1 = _import_value("CD1", params, "SI", None)
+            self._CD2 = _import_value("CD2", params, "SI", None)
+            self._CL_max = _import_value("CL_max", params, "SI", None)
 
         elif self._type == "nonlinear":
 
