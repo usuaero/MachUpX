@@ -8,15 +8,16 @@ import scipy.interpolate as sinterp
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import time
+import copy
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
 
     Parameters
     ----------
-    input_filename : string
-        Path to the JSON object specifying the scene parameters. For information on creating
-        input files, see examples/How_To_Create_Input_Files.
+    scene_input : string or dict
+        Dictionary or path to the JSON object specifying the scene parameters. 
+        For information on creating input files, see examples/How_To_Create_Input_Files.
 
     Raises
     ------
@@ -32,21 +33,32 @@ class Scene:
     display_wireframe()
     """
 
-    def __init__(self, input_filename):
+    def __init__(self, scene_input):
 
         self.airplanes = {}
         self._airplane_names = []
         self._segment_names = []
         self._N = 0
 
-        _check_filepath(input_filename,".json")
-        self._load_params(input_filename)
+        self._load_params(scene_input)
 
 
-    def _load_params(self, input_filename):
+    def _load_params(self, scene_input):
         # Loads JSON object and stores input parameters and aircraft
-        with open(input_filename) as input_json_handle:
-            self._input_dict = json.load(input_json_handle)
+
+        # File
+        if isinstance(scene_input, str):
+            _check_filepath(input_filename,".json")
+            with open(scene_input) as input_json_handle:
+                self._input_dict = json.load(input_json_handle)
+
+        # Dictionary
+        elif isinstance(scene_input, dict):
+            self._input_dict = copy.deepcopy(scene_input)
+
+        else:
+            raise IOError("Input to Scene class initializer must be a file path or Python dictionary.")
+
 
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
