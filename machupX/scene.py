@@ -48,7 +48,7 @@ class Scene:
 
         # File
         if isinstance(scene_input, str):
-            _check_filepath(input_filename,".json")
+            _check_filepath(scene_input,".json")
             with open(scene_input) as input_json_handle:
                 self._input_dict = json.load(input_json_handle)
 
