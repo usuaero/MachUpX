@@ -49,10 +49,11 @@ class Scene:
             self._input_dict = json.load(input_json_handle)
 
         # Store solver parameters
-        solver_params = self._input_dict.get("solver",{})
+        solver_params = self._input_dict.get("solver", {})
         self._nonlinear_solver = solver_params.get("type", "linear") == "nonlinear"
-        self._solver_convergence = solver_params.get("convergence",1e-10)
-        self._solver_relaxation = solver_params.get("relaxation",0.9)
+        self._solver_convergence = solver_params.get("convergence", 1e-10)
+        self._solver_relaxation = solver_params.get("relaxation", 0.9)
+        self._max_solver_iterations = solver_params.get("max_iterations", 100)
 
         # Store unit system
         self._unit_sys = self._input_dict.get("units","English")
@@ -278,10 +279,10 @@ class Scene:
             self._V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
 
 
-    def _solve_linear(self):
-        # Determines the vortex strengths of all horseshoe vortices in the scene
+    def _solve_linear(self, verbose=False):
+        # Determines the vortex strengths of all horseshoe vortices in the scene using the linearize equations
 
-        # Start with linear solver
+        if verbose: print("Running linear solver...")
         start_time = time.time()
 
         # Gather necessary variables
@@ -292,6 +293,7 @@ class Scene:
         self._rho = np.zeros(self._N)
 
         # Airfoil parameters
+        alpha_approx = np.zeros(self._N)
         CLa = np.zeros(self._N)
         aL0 = np.zeros(self._N)
 
@@ -316,10 +318,6 @@ class Scene:
                 segment_object = airplane_object.wing_segments[segment_name]
                 num_cps = segment_object._N
                 cur_slice = slice(index, index+num_cps)
-
-                # Airfoil parameters
-                CLa[cur_slice] = segment_object.get_cp_CLa()
-                aL0[cur_slice] = segment_object.get_cp_aL0()
 
                 # Freestream velocity at control points
 
@@ -349,6 +347,10 @@ class Scene:
                 P0_v_inf[cur_slice,:] = node_v_inf[:-1,:]
                 P1_v_inf[cur_slice,:] = node_v_inf[1:,:]
 
+                # Airfoil parameters
+                CLa[cur_slice] = segment_object.get_cp_CLa()
+                aL0[cur_slice] = segment_object.get_cp_aL0()
+
                 index += num_cps
 
         # Control point velocities
@@ -371,10 +373,11 @@ class Scene:
         V_ji_due_to_1 = np.cross(P1_u_inf, self._rj1i)/denom[:,:,np.newaxis]
 
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + self._V_ji_due_to_bound + V_ji_due_to_1)
+        self._V_ji_trans = self._V_ji.transpose((1,0,2))
 
         # A matrix
         A = np.zeros((self._N,self._N))
-        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji.transpose((1,0,2)), self._u_n[:,np.newaxis])
+        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])
         A[:,:] = -(CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
         u_inf_x_dl = np.cross(cp_u_inf, self._dl)
@@ -390,15 +393,91 @@ class Scene:
         return end_time-start_time
 
 
-    def _solve_nonlinear(self):
+    def _solve_nonlinear(self, verbose=False):
         # Nonlinear improvement to the vector of gammas already determined
+        if verbose: 
+            print("Running nonlinear solver...")
+            print("    Relaxation: {0}".format(self._solver_relaxation))
+            print("    Convergence: {0}".format(self._solver_convergence))
+            print("{0:<20}{1:<20}".format("Iteration", "SRSSQ Error"))
         start_time = time.time()
+
+        J = np.zeros((self._N, self._N))
+        C_L = np.zeros(self._N)
+        C_La = np.zeros(self._N)
+        alpha = np.zeros(self._N)
+
+        iteration = 0
+        error = 100
+        while error > self._solver_convergence:
+            iteration += 1
+
+            # Calculate residual
+            v_i = self._cp_v_inf+np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
+            v_ni = np.einsum('ij,ij->i', v_i, self._u_n)
+            v_ai = np.einsum('ij,ij->i', v_i, self._u_a)
+
+            np.arctan2(v_ni, v_ai, out=alpha)
+
+            index = 0
+
+            # Loop through airplanes
+            for i, airplane_name in enumerate(self._airplane_names):
+                airplane_object = self.airplanes[airplane_name]
+
+                # Loop through segments
+                for segment_name in self._segment_names[i]:
+                    segment_object = airplane_object.wing_segments[segment_name]
+                    num_cps = segment_object._N
+                    cur_slice = slice(index, index+num_cps)
+
+                    # Get lift coefficient
+                    C_L[cur_slice] = segment_object.get_cp_CL(alpha[cur_slice])
+                    C_La[cur_slice] = segment_object.get_cp_CLa()
+
+                    index += num_cps
+
+            # Intermediate calcs
+            V_i = np.sqrt(np.einsum('ij,ij->i', v_i, v_i))
+            w_i = np.cross(v_i, self._dl)
+            w_i_mag = np.sqrt(np.einsum('ij,ij->i', w_i, w_i))
+            v_iji = np.einsum('ijk,ijk->ij', v_i[:,np.newaxis,:], self._V_ji_trans)
+
+            # Residual vector
+            R = 2*w_i_mag*self._Gamma-V_i**2*C_L*self._dS
+
+            error = np.sqrt(np.sum(R**2))
+
+            # Caclulate Jacobian
+            J[:,:] = (2*self._Gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
+            J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji
+            J[:,:] -= (V_i**2*self._dS)[:,np.newaxis]*(C_La[:,np.newaxis]*(
+                v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*
+                np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/
+                (v_ni**2+v_ai**2)[:,np.newaxis])
+
+            diag_ind = np.diag_indices(self._N)
+            J[diag_ind] += 2*w_i_mag
+
+            # Solve for change in gamma
+            dGamma = np.linalg.solve(J, -R)
+
+            # Update gammas
+            self._Gamma += self._solver_relaxation*dGamma
+
+            if verbose: print("{0:<20}{1:<20}".format(iteration, error))
+
+            if iteration >= self._max_solver_iterations:
+                print("Nonlinear solver failed to converge within the allowable number of iterations.")
+                break
+        else:
+            if verbose: print("Nonlinear solver successfully converged.")
 
         end_time = time.time()
         return end_time-start_time
 
 
-    def _integrate_forces_and_moments(self):
+    def _integrate_forces_and_moments(self, verbose=False):
         # Determines the forces and moments on each lifting surface
         start_time = time.time()
 
@@ -551,11 +630,11 @@ class Scene:
         dict:
             Dictionary of forces and moments acting on each wing segment.
         """
-        linear_time = self._solve_linear()
+        linear_time = self._solve_linear(verbose=verbose)
         nonlinear_time = 0.0
         if self._nonlinear_solver:
-            nonlinear_time = self._solve_nonlinear()
-        integrate_time = self._integrate_forces_and_moments()
+            nonlinear_time = self._solve_nonlinear(verbose=verbose)
+        integrate_time = self._integrate_forces_and_moments(verbose=verbose)
 
         if verbose:
             print("Time to compute linear solution: {0} s".format(linear_time))

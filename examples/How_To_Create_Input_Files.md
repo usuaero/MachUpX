@@ -126,6 +126,9 @@ deterimined by the user.
         "relaxation" : (float)
             Defaults to 0.9.
 
+        "max_iterations" : (int)
+            Maximum number of iterations for the nonlinear solver. Defaults to 100
+
     "units" : (string)
         Specifies the units to be used for inputs and outputs. Can be "SI" or "English". Any units
         not explicitly defined for each value in the input objects will be assumed to be the standard

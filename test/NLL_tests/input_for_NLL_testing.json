@@ -6,8 +6,8 @@
         "aero_derivatives" : {}
     },
     "solver" : {
-        "type" : "linear",
-        "convergence" : 0.000001,
+        "type" : "nonlinear",
+        "convergence" : 1e-10,
         "relaxation" : 0.9
     },
     "units" : "English",

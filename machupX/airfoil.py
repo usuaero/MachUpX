@@ -153,8 +153,8 @@ class Airfoil:
 
         Parameters
         ----------
-        *args : floats
-            Arbitrary airfoil parameters. The first is always angle of attack in radians
+        inputs : ndarray
+            Arbitrary airfoil parameters. The first is always angle of attack in radians.
 
         Returns
         -------
@@ -168,6 +168,11 @@ class Airfoil:
     def get_CLa(self):
         """Returns the lift slope.
 
+        Parameters
+        ----------
+        inputs : ndarray
+            Arbitrary airfoil parameters. The first is always angle of attack in radians.
+
         Returns
         -------
         float
@@ -179,6 +184,11 @@ class Airfoil:
 
     def get_aL0(self):
         """Returns the zero-lift angle of attack.
+
+        Parameters
+        ----------
+        inputs : ndarray
+            Arbitrary airfoil parameters. The first is always angle of attack in radians.
 
         Returns
         -------
