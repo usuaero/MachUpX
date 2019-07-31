@@ -1,4 +1,5 @@
 from .helpers import _check_filepath, _vectorized_convert_units, _import_value
+from .poly_fits import multivariablePolynomialFit, multivariablePolynomialFunction
 
 import numpy as np
 import json
@@ -14,15 +15,6 @@ class Airfoil:
     input_dict : dict
         Dictionary describing the airfoil.
 
-    input_list : str
-        List of argument names the airfoil parameters can be a function of. The 
-        first element of this list must always be "alpha" (i.e. angle of 
-        attack). An arbitrary number of the following arguments be specified 
-        (must be in this order):
-
-        "Rey" : Reynolds number NOT IMPLEMENTED
-        "M" : Mach number NOT IMPLEMENTED
-
     Returns
     -------
     Airfoil
@@ -34,15 +26,11 @@ class Airfoil:
         If the input is invalid.
     """
 
-    def __init__(self, name, input_dict, input_list=["alpha"]):
+    def __init__(self, name, input_dict):
 
         self.name = name
         self._input_dict = input_dict
         self._type = _import_value("type", self._input_dict, "SI", None) # Unit system doesn't matter for these
-
-        #TODO: Implement mapping of args
-        if input_list[0] != "alpha":
-            raise IOError("Don't do that!")
 
         self._initialize_data()
         self._define_vectorized_getters()

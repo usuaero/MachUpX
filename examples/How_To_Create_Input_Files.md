@@ -231,9 +231,6 @@ deterimined by the user.
 ### Aircraft Object
 Describes an aircraft.
 
-    "name" : (string)
-        The name of the aircraft.
-
     "CG" : (vector, optional)
         Location of the aircraft's center of gravity in body-fixed coordinates. Defaults to [0,0,0].
 

@@ -490,7 +490,7 @@ class WingSegment:
     def _airfoil_interpolator(self, interp_spans, sample_spans, coefs):
         # Interpolates the airfoil coefficients at the given span locations.
         # Allows for the coefficients having been evaluated as a function of 
-        # Span as well.
+        # span as well.
         # Solution found on stackoverflow
         i = np.arange(interp_spans.size)
         j = np.searchsorted(sample_spans, interp_spans) - 1
