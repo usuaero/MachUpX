@@ -257,18 +257,18 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Geometries
-                body_cp_locs = segment_object.get_cp_locs()
+                body_cp_locs = segment_object.control_points
                 self._PC[cur_slice,:] = body_cp_locs
-                self._c_bar[cur_slice] = segment_object.get_cp_avg_chord_lengths()
-                self._dS[cur_slice] = segment_object.get_array_of_dS()
+                self._c_bar[cur_slice] = segment_object.c_bar_cp
+                self._dS[cur_slice] = segment_object.dS
 
-                node_points = segment_object.get_node_locs()
+                node_points = segment_object.nodes
                 self._P0[cur_slice,:] = node_points[:-1,:]
                 self._P1[cur_slice,:] = node_points[1:,:]
 
-                self._u_a[cur_slice,:] = segment_object.get_cp_axial_vecs()
-                self._u_n[cur_slice,:] = segment_object.get_cp_normal_vecs()
-                self._u_s[cur_slice,:] = segment_object.get_cp_span_vecs()
+                self._u_a[cur_slice,:] = segment_object.u_a_cp
+                self._u_n[cur_slice,:] = segment_object.u_n_cp
+                self._u_s[cur_slice,:] = segment_object.u_s_cp
 
                 index += num_cps
 
@@ -333,12 +333,11 @@ class Scene:
 
                 # Freestream velocity at control points
                 # Due to wind
-                body_cp_locs = segment_object.get_cp_locs()
-                global_cp_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, body_cp_locs)
+                global_cp_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, self._PC[cur_slice,:])
                 cp_v_wind = _quaternion_transform(airplane_object.q, self._get_wind(global_cp_locs))
 
                 # Due to aircraft rotation
-                cp_v_rot = -np.cross(airplane_object.w, body_cp_locs)
+                cp_v_rot = -np.cross(airplane_object.w, self._PC[cur_slice,:])
 
                 self._cp_v_inf[cur_slice,:] = v_trans+cp_v_wind+cp_v_rot
 
@@ -347,7 +346,7 @@ class Scene:
 
                 # Freestream velocity at vortex nodes
                 # Due to wind
-                body_node_locs = segment_object.get_node_locs()
+                body_node_locs = segment_object.nodes
                 global_node_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, body_node_locs)
                 node_v_wind = _quaternion_transform(airplane_object.q, self._get_wind(global_node_locs))
 

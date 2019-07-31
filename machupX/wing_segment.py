@@ -55,11 +55,14 @@ class WingSegment:
             raise IOError("Wing segment ID for {0} may not be 0.".format(name))
 
         if self.ID != 0: # These do not need to be run for the origin segment
-            self._splines = {}
             self._initialize_params()
             self._initialize_getters()
             self._initialize_airfoils(airfoil_dict)
             self._initialize_cp_getters()
+
+            # These make repeated calls for geometry information faster. Should be called again if geometry changes.
+            self._setup_cp_data()
+            self._setup_node_data()
 
     
     def _initialize_params(self):
@@ -120,26 +123,6 @@ class WingSegment:
 
         ac_offset_data = _import_value("ac_offset", self._input_dict, self._unit_sys, 0)
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
-
-        ## Setup quarter-chord position getters
-
-        #num_samples = 10
-        #x_samples = np.zeros(num_samples)
-        #y_samples = np.zeros(num_samples)
-        #z_samples = np.zeros(num_samples)
-        #span_locs = np.linspace(0.0, 1.0, num_samples)
-
-        #for i, span in enumerate(span_locs):
-        #    x_samples[i] = integ.quad(lambda s : -np.tan(np.radians(self.get_sweep(s))), 0, span)[0]*self.b
-        #    if self._side == "left":
-        #        y_samples[i] = integ.quad(lambda s : -np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-        #    else:
-        #        y_samples[i] = integ.quad(lambda s : np.cos(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-        #    z_samples[i] = integ.quad(lambda s : -np.sin(np.radians(self.get_dihedral(s))), 0, span)[0]*self.b
-
-        #self._get_qc_dx_loc = interp.interp1d(span_locs, x_samples, kind="cubic")
-        #self._get_qc_dy_loc = interp.interp1d(span_locs, y_samples, kind="cubic")
-        #self._get_qc_dz_loc = interp.interp1d(span_locs, z_samples, kind="cubic")
 
 
     def _build_getter_linear_f_of_span(self, data, name, angular_data=False):
@@ -249,14 +232,26 @@ class WingSegment:
 
     def _initialize_cp_getters(self):
         # Decorates certain functions to return values at the control point locations
-        self.get_cp_axial_vecs = self._cp_decorator(self._get_axial_vec)
         self.get_cp_CLa = self._cp_decorator(self.get_CLa)
         self.get_cp_aL0 = self._cp_decorator(self.get_aL0)
-        self.get_cp_locs = self._cp_decorator(self.get_section_ac_loc)
-        self.get_cp_chord_lengths = self._cp_decorator(self.get_chord)
         self.get_cp_CL = self._cp_decorator(self.get_CL)
         self.get_cp_CD = self._cp_decorator(self.get_CD)
         self.get_cp_Cm = self._cp_decorator(self.get_Cm)
+
+
+    def _setup_cp_data(self):
+        # Creates and stores vectors of important data at each control point
+        self.u_a_cp = self._get_axial_vec(self._cp_span_locs)
+        self.u_n_cp = self._get_normal_vec(self._cp_span_locs)
+        self.u_s_cp = self._get_span_vec(self._cp_span_locs)
+        self.control_points = self._get_section_ac_loc(self._cp_span_locs)
+        self.c_bar_cp = self._get_cp_avg_chord_lengths()
+        self.dS = self._get_cp_dS()
+
+
+    def _setup_node_data(self):
+        # Creates and stores vectors of important data at each node
+        self.nodes = self._get_section_ac_loc(self._node_span_locs)
 
 
     def get_CLa(self, span):
@@ -411,22 +406,11 @@ class WingSegment:
         if self.ID == 0:
             return self._origin
         else:
-            return self.get_quarter_chord_loc(1.0)
+            return self._get_quarter_chord_loc(1.0)
 
 
-    def get_quarter_chord_loc(self, span):
-        """Returns the location of the quarter-chord at the given span fraction.
-
-        Parameters
-        ----------
-        span : float
-            Span location as a fraction of the total span starting at the root.
-
-        Returns
-        -------
-        ndarray
-            Location of the quarter-chord.
-        """
+    def _get_quarter_chord_loc(self, span):
+        #Returns the location of the quarter-chord at the given span fraction.
         if isinstance(span, float):
             converted = True
             span_array = np.asarray(span)[np.newaxis]
@@ -443,33 +427,11 @@ class WingSegment:
                 ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
             ds[i,2] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
 
-        #ds[0] = self._get_qc_dx_loc(span_array)
-        #ds[1] = self._get_qc_dy_loc(span_array)
-        #ds[2] = self._get_qc_dz_loc(span_array)
-
         qc_loc = self.get_root_loc()+ds
         if converted:
             qc_loc = qc_loc.flatten()
 
         return qc_loc
-
-
-    def get_section_ac_loc(self, span):
-        """Returns the location of the section aerodynamic center at the given span fraction.
-
-        Parameters
-        ----------
-        span : float
-            Span location as a fraction of the total span starting at the root.
-
-        Returns
-        -------
-        ndarray
-            Location of the section aerodynamic center.
-        """
-        loc = self.get_quarter_chord_loc(span)
-        loc += self._get_ac_offset(span)[:,np.newaxis]*self._get_axial_vec(span)
-        return loc
 
 
     def _get_axial_vec(self, span):
@@ -485,6 +447,67 @@ class WingSegment:
         S_twist = np.sin(twist)
 
         return np.asarray([-C_twist, np.zeros(span_array.shape[0]), S_twist]).T
+
+
+    def _get_normal_vec(self, span):
+        # Returns the normal vector at the given span locations
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
+        else:
+            span_array = np.asarray(span)
+
+        twist = self.get_twist(span_array)
+        dihedral = self.get_dihedral(span_array)
+        
+        C_twist = np.cos(twist)
+        S_twist = np.sin(twist)
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+
+        if self._side == "left":
+            normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, -C_twist*C_dihedral]).T
+        else:
+            normal_vecs = np.asarray([-S_twist*C_dihedral, -S_dihedral, -C_twist*C_dihedral]).T
+
+
+        return normal_vecs
+
+
+    def _get_span_vec(self, span):
+        # Returns the normal vector at the given span locations
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
+        else:
+            span_array = np.asarray(span)
+
+        dihedral = self.get_dihedral(span_array)
+
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+
+        if self._side == "left":
+            return np.asarray([np.zeros(self._N), -C_dihedral, -S_dihedral]).T
+        else:
+            return np.asarray([np.zeros(self._N), -C_dihedral, S_dihedral]).T
+
+
+    def _get_section_ac_loc(self, span):
+        #Returns the location of the section aerodynamic center at the given span fraction.
+        loc = self._get_quarter_chord_loc(span)
+        loc += self._get_ac_offset(span)[:,np.newaxis]*self._get_axial_vec(span)
+        return loc
+
+
+    def _get_cp_avg_chord_lengths(self):
+        #Returns the average local chord length at each control point on the segment.
+        node_chords = self.get_chord(self._node_span_locs)
+        return (node_chords[1:]+node_chords[:-1])/2
+
+
+    def _get_cp_dS(self):
+        #Returns the differential elements of area.
+        ds = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
+        return self.c_bar_cp*ds
 
 
     def _airfoil_interpolator(self, interp_spans, sample_spans, coefs):
@@ -597,88 +620,6 @@ class WingSegment:
             Cms[:,i] = self._airfoils[i].get_Cm(param_array)
 
         return self._airfoil_interpolator(span_array, self._airfoil_spans, Cms)
-
-
-    def get_node_locs(self):
-        """Returns the location of all horseshoe vortex node pairs on the segment.
-
-        Returns
-        -------
-        ndarray
-            Array of horseshoe vortex node pairs. First index is the node and 
-            second index is the position component.
-        """
-        return self.get_section_ac_loc(self._node_span_locs)
-
-
-    def get_cp_normal_vecs(self):
-        """Returns the local normal vector at each control point on the segment.
-
-        Returns
-        ----------
-        ndarray
-            Array of normal vectors. First index is the control point index and second 
-            index is the vector component.
-        """
-        twist = self.get_twist(self._cp_span_locs)
-        dihedral = self.get_dihedral(self._cp_span_locs)
-        
-        C_twist = np.cos(twist)
-        S_twist = np.sin(twist)
-        C_dihedral = np.cos(dihedral)
-        S_dihedral = np.sin(dihedral)
-
-        if self._side == "left":
-            normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, -C_twist*C_dihedral]).T
-        else:
-            normal_vecs = np.asarray([-S_twist*C_dihedral, -S_dihedral, -C_twist*C_dihedral]).T
-
-
-        return normal_vecs
-
-    
-    def get_cp_span_vecs(self):
-        """Returns the local spanwise vector at each control point on the segment.
-
-        Returns
-        -------
-        ndarray
-            Array of span vectors. First index is the control point index and second 
-            index is the vector component.
-        """
-        dihedral = self.get_dihedral(self._cp_span_locs)
-
-        C_dihedral = np.cos(dihedral)
-        S_dihedral = np.sin(dihedral)
-
-        if self._side == "left":
-            return np.asarray([np.zeros(self._N), -C_dihedral, -S_dihedral]).T
-        else:
-            return np.asarray([np.zeros(self._N), -C_dihedral, S_dihedral]).T
-
-
-    def get_cp_avg_chord_lengths(self):
-        """Returns the average local chord length at each control point on the segment.
-
-        Returns
-        -------
-        ndarray
-            Array of chord lengths corresponding to each control point.
-        """
-        node_chords = self.get_chord(self._node_span_locs)
-        return (node_chords[1:]+node_chords[:-1])/2
-
-
-    def get_array_of_dS(self):
-        """Returns the differential elements of area.
-
-        Returns
-        -------
-        ndarray
-            Array of area differential elements.
-        """
-        ds = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
-        return self.get_cp_avg_chord_lengths()*ds
 
 
     def get_outline_points(self):

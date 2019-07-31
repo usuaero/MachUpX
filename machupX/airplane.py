@@ -226,7 +226,7 @@ class Airplane:
             self.S_w = 0.0
             for (_, wing_segment) in self.wing_segments.items():
                 if wing_segment.is_main:
-                    self.S_w += np.sum(wing_segment.get_array_of_dS())
+                    self.S_w += np.sum(wing_segment.dS)
 
         # Lateral reference length
         if self.l_ref_lat == -1:
