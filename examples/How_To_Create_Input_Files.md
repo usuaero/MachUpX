@@ -280,29 +280,29 @@ Describes an aircraft.
                 either here or in a JSON object pointed to by "path". NOTE: Units may not be specified 
                 by the user for any airfoil parameters. These must be specified in the units given.
 
-            "aL0" : (float)
-                The zero-lift angle of attack in radians.
+            "aL0" : (float, optional)
+                The zero-lift angle of attack in radians. Defaults to 0.0.
 
-            "CLa" : (float)
-                The lift slope in radians^-1.
+            "CLa" : (float, optional)
+                The lift slope in radians^-1. Defaults to 2*pi
 
-            "CmL0" : (float)
-                The zero-lift moment coefficient.
+            "CmL0" : (float, optional)
+                The zero-lift moment coefficient. Defaults to 0.0.
 
-            "Cma" : (float)
-                The moment slope in radians^-1.
+            "Cma" : (float, optional)
+                The moment slope in radians^-1. Defaults to 0.0.
 
-            "CD0" : (float)
-                Constant coefficient in the quadratic fit of the CD/CL curve.
+            "CD0" : (float, optional)
+                Constant coefficient in the quadratic fit of the CD/CL curve. Defaults to 0.0.
 
-            "CD1" : (float)
-                Linear coefficient in the quadratic fit of the CD/CL curve.
+            "CD1" : (float, optional)
+                Linear coefficient in the quadratic fit of the CD/CL curve. Defaults to 0.0.
 
-            "CD2" : (float)
-                Quadratic coefficient in the quadratic fir of the CD/CL curve.
+            "CD2" : (float, optional)
+                Quadratic coefficient in the quadratic fir of the CD/CL curve. Defaults to 0.0.
 
-            "CL_max" : (float)
-                Maximum lift coefficient.
+            "CL_max" : (float, optional)
+                Maximum lift coefficient. Defaults to infinity.
 
             "path" : (string, optional)
                 Path to file containing either a JSON object describing the airfoil using the above keys 
@@ -310,6 +310,10 @@ Describes an aircraft.
                 number (described as part of the following key).
 
             "generate_database" : (bool, optional) NOT CURRENTLY IMPLEMENTED
+
+        If no airfoils are listed here MachUp will automatically generate a default airfoil and use it 
+        on all lifting surfaces. The default values listed above are for a flat plate as predicted by 
+        thin airfoil theory. Do not expect these to give you accurate results.
 
     "wing_segments" : (dict)
         Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the 

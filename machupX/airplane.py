@@ -155,30 +155,14 @@ class Airplane:
         # Create a wing segment which has no properties but which other segments 
         # connect to.
         origin_dict = {
-            "ID" : 0
+            "ID" : 0,
+            "is_main" : False
         }
         self._origin_segment = WingSegment("origin", origin_dict, "both", self._unit_sys, self._airfoil_database)
 
     
     def add_wing_segment(self, wing_segment_name, input_dict):
         """Adds a wing segment to the airplane.
-
-        Let me take a moment to explain the structure of wing segments in MachUpX. This is
-        for the sake of other developers. The way we have decided to define wing segements 
-        makes them fall very naturally into a tree-type structure. Any given wing segment 
-        is attached (we use this term loosely; more aaccurately, the position of one wing 
-        segment is defined relative to another) to another wing segment or the origin. 
-        Eventually, these all lead back to the origin. The origin here is a "dummy" wing 
-        segment which has no other properties than an ID of 0. Adding a wing segment is done
-        recursively via the tree. Each wing segment knows which wing segments attach to it.
-        However, no wing segment knows who it attaches to, only the location of its origin. 
-
-        The tree structure makes certain operations, such as integrating forces and moments 
-        and applying structural deformations, very natural. However, generating the lifting-
-        line matrix equations from this structure is very cumbersome. Therefore, we also 
-        store references to each wing segment at the Airplane level in a list. This makes 
-        generating the lifting-line matrix much more friendly. This makes the code a little 
-        more fragile, but this is Python and we assume the user is being responsible.
 
         Parameters
         ----------
@@ -196,6 +180,23 @@ class Airplane:
         IOError
             If the input is improperly specified.
         """
+
+        #Let me take a moment to explain the structure of wing segments in MachUpX. This is
+        #for the sake of other developers. The way we have decided to define wing segements 
+        #makes them fall very naturally into a tree-type structure. Any given wing segment 
+        #is attached (we use this term loosely; more accurately, the position of one wing 
+        #segment is defined relative to another) to another wing segment or the origin. 
+        #Eventually, these all lead back to the origin. The origin here is a "dummy" wing 
+        #segment which has no other properties than an ID of 0. Adding a wing segment is done
+        #recursively via the tree. Each wing segment knows which wing segments attach to it.
+        #However, no wing segment knows who it attaches to, only the location of its origin. 
+
+        #The tree structure makes certain operations, such as integrating forces and moments 
+        #and applying structural deformations, very natural. However, generating the lifting-
+        #line matrix equations from this structure is very cumbersome. Therefore, we also 
+        #store references to each wing segment at the Airplane level in a list. This makes 
+        #generating the lifting-line matrix much more friendly. This makes the code a little 
+        #more fragile, but this is Python and we assume the user is being responsible.
         
         if wing_segment_name in self.wing_segments.keys():
             raise IOError("Wing segment {0} already exists in this airplane.".format(wing_segment_name))
@@ -273,10 +274,7 @@ class Airplane:
         # Creates a dictionary of all the airfoils. This dictionary is then passed to each 
         # wing segment when it gets created for the wing segment to use.
 
-        try:
-            airfoils = self._input_dict["airfoils"]
-        except NameError:
-            raise IOError("Airfoil database must be defined.")
+        airfoils = self._input_dict.get("airfoils", {"default" : {} })
 
         # Load airfoil database from separate file
         if isinstance(airfoils, str):
@@ -343,6 +341,7 @@ class Airplane:
         delta_beta : float
             Change in sideslip angle.
         """
+        raise IOError("Sorry, Airplane.update_state() is not yet functional.")
         self.p_bar += _import_value("delta_position", kwargs, self._unit_sys, [0, 0, 0])
         self.w += _import_value("delta_omega", kwargs, self._unit_sys, [0, 0, 0])
 

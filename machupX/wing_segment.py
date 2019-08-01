@@ -58,7 +58,6 @@ class WingSegment:
             self._initialize_params()
             self._initialize_getters()
             self._initialize_airfoils(airfoil_dict)
-            self._initialize_cp_getters()
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
             self._setup_cp_data()
@@ -221,24 +220,6 @@ class WingSegment:
         self._aL0 = np.asarray(self._aL0)
 
 
-    def _cp_decorator(self, func):
-        # Decorates whatever function to return its values at the control point locations
-
-        def wrapper(*args):
-            return func(self._cp_span_locs, *args)
-
-        return wrapper
-
-
-    def _initialize_cp_getters(self):
-        # Decorates certain functions to return values at the control point locations
-        self.get_cp_CLa = self._cp_decorator(self.get_CLa)
-        self.get_cp_aL0 = self._cp_decorator(self.get_aL0)
-        self.get_cp_CL = self._cp_decorator(self.get_CL)
-        self.get_cp_CD = self._cp_decorator(self.get_CD)
-        self.get_cp_Cm = self._cp_decorator(self.get_Cm)
-
-
     def _setup_cp_data(self):
         # Creates and stores vectors of important data at each control point
         self.u_a_cp = self._get_axial_vec(self._cp_span_locs)
@@ -254,38 +235,28 @@ class WingSegment:
         self.nodes = self._get_section_ac_loc(self._node_span_locs)
 
 
-    def get_CLa(self, span):
-        """Returns the lift slope as a function of span. Used for the linear 
+    def get_cp_CLa(self):
+        """Returns the lift slope at each control point. Used for the linear 
         solution to NLL.
-
-        Parameters
-        ----------
-        span : float
-            Span location(s)
 
         Returns
         -------
         float
             Lift slope
         """
-        return np.interp(span, self._airfoil_spans, self._CLa)
+        return np.interp(self._cp_span_locs, self._airfoil_spans, self._CLa)
 
 
-    def get_aL0(self, span):
-        """Returns the zero-lift angle of attack as a function of span. Used for the linear 
+    def get_cp_aL0(self):
+        """Returns the zero-lift angle of attack at each control point. Used for the linear 
         solution to NLL.
-
-        Parameters
-        ----------
-        span : float
-            Span location(s)
 
         Returns
         -------
         float
             Zero lift angle of attack
         """
-        return np.interp(span, self._airfoil_spans, self._aL0)
+        return np.interp(self._cp_span_locs, self._airfoil_spans, self._aL0)
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
@@ -378,9 +349,6 @@ class WingSegment:
     def get_root_loc(self):
         """Returns the location of the root quarter-chord.
 
-        Parameters
-        ----------
-
         Returns
         -------
         ndarray
@@ -394,9 +362,6 @@ class WingSegment:
 
     def get_tip_loc(self):
         """Returns the location of the tip quarter-chord.
-
-        Parameters
-        ----------
 
         Returns
         -------
@@ -522,104 +487,73 @@ class WingSegment:
         return (1-d)*coefs[i,j]+d*coefs[i,j+1]
 
 
-    def get_CL(self, span, params):
-        """Returns the coefficient of lift at the given span location as a function of *args.
+    def get_cp_CL(self, params):
+        """Returns the coefficient of lift at each control point as a function of params.
 
         Parameters
         ----------
-        span : float or ndarray
-            Span location as a fraction of the total span, starting at the root.
-
         params : ndarray
-            Airfoil parameters. The first is always angle of attack in radians. If a 2D 
-            array, specifies the airfoil parameters at each given span location.
+            Airfoil parameters.
 
         Returns
         -------
         float or ndarray
             Coefficient of lift
         """
-        if isinstance(span, float):
-            span_array = np.asarray(span)[np.newaxis]
-            param_array = params[np.newaxis]
-        else:
-            if span.shape[0] != params.shape[0]:
-                raise ValueError("""span and inputs must have the same first dimension. Could 
-                                    not match dimensions {0} and {1}.""".format(span.shape, params.shape))
-            span_array = np.copy(span)
-            param_array = np.copy(params)
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        CLs = np.zeros((span_array.shape[0],self._num_airfoils))
+        CLs = np.zeros((self._N,self._num_airfoils))
         for i in range(self._num_airfoils):
-            CLs[:,i] = self._airfoils[i].get_CL(param_array)
+            CLs[:,i] = self._airfoils[i].get_CL(params)
 
-        return self._airfoil_interpolator(span_array, self._airfoil_spans, CLs)
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLs)
 
 
-    def get_CD(self, span, params):
-        """Returns the coefficient of drag at the given span location as a function of params.
+    def get_cp_CD(self, params):
+        """Returns the coefficient of drag at each control point as a function of params.
 
         Parameters
         ----------
-        span : float
-            Span location as a fraction of the total span, starting at the root.
-
         params : floats
-            Airfoil parameters. The first is always angle of attack in radians.
+            Airfoil parameters.
 
         Returns
         -------
         float
             Coefficient of drag
         """
-        if isinstance(span, float):
-            span_array = np.asarray(span)[np.newaxis]
-            param_array = params[np.newaxis]
-        else:
-            if span.shape[0] != params.shape[0]:
-                raise ValueError("""span and inputs must have the same first dimension. Could 
-                                    not match dimensions {0} and {1}.""".format(span.shape, params.shape))
-            span_array = np.copy(span)
-            param_array = np.copy(params)
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        CDs = np.zeros((span_array.shape[0],self._num_airfoils))
+        CDs = np.zeros((self._N,self._num_airfoils))
         for i in range(self._num_airfoils):
-            CDs[:,i] = self._airfoils[i].get_CD(param_array)
+            CDs[:,i] = self._airfoils[i].get_CD(params)
 
-        return self._airfoil_interpolator(span_array, self._airfoil_spans, CDs)
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CDs)
 
 
-    def get_Cm(self, span, params):
-        """Returns the moment coefficient at the given span location as a function of *args.
+    def get_cp_Cm(self, params):
+        """Returns the moment coefficient at each control point as a function of params.
 
         Parameters
         ----------
-        span : float
-            Span location as a fraction of the total span, starting at the root.
-
         params : floats
-            Airfoil parameters. The first is always angle of attack in radians.
+            Airfoil parameters.
 
         Returns
         -------
         float
             Moment coefficient
         """
-        if isinstance(span, float):
-            span_array = np.asarray(span)[np.newaxis]
-            param_array = params[np.newaxis]
-        else:
-            if span.shape[0] != params.shape[0]:
-                raise ValueError("""span and inputs must have the same first dimension. Could 
-                                    not match dimensions {0} and {1}.""".format(span.shape, params.shape))
-            span_array = np.copy(span)
-            param_array = np.copy(params)
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        Cms = np.zeros((span_array.shape[0],self._num_airfoils))
+        Cms = np.zeros((self._N,self._num_airfoils))
         for i in range(self._num_airfoils):
-            Cms[:,i] = self._airfoils[i].get_Cm(param_array)
+            Cms[:,i] = self._airfoils[i].get_Cm(params)
 
-        return self._airfoil_interpolator(span_array, self._airfoil_spans, Cms)
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, Cms)
 
 
     def get_outline_points(self):
@@ -632,7 +566,7 @@ class WingSegment:
         """
         num_span_locs = 10
         spans = np.linspace(0, 1, num_span_locs)
-        qc_points = self.get_quarter_chord_loc(spans)
+        qc_points = self._get_quarter_chord_loc(spans)
         chords = self.get_chord(spans)
         axial_vecs = self._get_axial_vec(spans)
 

@@ -491,7 +491,7 @@ class Scene:
         return end_time-start_time
 
 
-    def _integrate_forces_and_moments(self, verbose=False):
+    def _integrate_forces_and_moments(self, verbose=False, breakdown=True):
         # Determines the forces and moments on each lifting surface
         start_time = time.time()
 
@@ -519,29 +519,11 @@ class Scene:
             FM_inv_airplane_total = np.zeros(9)
             FM_vis_airplane_total = np.zeros(9)
             self._FM[airplane_name] = {
-                "inviscid" : {
-                    "FL" : {},
-                    "FD" : {},
-                    "FS" : {},
-                    "Fx" : {},
-                    "Fy" : {},
-                    "Fz" : {},
-                    "Mx" : {},
-                    "My" : {},
-                    "Mz" : {}
-                },
-                "viscous" : {
-                    "FL" : {},
-                    "FD" : {},
-                    "FS" : {},
-                    "Fx" : {},
-                    "Fy" : {},
-                    "Fz" : {},
-                    "Mx" : {},
-                    "My" : {},
-                    "Mz" : {}
-                },
-                "total" : {
+                "total" : {}
+            }
+
+            if breakdown:
+                self._FM[airplane_name]["inviscid"] =  {
                     "FL" : {},
                     "FD" : {},
                     "FS" : {},
@@ -552,7 +534,17 @@ class Scene:
                     "My" : {},
                     "Mz" : {}
                 }
-            }
+                self._FM[airplane_name]["viscous"] =  {
+                    "FL" : {},
+                    "FD" : {},
+                    "FS" : {},
+                    "Fx" : {},
+                    "Fy" : {},
+                    "Fz" : {},
+                    "Mx" : {},
+                    "My" : {},
+                    "Mz" : {}
+                }
 
             # Determine freestream vector
             v_trans = airplane_object.get_v_inf()
@@ -570,41 +562,45 @@ class Scene:
                 dD = q_inf[cur_slice]*self._dS[cur_slice]*CD
                 dF_b_visc = dD[:,np.newaxis]*u[cur_slice]
                 F_b_visc = np.sum(dF_b_visc, axis=0)
-                self._FM[airplane_name]["viscous"]["Fx"][segment_name] = F_b_visc[0].item()
-                self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
-                self._FM[airplane_name]["viscous"]["Fz"][segment_name] = F_b_visc[2].item()
 
                 L_visc, D_visc, S_visc = self._rotate_aero_forces(F_b_visc, u_inf)
-                self._FM[airplane_name]["viscous"]["FL"][segment_name] = L_visc
-                self._FM[airplane_name]["viscous"]["FD"][segment_name] = D_visc
-                self._FM[airplane_name]["viscous"]["FS"][segment_name] = S_visc
 
                 # Inviscid
                 F_b_inv = np.sum(dF_inv[cur_slice], axis=0)
-                self._FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_b_inv[0].item()
-                self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
-                self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
 
                 L_inv, D_inv, S_inv = self._rotate_aero_forces(F_b_inv, u_inf)
-                self._FM[airplane_name]["inviscid"]["FL"][segment_name] = L_inv
-                self._FM[airplane_name]["inviscid"]["FD"][segment_name] = D_inv
-                self._FM[airplane_name]["inviscid"]["FS"][segment_name] = S_inv
 
                 # Determine viscid moment
                 Cm = self.airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(alpha[cur_slice])
                 dM_visc = dD[:,np.newaxis]*np.cross(self._PC[cur_slice], u[cur_slice])
                 M_b_visc = np.sum(dM_visc, axis=0)
-                self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
-                self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
-                self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
 
                 # Determine inviscid moment
                 dM_section = -(q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*Cm)[:,np.newaxis]*self._u_s[cur_slice] # Due to section moment coef
                 M_b_inv = np.sum(dM_section+dM_vortex[cur_slice], axis=0)
-                self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
-                self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
-                self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
 
+                # Store breakdown of forces and moments
+                if breakdown:
+                    self._FM[airplane_name]["viscous"]["Fx"][segment_name] = F_b_visc[0].item()
+                    self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
+                    self._FM[airplane_name]["viscous"]["Fz"][segment_name] = F_b_visc[2].item()
+                    self._FM[airplane_name]["viscous"]["FL"][segment_name] = L_visc
+                    self._FM[airplane_name]["viscous"]["FD"][segment_name] = D_visc
+                    self._FM[airplane_name]["viscous"]["FS"][segment_name] = S_visc
+                    self._FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_b_inv[0].item()
+                    self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
+                    self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
+                    self._FM[airplane_name]["inviscid"]["FL"][segment_name] = L_inv
+                    self._FM[airplane_name]["inviscid"]["FD"][segment_name] = D_inv
+                    self._FM[airplane_name]["inviscid"]["FS"][segment_name] = S_inv
+                    self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
+                    self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
+                    self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
+                    self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
+                    self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
+                    self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
+
+                # Sum up totals
                 FM_inv_airplane_total[0] += L_inv
                 FM_inv_airplane_total[1] += D_inv
                 FM_inv_airplane_total[2] += S_inv
@@ -618,28 +614,31 @@ class Scene:
                 
                 index += num_cps
 
-            self._FM[airplane_name]["inviscid"]["FL"]["total"] = FM_inv_airplane_total[0].item()
-            self._FM[airplane_name]["inviscid"]["FD"]["total"] = FM_inv_airplane_total[1].item()
-            self._FM[airplane_name]["inviscid"]["FS"]["total"] = FM_inv_airplane_total[2].item()
-            self._FM[airplane_name]["inviscid"]["Fx"]["total"] = FM_inv_airplane_total[3].item()
-            self._FM[airplane_name]["inviscid"]["Fy"]["total"] = FM_inv_airplane_total[4].item()
-            self._FM[airplane_name]["inviscid"]["Fz"]["total"] = FM_inv_airplane_total[5].item()
-            self._FM[airplane_name]["inviscid"]["Mx"]["total"] = FM_inv_airplane_total[6].item()
-            self._FM[airplane_name]["inviscid"]["My"]["total"] = FM_inv_airplane_total[7].item()
-            self._FM[airplane_name]["inviscid"]["Mz"]["total"] = FM_inv_airplane_total[8].item()
+            if breakdown:
+                # Store the total inviscid force and moment
+                self._FM[airplane_name]["inviscid"]["FL"]["total"] = FM_inv_airplane_total[0].item()
+                self._FM[airplane_name]["inviscid"]["FD"]["total"] = FM_inv_airplane_total[1].item()
+                self._FM[airplane_name]["inviscid"]["FS"]["total"] = FM_inv_airplane_total[2].item()
+                self._FM[airplane_name]["inviscid"]["Fx"]["total"] = FM_inv_airplane_total[3].item()
+                self._FM[airplane_name]["inviscid"]["Fy"]["total"] = FM_inv_airplane_total[4].item()
+                self._FM[airplane_name]["inviscid"]["Fz"]["total"] = FM_inv_airplane_total[5].item()
+                self._FM[airplane_name]["inviscid"]["Mx"]["total"] = FM_inv_airplane_total[6].item()
+                self._FM[airplane_name]["inviscid"]["My"]["total"] = FM_inv_airplane_total[7].item()
+                self._FM[airplane_name]["inviscid"]["Mz"]["total"] = FM_inv_airplane_total[8].item()
 
-            self._FM[airplane_name]["viscous"]["FL"]["total"] = FM_vis_airplane_total[0].item()
-            self._FM[airplane_name]["viscous"]["FD"]["total"] = FM_vis_airplane_total[1].item()
-            self._FM[airplane_name]["viscous"]["FS"]["total"] = FM_vis_airplane_total[2].item()
-            self._FM[airplane_name]["viscous"]["Fx"]["total"] = FM_vis_airplane_total[3].item()
-            self._FM[airplane_name]["viscous"]["Fy"]["total"] = FM_vis_airplane_total[4].item()
-            self._FM[airplane_name]["viscous"]["Fz"]["total"] = FM_vis_airplane_total[5].item()
-            self._FM[airplane_name]["viscous"]["Mx"]["total"] = FM_vis_airplane_total[6].item()
-            self._FM[airplane_name]["viscous"]["My"]["total"] = FM_vis_airplane_total[7].item()
-            self._FM[airplane_name]["viscous"]["Mz"]["total"] = FM_vis_airplane_total[8].item()
+                # Store the total viscous force and moment
+                self._FM[airplane_name]["viscous"]["FL"]["total"] = FM_vis_airplane_total[0].item()
+                self._FM[airplane_name]["viscous"]["FD"]["total"] = FM_vis_airplane_total[1].item()
+                self._FM[airplane_name]["viscous"]["FS"]["total"] = FM_vis_airplane_total[2].item()
+                self._FM[airplane_name]["viscous"]["Fx"]["total"] = FM_vis_airplane_total[3].item()
+                self._FM[airplane_name]["viscous"]["Fy"]["total"] = FM_vis_airplane_total[4].item()
+                self._FM[airplane_name]["viscous"]["Fz"]["total"] = FM_vis_airplane_total[5].item()
+                self._FM[airplane_name]["viscous"]["Mx"]["total"] = FM_vis_airplane_total[6].item()
+                self._FM[airplane_name]["viscous"]["My"]["total"] = FM_vis_airplane_total[7].item()
+                self._FM[airplane_name]["viscous"]["Mz"]["total"] = FM_vis_airplane_total[8].item()
 
+            # Determine total force and moment for the airplane
             FM_airplane_total = FM_vis_airplane_total+FM_inv_airplane_total
-
             self._FM[airplane_name]["total"]["FL"] = FM_airplane_total[0].item()
             self._FM[airplane_name]["total"]["FD"] = FM_airplane_total[1].item()
             self._FM[airplane_name]["total"]["FS"] = FM_airplane_total[2].item()
@@ -657,23 +656,28 @@ class Scene:
     def _rotate_aero_forces(self, F, u_inf):
         # Takes the force vector and coverts it to lift, drag, and sideforce
 
+        # Determine direction vectors
         u_lift = np.cross(u_inf,[0.,1.,0.])
+        u_lift = u_lift/np.linalg.norm(u_lift)
         u_side = np.cross(u_lift,u_inf)
+        u_side = u_side/np.linalg.norm(u_side)
 
+        # Drag force
         D = np.dot(F, u_inf)
         D_vec = D*u_inf
         
+        # Lift force
         L = np.dot(F, u_lift)
         L_vec = L*u_lift
         
+        # Side force
         S_vec = F-L_vec-D_vec
-
         S = np.dot(S_vec,u_side)
 
         return L,D,S
 
 
-    def solve_forces(self, filename=None, non_dimensional=False, verbose=False):
+    def solve_forces(self, filename=None, non_dimensional=False, verbose=False, only_totals=False):
         """Solves the NLL equations to determine the forces and moments on the aircraft.
 
         Parameters
@@ -690,6 +694,11 @@ class Scene:
             Display the time it took to complete each portion of the calculation. 
             Defaults to False.
 
+        only_totals : bool
+            If set to true, this function will only output the total forces and moments for each 
+            airplane. Otherwise, it will give a breakdown of viscous and inviscid forces and 
+            moments for each wing segment. Defaults to false.
+
         Returns
         -------
         dict:
@@ -699,7 +708,7 @@ class Scene:
         nonlinear_time = 0.0
         if self._nonlinear_solver:
             nonlinear_time = self._solve_nonlinear(verbose=verbose)
-        integrate_time = self._integrate_forces_and_moments(verbose=verbose)
+        integrate_time = self._integrate_forces_and_moments(verbose=verbose, breakdown=not only_totals)
 
         if verbose:
             print("Time to compute linear solution: {0} s".format(linear_time))

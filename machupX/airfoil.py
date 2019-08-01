@@ -55,14 +55,17 @@ class Airfoil:
                 params = self._input_dict
 
             # Save params
-            self._aL0 = _import_value("aL0", params, "SI", None) # Again, the unit system doesn't matter
-            self._CLa = _import_value("CLa", params, "SI", None)
-            self._CmL0 = _import_value("CmL0", params, "SI", None)
-            self._Cma = _import_value("Cma", params, "SI", None)
-            self._CD0 = _import_value("CD0", params, "SI", None)
-            self._CD1 = _import_value("CD1", params, "SI", None)
-            self._CD2 = _import_value("CD2", params, "SI", None)
-            self._CL_max = _import_value("CL_max", params, "SI", None)
+            self._aL0 = _import_value("aL0", params, "SI", 0.0) # Again, the unit system doesn't matter
+            self._CLa = _import_value("CLa", params, "SI", 2*np.pi)
+            self._CmL0 = _import_value("CmL0", params, "SI", 0.0)
+            self._Cma = _import_value("Cma", params, "SI", 0.0)
+            self._CD0 = _import_value("CD0", params, "SI", 0.0)
+            self._CD1 = _import_value("CD1", params, "SI", 0.0)
+            self._CD2 = _import_value("CD2", params, "SI", 0.0)
+            self._CL_max = _import_value("CL_max", params, "SI", np.inf)
+
+            self._CLM = _import_value("CLM", params, "SI", 0.0)
+            self._CLRe = _import_value("CLRe", params, "SI", 0.0)
 
         elif self._type == "nonlinear":
 
@@ -86,7 +89,11 @@ class Airfoil:
 
 
     def _define_vectorized_getters(self):
-        # Creates vecotrized functions to return CL, CD, and Cm
+        # Creates vectorized functions to return CL, CD, CL,a, Cm, aL0, etc.
+        # For each of these, the only parameter is inputs. This is a vector
+        # of parameters which can affect the airfoil coefficients. The first
+        # three are always alpha, Reynolds number, and Mach number, in that
+        # order.
 
         # Lift coefficient getter
         def CL(inputs):
@@ -96,20 +103,7 @@ class Airfoil:
                     CL = np.sign(CL)*self._CL_max
                 return CL
 
-        CL_docstring = """Returns the coefficient of lift as a function of args.
-
-        Parameters
-        ----------
-        inputs : ndarray
-            Arbitrary airfoil parameters. The first is always angle of attack in radians.
-
-        Returns
-        -------
-        float
-            Lift coefficient.
-        """
-
-        self.get_CL = np.vectorize(CL, doc=CL_docstring)
+        self.get_CL = np.vectorize(CL)
         
         # Drag coefficient getter
         def CD(inputs):
@@ -117,71 +111,37 @@ class Airfoil:
                 CL = self.get_CL(inputs)
                 return self._CD0+self._CD1*CL+self._CD2*CL**2
 
-        CD_docstring = """Returns the coefficient of drag as a function of args.
-
-        Parameters
-        ----------
-        inputs : ndarray
-            Arbitrary airfoil parameters. The first is always angle of attack in radians.
-
-        Returns
-        -------
-        float
-            Drag coefficient.
-        """
-
-        self.get_CD = np.vectorize(CD, doc=CD_docstring, excluded={0})
+        self.get_CD = np.vectorize(CD)
 
         # Moment coefficient getter
         def Cm(inputs):
             if self._type == "linear":
                 return self._Cma*inputs+self._CmL0
-        
-        Cm_docstring = """Returns the coefficient of moment as a function of args.
 
-        Parameters
-        ----------
-        inputs : ndarray
-            Arbitrary airfoil parameters. The first is always angle of attack in radians.
+        self.get_Cm = np.vectorize(Cm)
 
-        Returns
-        -------
-        float
-            Moment coefficient.
-        """
+        # Lift slope getter
+        def CLa(inputs=None):
+            if self._type == "linear":
+                return self._CLa
 
-        self.get_Cm = np.vectorize(Cm, doc=Cm_docstring, excluded={0})
+        self.get_CLa = np.vectorize(CLa)
 
+        # Zero-lift angle of attack getter
+        def aL0(inputs=None):
+            if self._type == "linear":
+                return self._aL0
 
-    def get_CLa(self):
-        """Returns the lift slope.
+        self.get_aL0 = np.vectorize(aL0)
 
-        Parameters
-        ----------
-        inputs : ndarray
-            Arbitrary airfoil parameters. The first is always angle of attack in radians.
+        # Derivative of lift coef wrt Mach number
+        def CLM(inputs=None):
+            if self._type == "linear":
+                return self._CLM
 
-        Returns
-        -------
-        float
-            Lift slope in 1/radians.
-        """
-        if self._type == "linear":
-            return self._CLa
+        self.get_CLM = np.vectorize(CLM)
 
-
-    def get_aL0(self):
-        """Returns the zero-lift angle of attack.
-
-        Parameters
-        ----------
-        inputs : ndarray
-            Arbitrary airfoil parameters. The first is always angle of attack in radians.
-
-        Returns
-        -------
-        float
-            Zero-lift angle of attack in radians.
-        """
-        if self._type == "linear":
-            return self._aL0
+        # Derivative of lift coef wrt Re
+        def CLRe(inputs=None):
+            if self._type == "linear":
+                return self._CLRe
