@@ -328,7 +328,7 @@ def test_node_generation():
 
     wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
-        print(wing_dict[key].get_node_locs())
+        print(wing_dict[key].nodes)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])
@@ -364,7 +364,7 @@ def test_cp_generation():
 
     wing_dict = scene.airplanes["test_plane"].wing_segments
     for key in wing_dict:
-        print(wing_dict[key].get_cp_locs())
+        print(wing_dict[key].control_points)
 
     sp.run(["rm", altered_airplane_name])
     sp.run(["rm", altered_input_name])

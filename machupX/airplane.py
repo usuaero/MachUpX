@@ -129,8 +129,9 @@ class Airplane:
 
                 v_inf = np.zeros(3)
                 denom = np.sqrt(1-S_a**2*S_B**2)
+                # Since this formulation gives the components of aircraft velocity, we store the negative to get u, v, and w
                 v_inf[0] = -v_value*C_a*C_B/denom
-                v_inf[1] = v_value*C_a*S_B/denom
+                v_inf[1] = -v_value*C_a*S_B/denom
                 v_inf[2] = -v_value*S_a*C_B/denom
                 
                 self.v = -_quaternion_inverse_transform(self.q, v_inf)
