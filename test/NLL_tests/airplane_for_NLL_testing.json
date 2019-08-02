@@ -20,7 +20,6 @@
                 "location" : "root"
             },
             "side" : "both",
-            "twist" : -1.0,
             "span" : 2.0,
             "airfoil" : "NACA_0010",
             "grid" : 40
@@ -31,7 +30,8 @@
             "connect_to" : {
                 "ID" : 1,
                 "dx" : -3.0,
-                "location" : "root"
+                "location" : "root",
+                "dz" : -0.1
             },
             "side" : "right",
             "dihedral" : 90.0,

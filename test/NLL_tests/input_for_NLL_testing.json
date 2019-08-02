@@ -1,7 +1,9 @@
 {
     "tag" : "Ideal MachUpX input file.",
     "run" : {
-        "forces" : {},
+        "forces" : {
+            "verbose" : true
+        },
         "stl" : {},
         "aero_derivatives" : {}
     },

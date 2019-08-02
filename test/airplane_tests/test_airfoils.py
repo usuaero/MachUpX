@@ -38,7 +38,9 @@ def test_constant_airfoil_section_get_lift():
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_CL in zip(alphas, CLs):
         for key in wing_segments:
-            CL = wing_segments[key].get_cp_CL(np.repeat(alpha[np.newaxis], wing_segments[key]._N))
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            CL = wing_segments[key].get_cp_CL(params)
             assert np.allclose(CL, correct_CL, rtol=0.0, atol=1e-10)
 
 def test_constant_airfoil_section_get_drag():
@@ -73,7 +75,9 @@ def test_constant_airfoil_section_get_drag():
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_CD in zip(alphas, CDs):
         for key in wing_segments:
-            CD = wing_segments[key].get_cp_CD(np.repeat(alpha[np.newaxis], wing_segments[key]._N))
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            CD = wing_segments[key].get_cp_CD(params)
             assert np.allclose(CD, correct_CD, rtol=0.0, atol=1e-10)
 
 def test_constant_airfoil_section_get_moment():
@@ -108,7 +112,9 @@ def test_constant_airfoil_section_get_moment():
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for alpha, correct_Cm in zip(alphas, Cms):
         for key in wing_segments:
-            Cm = wing_segments[key].get_cp_Cm(np.repeat(alpha[np.newaxis], wing_segments[key]._N))
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            Cm = wing_segments[key].get_cp_Cm(params)
             assert np.allclose(Cm, correct_Cm, rtol=0.0, atol=1e-10)
 
 def test_variable_airfoil_section_get_lift():
@@ -146,7 +152,9 @@ def test_variable_airfoil_section_get_lift():
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
         for key in wing_segments:
-            CL = wing_segments[key].get_cp_CL(np.repeat(alpha[np.newaxis], wing_segments[key]._N))
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            CL = wing_segments[key].get_cp_CL(params)
             if wing_segments[key]._side == "left":
                 assert np.allclose(CL, CLs[i], rtol=0.0, atol=1e-8)
             else:
@@ -188,7 +196,9 @@ def test_variable_airfoil_section_get_drag():
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
         for key in wing_segments:
-            CD = wing_segments[key].get_cp_CD(np.repeat(alpha[np.newaxis],wing_segments[key]._N))
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            CD = wing_segments[key].get_cp_CD(params)
             if wing_segments[key]._side == "left":
                 assert np.allclose(CD, CDs[i], rtol=0.0, atol=1e-8)
             else:
@@ -229,7 +239,9 @@ def test_variable_airfoil_section_get_moment():
     wing_segments = scene.airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):
         for key in wing_segments:
-            Cm = wing_segments[key].get_cp_Cm(np.repeat(alpha[np.newaxis],wing_segments[key]._N))
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            Cm = wing_segments[key].get_cp_Cm(params)
             if wing_segments[key]._side == "left":
                 assert np.allclose(Cm, Cms[i], rtol=0.0, atol=1e-8)
             else:
