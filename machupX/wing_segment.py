@@ -708,19 +708,18 @@ class WingSegment:
         ndarray
             Array of outline points.
         """
-        num_span_locs = 10
-        spans = np.linspace(0, 1, num_span_locs)
+        spans = np.linspace(0, 1, self._N)
         qc_points = self._get_quarter_chord_loc(spans)
         chords = self.get_chord(spans)
         axial_vecs = self._get_axial_vec(spans)
 
-        points = np.zeros((num_span_locs*2+1,3))
+        points = np.zeros((self._N*2+1,3))
 
         # Leading edge
-        points[:num_span_locs,:] = qc_points - 0.25*(axial_vecs*chords[:,np.newaxis])
+        points[:self._N,:] = qc_points - 0.25*(axial_vecs*chords[:,np.newaxis])
 
         # Trailing edge
-        points[-2:num_span_locs-1:-1,:] = qc_points - 0.75*(axial_vecs*chords[:,np.newaxis])
+        points[-2:self._N-1:-1,:] = qc_points - 0.75*(axial_vecs*chords[:,np.newaxis])
 
         # Complete the circle
         points[-1,:] = points[0,:]
@@ -752,9 +751,9 @@ class WingSegment:
         for key in control_state:
             deflection = _import_value(key, control_state, self._unit_sys, 0.0)
             if self._side == "right" or control_symmetry[key]:
-                self._delta_flap += deflection*self._control_mixing[key]
+                self._delta_flap += deflection*self._control_mixing.get(key, 0.0)
             else:
-                self._delta_flap -= deflection*self._control_mixing[key]
+                self._delta_flap -= deflection*self._control_mixing.get(key, 0.0)
 
         # Determine flap efficiency
         # From a fit of Mechanics of Flight Fig. 1.7.5

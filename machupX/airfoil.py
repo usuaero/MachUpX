@@ -3,6 +3,7 @@ from .poly_fits import multivariablePolynomialFit, multivariablePolynomialFuncti
 
 import numpy as np
 import json
+import copy
 
 class Airfoil:
     """A class defining an airfoil.
@@ -126,8 +127,12 @@ class Airfoil:
             Drag coefficient
         """
         if self._type == "linear":
-            CL = self.get_CL(inputs)
-            return self._CD0+self._CD1*CL+self._CD2*CL**2
+            delta_flap = inputs[4]
+            inputs_wo_flap = copy.copy(inputs)
+            inputs_wo_flap[3:] = 0.0
+            CL = self.get_CL(inputs_wo_flap)
+            CD_flap = 0.002*np.abs(delta_flap)*180/np.pi # A rough estimate for flaps
+            return self._CD0+self._CD1*CL+self._CD2*CL**2+CD_flap
 
 
     def get_Cm(self, inputs):

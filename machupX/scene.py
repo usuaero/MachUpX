@@ -788,7 +788,10 @@ class Scene:
                 segment_names.append(segment_name)
 
                 points = segment_object.get_outline_points()
-                ax.plot(points[:,0], points[:,1], points[:,2], '-')
+                if show_legend: # Then colors matter
+                    ax.plot(points[:,0], points[:,1], points[:,2], '-')
+                else:
+                    ax.plot(points[:,0], points[:,1], points[:,2], 'k-')
 
                 axis_max = max([axis_max, max(points.flatten())])
                 axis_min = min([axis_min, min(points.flatten())])
@@ -804,3 +807,5 @@ class Scene:
         ax.set_xlim3d(axis_min, axis_max)
         ax.set_ylim3d(axis_min, axis_max)
         ax.set_zlim3d(axis_min, axis_max)
+
+        plt.show()
