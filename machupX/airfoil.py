@@ -26,6 +26,7 @@ class Airfoil:
         If the input is invalid.
     """
 
+
     def __init__(self, name, input_dict):
 
         self.name = name
@@ -33,7 +34,6 @@ class Airfoil:
         self._type = _import_value("type", self._input_dict, "SI", None) # Unit system doesn't matter for these
 
         self._initialize_data()
-        self._define_vectorized_getters()
 
     
     def _initialize_data(self):
@@ -85,63 +85,141 @@ class Airfoil:
     def _generate_database(self):
         # Generates a database of airfoil parameters from the section geometry
         #TODO: Implement this
-        pass
+        raise IOError("Generateing an airfoil database is not yet allowed in this version of MachUpX.")
 
 
-    def _define_vectorized_getters(self):
-        # Creates vectorized functions to return CL, CD, CL,a, Cm, aL0, etc.
-        # For each of these, the only parameter is inputs. This is a vector
-        # of parameters which can affect the airfoil coefficients. The first
-        # three are always alpha, Reynolds number, and Mach number, in that
-        # order.
+    def get_CL(self, inputs):
+        """Returns the coefficient of lift.
 
-        # Lift coefficient getter
-        def CL(inputs):
-            if self._type == "linear":
-                CL = self._CLa*(inputs-self._aL0)
-                if CL > self._CL_max or CL < -self._CL_max:
-                    CL = np.sign(CL)*self._CL_max
-                return CL
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
 
-        self.get_CL = np.vectorize(CL)
-        
-        # Drag coefficient getter
-        def CD(inputs):
-            if self._type == "linear":
-                CL = self.get_CL(inputs)
-                return self._CD0+self._CD1*CL+self._CD2*CL**2
+        Returns
+        -------
+        float
+            Lift coefficient
+        """
+        if self._type == "linear":
+            CL = self._CLa*(inputs[0]-self._aL0+inputs[3]*inputs[4])
+            if CL > self._CL_max or CL < -self._CL_max:
+                CL = np.sign(CL)*self._CL_max
+            return CL
 
-        self.get_CD = np.vectorize(CD)
 
-        # Moment coefficient getter
-        def Cm(inputs):
-            if self._type == "linear":
-                return self._Cma*inputs+self._CmL0
+    def get_CD(self, inputs):
+        """Returns the coefficient of drag
 
-        self.get_Cm = np.vectorize(Cm)
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
 
-        # Lift slope getter
-        def CLa(inputs=None):
-            if self._type == "linear":
-                return self._CLa
+        Returns
+        -------
+        float
+            Drag coefficient
+        """
+        if self._type == "linear":
+            CL = self.get_CL(inputs)
+            return self._CD0+self._CD1*CL+self._CD2*CL**2
 
-        self.get_CLa = np.vectorize(CLa)
 
-        # Zero-lift angle of attack getter
-        def aL0(inputs=None):
-            if self._type == "linear":
-                return self._aL0
+    def get_Cm(self, inputs):
+        """Returns the moment coefficient
 
-        self.get_aL0 = np.vectorize(aL0)
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
 
-        # Derivative of lift coef wrt Mach number
-        def CLM(inputs=None):
-            if self._type == "linear":
-                return self._CLM
+        Returns
+        -------
+        float
+            Moment coefficient
+        """
+        if self._type == "linear":
+            return self._Cma*inputs[0]+self._CmL0+inputs[3]*inputs[4]
 
-        self.get_CLM = np.vectorize(CLM)
 
-        # Derivative of lift coef wrt Re
-        def CLRe(inputs=None):
-            if self._type == "linear":
-                return self._CLRe
+    def get_aL0(self, inputs):
+        """Returns the zero-lift angle of attack
+
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
+
+        Returns
+        -------
+        float
+            Zero-lift angle of attack
+        """
+        if self._type == "linear":
+            return self._aL0
+
+
+    def get_CLM(self, inputs):
+        """Returns the lift slope with respect to Reynolds number
+
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
+
+        Returns
+        -------
+        float
+            Lift slope with respect to Reynolds number
+        """
+        if self._type == "linear":
+            return self._CLM
+
+
+    def get_CLRe(self, inputs):
+        """Returns the lift slope with respect to Reynolds number
+
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
+
+        Returns
+        -------
+        float
+            Lift slope with respect to Reynolds number
+        """
+        if self._type == "linear":
+            return self._CLRe
+
+
+    def get_CLa(self, inputs):
+        """Returns the lift slope
+
+        Parameters
+        ----------
+        inputs : ndarray
+            Parameters which can affect the airfoil coefficients. The first
+            three are always alpha, Reynolds number, and Mach number. Fourth 
+            is flap efficiency and fifth is flap deflection.
+
+        Returns
+        -------
+        float
+            Lift slope
+        """
+        if self._type == "linear":
+            return self._CLa

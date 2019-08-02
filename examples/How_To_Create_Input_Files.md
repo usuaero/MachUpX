@@ -414,21 +414,25 @@ Describes an aircraft.
                 be distributed evenly. Defaults to 1.
 
             "control_surface" : (dict, optional)
-                Defines a control surface on the trailing edge of the wing segment.
+                Defines a control surface on the trailing edge of the wing segment. Uses Phillips' 
+                approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
 
                 "root_span" : (float, optional)
                     The span location, as a fraction of total span, where the control surface begins.
-                    Defaults to 0.2.
+                    Defaults to 0.0.
 
                 "tip_span" : (float, optional)
                     The span location, as a fraction of total span, where the control surface ends.
-                    Defaults to 0.8.
+                    Defaults to 1.0.
 
                 "chord_fraction" : (float, array, or string, optional)
                     The depth of the control surface, as a fraction of the local chord length. Defined
                     the same as "twist". If an array or file is specified, however, the start and end 
                     of the data must coincide with "root_span" and "tip_span", respectively. Defaults
                     to 0.25.
+
+                "is_sealed" : (bool, optional)
+                    Whether or not the flap is sealed. Defaults to True.
 
                 "control_mixing" : (dict)
                     Determines which control inputs move this control surface. A control surface can be

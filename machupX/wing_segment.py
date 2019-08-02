@@ -58,6 +58,7 @@ class WingSegment:
             self._initialize_params()
             self._initialize_getters()
             self._initialize_airfoils(airfoil_dict)
+            self._setup_control_surface(self._input_dict.get("control_surface", None))
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
             self._setup_cp_data()
@@ -210,14 +211,48 @@ class WingSegment:
 
         self._airfoil_spans = np.asarray(self._airfoil_spans)
 
-        self._CLa = []
-        self._aL0 = []
-        for airfoil in self._airfoils:
-            self._CLa.append(airfoil.get_CLa())
-            self._aL0.append(airfoil.get_aL0())
 
-        self._CLa = np.asarray(self._CLa)
-        self._aL0 = np.asarray(self._aL0)
+    def _setup_control_surface(self, control_dict):
+        # Sets up the control surface on this wing segment
+        self._delta_flap = 0.0 # Positive deflection is down
+        self._has_control_surface = False
+        self._Cm_delta_flap = 0.0
+
+        if control_dict is not None:
+            self._has_control_surface = True
+
+            self._cp_flap_chord_frac = np.zeros(self._N)
+            self._control_mixing = {}
+
+            # Determine which control points are affected by the control surface
+            root_span = control_dict.get("root_span", 0.0)
+            tip_span = control_dict.get("tip_span", 1.0)
+            self._cp_in_control_surface = (self._cp_span_locs >= root_span) & (self._cp_span_locs <= tip_span)
+
+            # Determine the flap chord fractions at each control point
+            chord_data = _import_value("chord_fraction", control_dict, self._unit_sys, 0.25)
+            if isinstance(chord_data, float): # Constant chord fraction
+                self._cp_flap_chord_frac[self._cp_in_control_surface] = chord_data
+            else: # Variable chord fraction
+                self._cp_flap_chord_frac[self._cp_in_control_surface] = np.interp(self._cp_span_locs[self._cp_in_control_surface], chord_data[:,0], chord_data[:,1])
+
+            # Store mixing
+            self._control_mixing = control_dict.get("control_mixing", {})
+            is_sealed = control_dict.get("is_sealed", True)
+
+            # Determine flap efficiency for altering angle of attack
+            theta_f = np.arccos(2*self._cp_flap_chord_frac-1)
+            eps_flap_ideal = 1-(theta_f-np.sin(theta_f))/np.pi
+
+            # Based off of Mechanics of Flight Fig. 1.7.4
+            hinge_eff = 3.9598*np.arctan((self._cp_flap_chord_frac+0.006527)*89.2574+4.898015)-5.18786
+            if not is_sealed:
+                hinge_eff *= 0.8
+
+            self._eta_h_esp_f = eps_flap_ideal*hinge_eff
+
+            # Determine flap efficiency for changing moment coef
+            self._Cm_delta_flap = (np.sin(2*theta_f)-2*np.sin(theta_f))/4
 
 
     def _setup_cp_data(self):
@@ -227,36 +262,12 @@ class WingSegment:
         self.u_s_cp = self._get_span_vec(self._cp_span_locs)
         self.control_points = self._get_section_ac_loc(self._cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
-        self.dS = self._get_cp_dS()
+        self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
     def _setup_node_data(self):
         # Creates and stores vectors of important data at each node
         self.nodes = self._get_section_ac_loc(self._node_span_locs)
-
-
-    def get_cp_CLa(self):
-        """Returns the lift slope at each control point. Used for the linear 
-        solution to NLL.
-
-        Returns
-        -------
-        float
-            Lift slope
-        """
-        return np.interp(self._cp_span_locs, self._airfoil_spans, self._CLa)
-
-
-    def get_cp_aL0(self):
-        """Returns the zero-lift angle of attack at each control point. Used for the linear 
-        solution to NLL.
-
-        Returns
-        -------
-        float
-            Zero lift angle of attack
-        """
-        return np.interp(self._cp_span_locs, self._airfoil_spans, self._aL0)
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
@@ -430,12 +441,9 @@ class WingSegment:
         S_dihedral = np.sin(dihedral)
 
         if self._side == "left":
-            normal_vecs = np.asarray([-S_twist*C_dihedral, S_dihedral, -C_twist*C_dihedral]).T
+            return np.asarray([-S_twist*C_dihedral, S_dihedral, -C_twist*C_dihedral]).T
         else:
-            normal_vecs = np.asarray([-S_twist*C_dihedral, -S_dihedral, -C_twist*C_dihedral]).T
-
-
-        return normal_vecs
+            return np.asarray([-S_twist*C_dihedral, -S_dihedral, -C_twist*C_dihedral]).T
 
 
     def _get_span_vec(self, span):
@@ -459,7 +467,7 @@ class WingSegment:
     def _get_section_ac_loc(self, span):
         #Returns the location of the section aerodynamic center at the given span fraction.
         loc = self._get_quarter_chord_loc(span)
-        loc += self._get_ac_offset(span)[:,np.newaxis]*self._get_axial_vec(span)
+        loc += (self._get_ac_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_axial_vec(span)
         return loc
 
 
@@ -467,12 +475,6 @@ class WingSegment:
         #Returns the average local chord length at each control point on the segment.
         node_chords = self.get_chord(self._node_span_locs)
         return (node_chords[1:]+node_chords[:-1])/2
-
-
-    def _get_cp_dS(self):
-        #Returns the differential elements of area.
-        ds = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b
-        return self.c_bar_cp*ds
 
 
     def _airfoil_interpolator(self, interp_spans, sample_spans, coefs):
@@ -485,6 +487,127 @@ class WingSegment:
         j[np.where(j<0)] = 0 # Not allowed to go outside the array
         d = (interp_spans-sample_spans[j])/(sample_spans[j+1]-sample_spans[j])
         return (1-d)*coefs[i,j]+d*coefs[i,j+1]
+
+
+    def get_cp_CLa(self, params):
+        """Returns the lift slope at each control point.
+
+        Parameters
+        ----------
+        params : ndarray
+            Airfoil parameters.
+
+        Returns
+        -------
+        float
+            Lift slope
+        """
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
+
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._flap_eff
+            new_params[:,4] = self._delta_flap
+
+        CLas = np.zeros((self._N,self._num_airfoils))
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                CLas[i,j] = self._airfoils[j].get_CLa(new_params[i,:])
+
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLas)
+
+
+    def get_cp_aL0(self, params):
+        """Returns the zero-lift angle of attack at each control point. Used for the linear 
+        solution to NLL.
+
+        Parameters
+        ----------
+        params : ndarray
+            Airfoil parameters.
+
+        Returns
+        -------
+        float
+            Zero lift angle of attack
+        """
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
+
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._flap_eff
+            new_params[:,4] = self._delta_flap
+
+        aL0s = np.zeros((self._N,self._num_airfoils))
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                aL0s[i,j] = self._airfoils[j].get_aL0(new_params[i,:])
+
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, aL0s)
+
+
+    def get_cp_CLRe(self, params):
+        """Returns the derivative of the lift coefficient with respect to Reynolds number at each control point
+
+        Parameters
+        ----------
+        params : ndarray
+            Airfoil parameters.
+
+        Returns
+        -------
+        float
+            Z
+        """
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
+
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._flap_eff
+            new_params[:,4] = self._delta_flap
+
+        CLRes = np.zeros((self._N,self._num_airfoils))
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                CLRes[i,j] = self._airfoils[j].get_CLRe(new_params[i,:])
+
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLRes)
+
+    
+    def get_cp_CLM(self, params):
+        """Returns the derivative of the lift coefficient with respect to Mach number at each control point
+
+        Parameters
+        ----------
+        params : ndarray
+            Airfoil parameters.
+
+        Returns
+        -------
+        float
+            Z
+        """
+        if params.shape[0] != self._N:
+            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
+
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._flap_eff
+            new_params[:,4] = self._delta_flap
+
+        CLMs = np.zeros((self._N,self._num_airfoils))
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                CLMs[i,j] = self._airfoils[j].get_CLM(new_params[i,:])
+
+        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLMs)
 
 
     def get_cp_CL(self, params):
@@ -503,9 +626,16 @@ class WingSegment:
         if params.shape[0] != self._N:
             raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._flap_eff
+            new_params[:,4] = self._delta_flap
+
         CLs = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._num_airfoils):
-            CLs[:,i] = self._airfoils[i].get_CL(params)
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                CLs[i,j] = self._airfoils[j].get_CL(new_params[i,:])
 
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLs)
 
@@ -526,9 +656,16 @@ class WingSegment:
         if params.shape[0] != self._N:
             raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._flap_eff
+            new_params[:,4] = self._delta_flap
+
         CDs = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._num_airfoils):
-            CDs[:,i] = self._airfoils[i].get_CD(params)
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                CDs[i,j] = self._airfoils[j].get_CD(new_params[i,:])
 
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CDs)
 
@@ -549,9 +686,16 @@ class WingSegment:
         if params.shape[0] != self._N:
             raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
+        new_params = np.zeros((self._N,5))
+        new_params[:,:3] = params
+        if self._has_control_surface:
+            new_params[:,3] = self._Cm_delta_flap
+            new_params[:,4] = self._delta_flap
+
         Cms = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._num_airfoils):
-            Cms[:,i] = self._airfoils[i].get_Cm(params)
+        for i in range(self._N):
+            for j in range(self._num_airfoils):
+                Cms[i,j] = self._airfoils[j].get_Cm(new_params[i,:])
 
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, Cms)
 
@@ -582,3 +726,53 @@ class WingSegment:
         points[-1,:] = points[0,:]
 
         return points
+
+
+    def apply_control(self, control_state, control_symmetry):
+        """Applies the control deflection to this wing segment's control surface deflection.
+
+        Parameters
+        ----------
+        control_state : dict
+            A set of key-value pairs where the key is the name of the control and the 
+            value is the deflection. For positive mapping values, a positive deflection 
+            here will cause a downward deflection of symmetric control surfaces and 
+            downward deflection of the right surface for anti-symmetric control surfaces.
+            Units may be specified as in the input file. Any deflections not given will 
+            default to zero.
+
+        control_symmetry : dict
+            Specifies which of the controls are symmetric
+        """
+        if not self._has_control_surface:
+            return # Don't even bother...
+
+        # Determine flap deflection
+        self._delta_flap = 0.0
+        for key in control_state:
+            deflection = _import_value(key, control_state, self._unit_sys, 0.0)
+            if self._side == "right" or control_symmetry[key]:
+                self._delta_flap += deflection*self._control_mixing[key]
+            else:
+                self._delta_flap -= deflection*self._control_mixing[key]
+
+        # Determine flap efficiency
+        # From a fit of Mechanics of Flight Fig. 1.7.5
+        if self._delta_flap < 11:
+            self._eta_defl = 1.0
+        else:
+            self._eta_defl = -8.71794871794872E-03*self._delta_flap+1.09589743589744
+        self._flap_eff = self._eta_h_esp_f*self._eta_defl
+
+        # Convert to radians
+        self._delta_flap = np.radians(self._delta_flap)
+
+
+    def get_cp_flap(self):
+        """Returns the effective change in angle of attack due to the flap deflection.
+        Used for the linear solution to NLL.
+        """
+        if self._has_control_surface:
+            return self._flap_eff*self._delta_flap
+        else:
+            return 0.0

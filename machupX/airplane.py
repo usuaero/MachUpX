@@ -33,7 +33,7 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, filename, unit_system, state={}, control_state={}):
+    def __init__(self, name, filename, unit_system, init_state={}, init_control_state={}):
 
         self.name = name
         self._unit_sys = unit_system
@@ -43,12 +43,12 @@ class Airplane:
         self._N = 0
 
         self._load_params(filename)
-        self._initialize_state(state)
-        self._initialize_controls(control_state)
+        self._initialize_state(init_state)
         self._create_airfoil_database()
         self._create_origin_segment()
         self._load_wing_segments()
         self._check_reference_params()
+        self._initialize_controls(init_control_state)
 
 
     def _load_params(self, filename):
@@ -146,9 +146,14 @@ class Airplane:
             raise IOError("{0} is not an acceptable state type.".format(state_type))
 
 
-    def _initialize_controls(self, control_state):
-        # Sets the control vector from the provided dictionary
-        pass
+    def _initialize_controls(self, init_control_state):
+        # Initializes the control surfaces on the airplane
+        self._control_symmetry = {}
+        controls = self._input_dict.get("controls", {})
+        for key in controls:
+            self._control_symmetry[key] = controls[key]["is_symmetric"]
+
+        self.set_control_state(control_state=init_control_state)
         
 
     def _create_origin_segment(self):
@@ -352,3 +357,20 @@ class Airplane:
                 pass
         else:
             self.q += dq
+
+
+    def set_control_state(self, control_state={}):
+        """Sets the control surface deflections on the airplane using the control mapping.
+
+        Parameters
+        ----------
+        control_state : dict
+            A set of key-value pairs where the key is the name of the control and the 
+            value is the deflection. For positive mapping values, a positive deflection 
+            here will cause a downward deflection of symmetric control surfaces and 
+            downward deflection of the right surface for anti-symmetric control surfaces.
+            Units may be specified as in the input file. Any deflections not given will 
+            default to zero.
+        """
+        for _,wing_segment in self.wing_segments.items():
+            wing_segment.apply_control(control_state, self._control_symmetry)
