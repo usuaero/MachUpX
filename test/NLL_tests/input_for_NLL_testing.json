@@ -29,10 +29,9 @@
                     "beta" : 0.0
                 },
                 "control_state" : {
-                    "elevator" : [0.0, "deg"],
-                    "rudder" : [0.0, "deg"],
-                    "aileron" : [0.0, "deg"],
-                    "flap" : [0.0, "deg"]
+                    "elevator" : 0.0,
+                    "rudder" : 0.0,
+                    "aileron" : 0.0
                 }
             }
         }

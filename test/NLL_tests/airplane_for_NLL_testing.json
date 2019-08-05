@@ -1,7 +1,23 @@
 {
     "CG" : [0,0,0],
     "weight" : 100.0,
+    "reference" : {
+        "area" : 8,
+        "longitudinal_length" : 1,
+        "lateral_length" : 4
+    },
     "airfoils" : "test/NLL_tests/airfoils_for_NLL_testing.json",
+    "controls" : {
+        "elevator" : {
+            "is_symmetric" : true
+        },
+        "aileron" : {
+            "is_symmetric" : false
+        },
+        "rudder" : {
+            "is_symmetric" : false
+        }
+    },
     "wings" : {
         "main_wing" : {
             "ID" : 1,
@@ -9,6 +25,12 @@
             "side" : "both",
             "span" : 4.0,
             "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.1,
+                "control_mixing" : {
+                    "aileron" : 1.0
+                }
+            },
             "grid" : 40
         },
         "h_stab" : {
@@ -22,6 +44,12 @@
             "side" : "both",
             "span" : 2.0,
             "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "elevator" : 1.0
+                }
+            },
             "grid" : 40
         },
         "v_stab" : {
@@ -37,6 +65,12 @@
             "dihedral" : 90.0,
             "span" : 2.0,
             "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "rudder" : 1.0
+                }
+            },
             "grid" : 40
         }
     }
