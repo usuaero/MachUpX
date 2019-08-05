@@ -196,3 +196,41 @@ def test_flap_deflection():
     assert abs(FM["test_plane"]["total"]["Mx"]+9.609305988467975)<1e-10
     assert abs(FM["test_plane"]["total"]["My"]-3.6127056551475074)<1e-10
     assert abs(FM["test_plane"]["total"]["Mz"]+2.3148796481465355)<1e-10
+
+
+def test_coefficients():
+    # Tests the NLL algorithm correctly returns nondimensional coefficients
+
+    # Alter input
+    with open(input_file, 'r') as input_file_handle:
+        input_dict = json.load(input_file_handle)
+
+    input_dict["solver"]["type"] = "linear"
+
+    input_dict["scene"]["aircraft"]["test_plane"]["control_state"] = {
+        "elevator" : 0.0,
+        "rudder" : 0.0,
+        "aileron" : 0.0
+    }
+
+    input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
+        "type" : "aerodynamic",
+        "position" : [0, 0, 1000],
+        "angular_rates" : [0.0, 0.0, 0.0],
+        "velocity" : 100,
+        "alpha" : 2.0,
+        "beta" : 0.0
+    }
+
+    # Create scene
+    scene = MX.Scene(input_dict)
+    FM = scene.solve_forces(non_dimensional=True)
+    assert abs(FM["test_plane"]["total"]["CL"]-0.22047582886611075)<1e-10
+    assert abs(FM["test_plane"]["total"]["CD"]-0.014658786284228585)<1e-10
+    assert abs(FM["test_plane"]["total"]["CS"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Cx"]+0.006955361085197383)<1e-10
+    assert abs(FM["test_plane"]["total"]["Cy"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Cz"]+0.22085310521181217)<1e-10
+    assert abs(FM["test_plane"]["total"]["Cl"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Cm"]+0.13548794578109555)<1e-10
+    assert abs(FM["test_plane"]["total"]["Cn"])<1e-10
