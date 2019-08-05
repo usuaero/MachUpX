@@ -93,10 +93,10 @@ Testing is accomplished using the pytest module. Run tests using the command:
 
 'python -m pytest test/'
 
-##Support
+## Support
 
 Contact doug.hunsaker@usu.edu or cory.goates@aggiemail.usu.edu with any questions.
 
-##License
+## License
 
 This project is licensed under the MIT license. See LICENSE file for more information. 
