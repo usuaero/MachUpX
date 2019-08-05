@@ -820,13 +820,6 @@ class Scene:
         return L,D,S
 
 
-    def _non_dimensionalize(self):
-        # Takes the forces and moments determined and returns non-dimensional coefficients
-        for i, airplane_name in enumerate(self._airplane_names):
-            airplane_object = self.airplanes[airplane_name]
-
-
-
     def solve_forces(self, filename=None, non_dimensional=False, verbose=False):
         """Solves the NLL equations to determine the forces and moments on the aircraft.
 
@@ -854,8 +847,6 @@ class Scene:
         if self._nonlinear_solver:
             nonlinear_time = self._solve_nonlinear(verbose=verbose)
         integrate_time = self._integrate_forces_and_moments(non_dimensional=non_dimensional, verbose=verbose)
-        if non_dimensional:
-            self._non_dimensionalize()
 
         if verbose:
             print("Time to compute linear solution: {0} s".format(linear_time))

@@ -69,14 +69,14 @@ class Airplane:
     def _initialize_state(self, state):
         # Sets the state vector from the provided dictionary
 
-        self.state_type = _import_value("type", state, self._unit_sys, -1)
+        self.state_type = _import_value("type", state, self._unit_sys, None)
         self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 1000])
         self.w = _import_value("angular_rates", state, self._unit_sys, [0, 0, 0])
 
         # Rigid-body definition
         if self.state_type == "rigid-body":
             if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
-                raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
+                raise IOError("Alpha and beta are not allowed as part of a rigid-body state specification.")
 
             # Set up orientation quaternion
             self.q = _import_value("orientation", state, self._unit_sys, [1, 0, 0, 0])
@@ -94,14 +94,14 @@ class Airplane:
 
             # Set up velocity
             try:
-                self.v = _import_value("velocity", state, self._unit_sys, -1).reshape((3,1))
+                self.v = _import_value("velocity", state, self._unit_sys, -1)
             except AttributeError: # The value can't be reshaped, therefore it is not a numpy array and has been improperly specified.
                 raise IOError("For a rigid-body state definition, 'velocity' must be a 3-element vector.")
 
         # Aerodynamic definition
         elif self.state_type == "aerodynamic":
             if "orientation" in list(state.keys()):
-                raise IOError("Mixing of rigid-body and aerodynamic state definitions is not allowed.")
+                raise IOError("Orientation is not allowed as part of an aerodynamic state specification.")
 
             self.q = np.asarray([1.0, 0.0, 0.0, 0.0])
 
@@ -116,16 +116,16 @@ class Airplane:
                 C_B = np.cos(np.radians(beta))
                 S_B = np.sin(np.radians(beta))
 
-                v_inf = np.zeros(3)
+                self.v = np.zeros(3)
                 denom = np.sqrt(1-S_a**2*S_B**2)
-                # Since this formulation gives the components of aircraft velocity, we store the negative to get u, v, and w
-                v_inf[0] = -v_value*C_a*C_B/denom
-                v_inf[1] = -v_value*C_a*S_B/denom
-                v_inf[2] = -v_value*S_a*C_B/denom
-                
-                self.v = -_quaternion_inverse_transform(self.q, v_inf)
+                # This formulation gives the components of aircraft velocity
+                self.v[0] = v_value*C_a*C_B/denom
+                self.v[1] = v_value*C_a*S_B/denom
+                self.v[2] = v_value*S_a*C_B/denom
 
-            elif isinstance(v_value, np.ndarray):
+            elif isinstance(v_value, np.ndarray) and v_value.shape[0] == 3:
+                if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
+                    raise IOError("Alpha and beta may not be specified along with a freestream vector.")
                 self.v = v_value
 
             else:
@@ -314,39 +314,60 @@ class Airplane:
 
         Parameters
         ----------
-        delta_position : ndarray
+        dp : ndarray
             Change in position in flat-earth coordinates.
 
-        delta_velocity : ndarray
+        dv : ndarray
             Change in velocity in flat-earth coordinates.
 
-        delta_q : ndarray
+        dq : ndarray
             Change in the orientation quaternion.
 
-        delta_euler_angles : ndarray
+        dEuler : ndarray
             Change in the Euler angles.
 
-        delta_omega : ndarray
+        dw : ndarray
             Change in the angular velocity vector.
 
-        delta_alpha : float
+        dAlpha : float
             Change in angle of attack.
 
-        delta_beta : float
+        dBeta : float
             Change in sideslip angle.
         """
-        self.p_bar += _import_value("delta_position", kwargs, self._unit_sys, [0, 0, 0])
-        self.w += _import_value("delta_omega", kwargs, self._unit_sys, [0, 0, 0])
+        # Update position
+        self.p_bar += _import_value("dp", kwargs, self._unit_sys, [0, 0, 0])
 
-        dq = _import_value("delta_q", kwargs, self._unit_sys, None)
+        # Update angular rate
+        self.w += _import_value("dw", kwargs, self._unit_sys, [0, 0, 0])
+
+        # Update orientation
+        dq = _import_value("dq", kwargs, self._unit_sys, None)
         if dq is None:
-            deuler = _import_value("delta_euler_angles", kwargs, self._unit_sys, None)
+            deuler = _import_value("dEuler", kwargs, self._unit_sys, None)
             if deuler is not None:
+                if self.state_type == "aerodynamic":
+                    raise ValueError("Orientation may not be specified when using an aerodynamic state specification.")
                 E = _quaternion_to_euler(self.q)
                 E += deuler
                 self.q = _euler_to_quaternion(E)
         else:
+            if self.state_type == "aerodynamic":
+                raise ValueError("Orientation may not be specified when using an aerodynamic state specification.")
             self.q += dq
+
+        d_alpha = _import_value("dAlpha", kwargs, self._unit_sys, None)
+
+        # Update velocity
+        dv = _import_value("dv", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
+        if self.state_type == "rigid_body":
+            if isinstance(dv, np.ndarray):
+                self.v += dv
+            else:
+                raise ValueError("Velocity increment for rigid-body state specification must be a vector.")
+        else:
+            if isinstance(dv, float):
+                pass
 
 
     def set_control_state(self, control_state={}):

@@ -9,8 +9,8 @@ setup(name = 'MachUpX',
     url = 'https://github.com/usuaero/MachUpX',
     author = 'usuaero',
     author_email = 'doug.hunsaker@usu.edu',
-    install_requires = ['numpy']
-    python_requires='>=3.6.0',
+    install_requires = ['numpy'],
+    python_requires ='>=3.6.0',
     license = 'MIT',
     packages = ['machupX'],
     zip_safe = False)
