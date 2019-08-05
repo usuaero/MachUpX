@@ -178,3 +178,46 @@ def _quaternion_inverse_transform(q, v):
         v_trans = v_trans.flatten()
     
     return v_trans
+
+
+def _euler_to_quaternion(E):
+    # Converts the Euler angles phi, theta, psi to an orientation quaternion
+    q = np.zeros(4)
+
+    # Trigonometric values
+    C_phi = np.cos(E[0]/2)
+    S_phi = np.cos(E[0]/2)
+    C_theta = np.cos(E[1]/2)
+    S_theta = np.cos(E[1]/2)
+    C_psi = np.cos(E[2]/2)
+    S_psi = np.cos(E[2]/2)
+
+    # Create quaternion
+    q[0] = C_phi*C_theta*C_psi + S_phi*S_theta*S_psi
+    q[1] = S_phi*C_theta*C_psi - C_phi*S_theta*S_psi
+    q[2] = C_phi*S_theta*C_psi + S_phi*C_theta*S_psi
+    q[3] = C_phi*C_theta*S_psi - S_phi*S_theta*C_psi
+
+    return q
+
+
+def _quaternion_to_euler(q):
+    # Converts an orientation quaternion to Euler angles
+    E = np.zeros(3)
+
+    quantity = q[0]*q[2]-q[1]*q[3]
+
+    if quantity == 0.5:
+        E[0] = 2*np.arcsin(q[1]/np.cos(np.pi/4))
+        E[1] = np.pi/2
+        E[2] = 0.0
+    elif quantity == -0.5:
+        E[0] = 2*np.arcsin(q[1]/np.cos(np.pi/4))
+        E[1] = -np.pi/2
+        E[2] = 0.0
+    else:
+        E[0] = np.arctan2(2*(q[0]*q[1]+q[2]*q[3]), q[0]**2+q[1]**2-q[2]**2-q[3]**2)
+        E[1] = np.arcsin(2*(q[0]*q[2]-q[1]*q[3]))
+        E[2] = np.arctan2(2*(q[0]*q[l]+q[1]*q[2]), q[0]**2+q[1]**2-q[2]**2-q[3]**2)
+
+    return E

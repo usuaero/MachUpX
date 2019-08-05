@@ -1,4 +1,4 @@
-from .helpers import _check_filepath, _import_value, _quaternion_transform, _quaternion_inverse_transform
+from .helpers import _check_filepath, _import_value, _quaternion_transform, _quaternion_inverse_transform, _euler_to_quaternion, _quaternion_to_euler
 from .wing_segment import WingSegment
 from .airfoil import Airfoil
 
@@ -81,18 +81,7 @@ class Airplane:
             # Set up orientation quaternion
             self.q = _import_value("orientation", state, self._unit_sys, [1, 0, 0, 0])
             if self.q.shape[0] == 3: # Euler angles
-                C_phi = np.cos(self.q[0]/2)
-                S_phi = np.cos(self.q[0]/2)
-                C_theta = np.cos(self.q[1]/2)
-                S_theta = np.cos(self.q[1]/2)
-                C_psi = np.cos(self.q[2]/2)
-                S_psi = np.cos(self.q[2]/2)
-
-                self.q = np.zeros(4)
-                self.q[0] = C_phi*C_theta*C_psi + S_phi*S_theta*S_psi
-                self.q[1] = S_phi*C_theta*C_psi - C_phi*S_theta*S_psi
-                self.q[2] = C_phi*S_theta*C_psi + S_phi*C_theta*S_psi
-                self.q[3] = C_phi*C_theta*S_psi - S_phi*S_theta*C_psi
+                self.q = _euler_to_quaternion(self.q)
 
             elif self.q.shape[0] == 4: # Quaternion
 
@@ -346,7 +335,6 @@ class Airplane:
         delta_beta : float
             Change in sideslip angle.
         """
-        raise IOError("Sorry, Airplane.update_state() is not yet functional.")
         self.p_bar += _import_value("delta_position", kwargs, self._unit_sys, [0, 0, 0])
         self.w += _import_value("delta_omega", kwargs, self._unit_sys, [0, 0, 0])
 
@@ -354,7 +342,9 @@ class Airplane:
         if dq is None:
             deuler = _import_value("delta_euler_angles", kwargs, self._unit_sys, None)
             if deuler is not None:
-                pass
+                E = _quaternion_to_euler(self.q)
+                E += deuler
+                self.q = _euler_to_quaternion(E)
         else:
             self.q += dq
 
