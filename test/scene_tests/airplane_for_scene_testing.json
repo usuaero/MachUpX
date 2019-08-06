@@ -39,7 +39,7 @@
             "side" : "both",
             "is_main" : false,
             "connect_to" : {
-                "ID" : 0,
+                "ID" : 1,
                 "location" : "root",
                 "dx" : -3.0
             },
@@ -55,10 +55,10 @@
         },
         "v_stab" : {
             "ID" : 3,
-            "side" : "left",
+            "side" : "right",
             "is_main" : false,
             "connect_to" : {
-                "ID" : 0,
+                "ID" : 1,
                 "location" : "root",
                 "dx" : -3.0,
                 "dz" : -0.1
