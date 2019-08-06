@@ -6,7 +6,7 @@ import subprocess as sp
 
 if __name__=="__main__":
 
-    input_file = "test/NLL_tests/input_for_NLL_testing.json"
+    input_file = "test/input_for_testing.json"
 
     # Alter input
     with open(input_file, 'r') as input_handle:

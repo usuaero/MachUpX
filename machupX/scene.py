@@ -864,6 +864,31 @@ class Scene:
         return self._FM
 
 
+    def set_aircraft_state(self, aircraft_name=None, state={}):
+        """Sets the state of the given aircraft.
+
+        Parameters
+        ----------
+        aircraft_name : str
+            The name of the aircraft to set the state of. If there
+            is only one aircraft in the scene, this does not need 
+            to be specified.
+    
+        state : dict
+            Dictionary describing the state as specified in 
+            How_To_Create_Input_Files.
+        """
+        if aircraft_name is None:
+            if len(list(self.airplanes.keys())) == 1:
+                aircraft_name = list(self.airplanes.keys())[0]
+            else:
+                raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
+
+        self.airplanes[aircraft_name].set_state(state)
+        if len(list(self.airplanes.keys())) != 1:
+            self._perform_geometry_calculations()
+
+
     def display_wireframe(self, show_legend=False):
         """Displays a 3D wireframe plot of the scene.
 

@@ -43,7 +43,7 @@ class Airplane:
         self._N = 0
 
         self._load_params(filename)
-        self._initialize_state(init_state)
+        self.set_state(init_state)
         self._create_airfoil_database()
         self._create_origin_segment()
         self._load_wing_segments()
@@ -66,8 +66,14 @@ class Airplane:
         self._control_names = self._input_dict.get("controls", [])
 
 
-    def _initialize_state(self, state):
-        # Sets the state vector from the provided dictionary
+    def set_state(self, state):
+        """Sets the state of the aircraft from the provided dictionary.
+        Parameters
+        ----------
+        state : dict
+            A dictionary describing the state of the aircraft. Same specification 
+            as given in How_To_Create_Input_Files.
+        """
 
         self.state_type = _import_value("type", state, self._unit_sys, None)
         self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 1000])
@@ -309,7 +315,7 @@ class Airplane:
         return -_quaternion_transform(self.q, self.v)
 
 
-    def update_state(self, **kwargs):
+    def increment_state(self, **kwargs):
         """Updates the state of the aircraft by the given deltas.
 
         Parameters
@@ -342,10 +348,10 @@ class Airplane:
         self.w += _import_value("dw", kwargs, self._unit_sys, [0, 0, 0])
 
         # Update orientation
-        dq = _import_value("dq", kwargs, self._unit_sys, None)
-        if dq is None:
-            deuler = _import_value("dEuler", kwargs, self._unit_sys, None)
-            if deuler is not None:
+        dq = _import_value("dq", kwargs, self._unit_sys, -1)
+        if dq == -1:
+            deuler = _import_value("dEuler", kwargs, self._unit_sys, -1)
+            if deuler != -1:
                 if self.state_type == "aerodynamic":
                     raise ValueError("Orientation may not be specified when using an aerodynamic state specification.")
                 E = _quaternion_to_euler(self.q)
@@ -356,7 +362,8 @@ class Airplane:
                 raise ValueError("Orientation may not be specified when using an aerodynamic state specification.")
             self.q += dq
 
-        d_alpha = _import_value("dAlpha", kwargs, self._unit_sys, None)
+        if self.state_type == "aerodynamic":
+            d_alpha = _import_value("dAlpha", kwargs, self._unit_sys, 0.0)
 
         # Update velocity
         dv = _import_value("dv", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
@@ -367,7 +374,11 @@ class Airplane:
                 raise ValueError("Velocity increment for rigid-body state specification must be a vector.")
         else:
             if isinstance(dv, float):
-                pass
+                v_mag = np.norm(self.v)
+                self.v += dv*self.v/v_mag
+            elif isinstance(dv, np.ndarray):
+                dv = _quaternion_inverse_transform(self.q, dv)
+                self.v += dv
 
 
     def set_control_state(self, control_state={}):

@@ -76,7 +76,7 @@ def _import_value(key, dict_of_vals, system, default_value):
     val = dict_of_vals.get(key, default_value)
     
     if val is None:
-        raise IOError("Key {0} is not optional. Please specify.".format(key))
+        raise IOError("Key '{0}' is not optional. Please specify.".format(key))
     is_array = False
 
     if isinstance(val, float): # Float without units
