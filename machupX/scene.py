@@ -28,6 +28,10 @@ class Scene:
     -------
     add_aircraft()
 
+    set_aircraft_state()
+
+    set_aircraft_control_state()
+
     solve_forces()
 
     display_wireframe()
@@ -39,6 +43,7 @@ class Scene:
         self._airplane_names = []
         self._segment_names = []
         self._N = 0
+        self._num_aircraft = 0
 
         self._load_params(scene_input)
 
@@ -212,7 +217,7 @@ class Scene:
         return visc_getter
 
     
-    def add_aircraft(self, airplane_name, airplane_file, state={}, control_state={}):
+    def add_aircraft(self, airplane_name, airplane_input, state={}, control_state={}):
         """Inserts an aircraft into the scene
 
         Parameters
@@ -223,8 +228,8 @@ class Scene:
         ID : int
             ID of the airplane in the scene.
         
-        airplane_file : str
-            Path to the JSON object describing the airplane.
+        airplane_input : str or dict
+            Path to the JSON object or dictionary describing the airplane.
 
         state : dict
             Dictionary describing the state of the airplane.
@@ -242,9 +247,10 @@ class Scene:
 
         """
 
-        self.airplanes[airplane_name] = Airplane(airplane_name, airplane_file, self._unit_sys, init_state=state, init_control_state=control_state)
+        self.airplanes[airplane_name] = Airplane(airplane_name, airplane_input, self._unit_sys, init_state=state, init_control_state=control_state)
         self._N += self.airplanes[airplane_name].get_num_cps()
         self._perform_geometry_calculations()
+        self._num_aircraft += 1
 
 
     def _perform_geometry_calculations(self):
@@ -864,29 +870,56 @@ class Scene:
         return self._FM
 
 
-    def set_aircraft_state(self, aircraft_name=None, state={}):
+    def set_aircraft_state(self, state={}, aircraft_name=None):
         """Sets the state of the given aircraft.
 
         Parameters
         ----------
+        state : dict
+            Dictionary describing the state as specified in 
+            How_To_Create_Input_Files.
+
         aircraft_name : str
             The name of the aircraft to set the state of. If there
             is only one aircraft in the scene, this does not need 
             to be specified.
-    
-        state : dict
-            Dictionary describing the state as specified in 
-            How_To_Create_Input_Files.
         """
         if aircraft_name is None:
-            if len(list(self.airplanes.keys())) == 1:
+            if self._num_aircraft == 1:
                 aircraft_name = list(self.airplanes.keys())[0]
             else:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
         self.airplanes[aircraft_name].set_state(state)
-        if len(list(self.airplanes.keys())) != 1:
+        if self._num_aircraft != 1:
             self._perform_geometry_calculations()
+
+
+    def set_aircraft_control_state(self, control_state={}, aircraft_name=None):
+        """Sets the control state of the given aircraft.
+
+        Parameters
+        ----------
+        control_state : dict
+            Dictionary describing the control state:
+
+            {
+                "<CONTROL_NAME>" : deflection, float
+                ...
+            }
+
+        aircraft_name : str
+            The name of the aircraft to set the state of. If there
+            is only one aircraft in the scene, this does not need 
+            to be specified.
+        """
+        if aircraft_name is None:
+            if self._num_aircraft == 1:
+                aircraft_name = list(self.airplanes.keys())[0]
+            else:
+                raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
+
+        self.airplanes[aircraft_name].set_control_state(control_state)
 
 
     def display_wireframe(self, show_legend=False):

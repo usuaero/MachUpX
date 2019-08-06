@@ -13,8 +13,9 @@ class Airplane:
     name : string
         Name of the airplane.
 
-    filename : string
-        Path to the JSON object describing the airplane.
+    airplane_input : string or dict
+        Path to the JSON object describing the airplane or dictionary
+        containing the same information.
 
     state : dict
         Dictionary describing the initial state vector of the airplane.
@@ -33,7 +34,7 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, filename, unit_system, init_state={}, init_control_state={}):
+    def __init__(self, name, airplane_input, unit_system, init_state={}, init_control_state={}):
 
         self.name = name
         self._unit_sys = unit_system
@@ -42,7 +43,7 @@ class Airplane:
         self._airfoil_database = {}
         self._N = 0
 
-        self._load_params(filename)
+        self._load_params(airplane_input)
         self.set_state(init_state)
         self._create_airfoil_database()
         self._create_origin_segment()
@@ -51,11 +52,16 @@ class Airplane:
         self._initialize_controls(init_control_state)
 
 
-    def _load_params(self, filename):
-        # Load JSON object
-        _check_filepath(filename,".json")
-        with open(filename) as json_handle:
-            self._input_dict = json.load(json_handle)
+    def _load_params(self, airplane_input):
+        if isinstance(airplane_input, str):
+            # Load JSON object
+            _check_filepath(airplane_input, ".json")
+            with open(airplane_input) as json_handle:
+                self._input_dict = json.load(json_handle)
+        elif isinstance(airplane_input, dict):
+            self._input_dict = airplane_input
+        else:
+            raise IOError("{0} is not an allowed airplane definition. Must be path or dictionary.".format(airplane_input))
 
         # Set airplane global params
         self.CG = _import_value("CG", self._input_dict, self._unit_sys, [0,0,0])

@@ -7,7 +7,7 @@
         "longitudinal_length" : 0,
         "lateral_length" : 0
     },
-    "airfoils" : "test/scene_tests/airfoils_for_testing.json",
+    "airfoils" : "test/scene_tests/airfoils_for_scene_testing.json",
     "wings" : {
     }
 }
