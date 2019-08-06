@@ -3,11 +3,76 @@
     "CG" : [0,0,0],
     "weight" : 100.0,
     "reference" : {
-        "area" : 0,
-        "longitudinal_length" : 0,
-        "lateral_length" : 0
+        "area" : 8.0,
+        "longitudinal_length" : 1.0,
+        "lateral_length" : 4.0
+    },
+    "controls" : {
+        "aileron" : {
+            "is_symmetric" : false
+        },
+        "elevator" : {
+            "is_symmetric" : true
+        },
+        "rudder" : {
+            "is_symmetric" : false
+        }
     },
     "airfoils" : "test/scene_tests/airfoils_for_scene_testing.json",
     "wings" : {
+        "main_wing" : {
+            "ID" : 1,
+            "side" : "both",
+            "is_main" : true,
+            "span" : 4.0,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.1,
+                "control_mixing" : {
+                    "aileron" : 1.0
+                }
+            },
+            "grid" : 40
+        },
+        "h_stab" : {
+            "ID" : 2,
+            "side" : "both",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 0,
+                "location" : "root",
+                "dx" : -3.0
+            },
+            "span" : 2.0,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "elevator" : 1.0
+                }
+            },
+            "grid" : 40
+        },
+        "v_stab" : {
+            "ID" : 3,
+            "side" : "left",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 0,
+                "location" : "root",
+                "dx" : -3.0,
+                "dz" : -0.1
+            },
+            "span" : 2.0,
+            "dihedral" : 90.0,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "rudder" : 1.0
+                }
+            },
+            "grid" : 40
+        }
     }
 }

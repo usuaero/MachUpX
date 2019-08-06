@@ -12,9 +12,7 @@
     },
     "units" : "English",
     "scene" : {
-        "atmosphere" : {
-
-        },
+        "atmosphere" : {},
         "aircraft" : {
             "test_plane" : {
                 "file" : "test/scene_tests/airplane_for_scene_testing.json",
