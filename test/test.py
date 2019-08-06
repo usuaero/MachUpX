@@ -15,16 +15,15 @@ if __name__=="__main__":
     with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
         airplane_dict = json.load(airplane_file_handle)
 
-    altered_airplane_name = "airplane.json"
-    input_dict["scene"]["aircraft"]["test_plane"]["file"] = altered_airplane_name
-
-    with open(altered_airplane_name, 'w') as json_handle:
-        json.dump(airplane_dict, json_handle)
+    airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
+    state = airplane_state.get("state", {})
+    control_state = airplane_state.get("control_state", {})
 
     # Load scene
     scene = MX.Scene(input_dict)
-    #scene.display_wireframe(show_legend=True)
+    scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
+    scene.display_wireframe(show_legend=True)
     FM = scene.solve_forces(verbose=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
 
-    sp.run(["rm", altered_airplane_name])
+    print(MX.helpers._euler_to_quaternion([0, 0, np.pi]))

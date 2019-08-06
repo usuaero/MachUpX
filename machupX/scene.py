@@ -225,9 +225,6 @@ class Scene:
         airplane_name : str
             Name of the airplane to be added.
 
-        ID : int
-            ID of the airplane in the scene.
-        
         airplane_input : str or dict
             Path to the JSON object or dictionary describing the airplane.
 
@@ -936,8 +933,8 @@ class Scene:
 
         fig = plt.figure(figsize=plt.figaspect(1.0))
         ax = fig.gca(projection='3d')
-        axis_min = 0.0
-        axis_max = 0.0
+
+        first_segment = True
 
         # Loop through airplanes
         for airplane_name, airplane_object in self.airplanes.items():
@@ -946,14 +943,21 @@ class Scene:
             for segment_name, segment_object in airplane_object.wing_segments.items():
                 segment_names.append(segment_name)
 
-                points = segment_object.get_outline_points()
+                points = airplane_object.p_bar+_quaternion_transform(airplane_object.q, segment_object.get_outline_points())
                 if show_legend: # Then colors matter
                     ax.plot(points[:,0], points[:,1], points[:,2], '-')
                 else:
                     ax.plot(points[:,0], points[:,1], points[:,2], 'k-')
 
-                axis_max = max([axis_max, max(points.flatten())])
-                axis_min = min([axis_min, min(points.flatten())])
+                if first_segment:
+                    x_lims = [min(points[:,0].flatten()), max(points[:,0].flatten())]
+                    y_lims = [min(points[:,1].flatten()), max(points[:,1].flatten())]
+                    z_lims = [min(points[:,2].flatten()), max(points[:,2].flatten())]
+                    first_segment = False
+                else:
+                    x_lims = [min(x_lims[0], min(points[:,0].flatten())), max(x_lims[1], max(points[:,0].flatten()))]
+                    y_lims = [min(y_lims[0], min(points[:,1].flatten())), max(y_lims[1], max(points[:,1].flatten()))]
+                    z_lims = [min(z_lims[0], min(points[:,2].flatten())), max(z_lims[1], max(points[:,2].flatten()))]
 
 
         if show_legend:
@@ -964,9 +968,27 @@ class Scene:
         ax.set_zlabel('z')
 
         # Set axes to the same scale
-        ax.set_xlim3d(axis_min, axis_max)
-        ax.set_ylim3d(axis_min, axis_max)
-        ax.set_zlim3d(axis_min, axis_max)
+        x_diff = x_lims[1]-x_lims[0]
+        y_diff = y_lims[1]-y_lims[0]
+        z_diff = z_lims[1]-z_lims[0]
+        max_diff = max([x_diff, y_diff, z_diff])
+
+        x_cent = x_lims[0]+0.5*x_diff
+        y_cent = y_lims[0]+0.5*y_diff
+        z_cent = z_lims[0]+0.5*z_diff
+
+        x_lims[0] -= 0.5*max_diff/x_diff
+        x_lims[1] += 0.5*max_diff/x_diff
+
+        y_lims[0] -= 0.5*max_diff/y_diff
+        y_lims[1] += 0.5*max_diff/y_diff
+
+        z_lims[0] -= 0.5*max_diff/z_diff
+        z_lims[1] += 0.5*max_diff/z_diff
+
+        ax.set_xlim3d(*x_lims)
+        ax.set_ylim3d(*y_lims)
+        ax.set_zlim3d(*z_lims)
 
         plt.show()
-        fig.close()
+        plt.close()

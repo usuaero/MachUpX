@@ -186,11 +186,11 @@ def _euler_to_quaternion(E):
 
     # Trigonometric values
     C_phi = np.cos(E[0]/2)
-    S_phi = np.cos(E[0]/2)
+    S_phi = np.sin(E[0]/2)
     C_theta = np.cos(E[1]/2)
-    S_theta = np.cos(E[1]/2)
+    S_theta = np.sin(E[1]/2)
     C_psi = np.cos(E[2]/2)
-    S_psi = np.cos(E[2]/2)
+    S_psi = np.sin(E[2]/2)
 
     # Create quaternion
     q[0] = C_phi*C_theta*C_psi + S_phi*S_theta*S_psi

@@ -204,8 +204,8 @@ deterimined by the user.
 
                     "orientation" : (vector, optional)
                         Orientation of the aircraft in flat-earth coordinates. If this is a 3-element 
-                        vector it is assumed the XYZ Euler angle formulation is used (i.e. [phi, theta, 
-                        psi]). If this is a 4-element vector it is assumed the quaternion formulation is 
+                        vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, 
+                        phi]). If this is a 4-element vector it is assumed the quaternion formulation is 
                         used where the first element is the scalar (i.e. [e0, ex, ey, ez]). This 
                         quaternion should be from flat-earth coordinates to body-fixed coordinates. 
                         Defaults to [1.0, 0.0, 0.0, 0.0].

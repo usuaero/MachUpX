@@ -5,7 +5,7 @@ import numpy as np
 import json
 import subprocess as sp
 
-input_file = "test/scene_tests/input_for_scene_testing.json"
+input_file = "test/input_for_testing.json"
 
 
 def test_linear_NLL():

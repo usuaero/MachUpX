@@ -719,7 +719,7 @@ class WingSegment:
         points[:self._N,:] = qc_points - 0.25*(axial_vecs*chords[:,np.newaxis])
 
         # Trailing edge
-        points[-2:self._N-1:-1,:] = qc_points - 0.75*(axial_vecs*chords[:,np.newaxis])
+        points[-2:self._N-1:-1,:] = qc_points + 0.75*(axial_vecs*chords[:,np.newaxis])
 
         # Complete the circle
         points[-1,:] = points[0,:]
