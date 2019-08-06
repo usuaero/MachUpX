@@ -15,6 +15,8 @@ if __name__=="__main__":
     with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
         airplane_dict = json.load(airplane_file_handle)
 
+    input_dict["solver"]["type"] = "linear"
+
     airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
@@ -25,5 +27,3 @@ if __name__=="__main__":
     scene.display_wireframe(show_legend=True)
     FM = scene.solve_forces(verbose=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-
-    print(MX.helpers._euler_to_quaternion([0, 0, np.pi]))

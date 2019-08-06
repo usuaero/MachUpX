@@ -91,7 +91,7 @@ class Airplane:
                 raise IOError("Alpha and beta are not allowed as part of a rigid-body state specification.")
 
             # Set up orientation quaternion
-            self.q = _import_value("orientation", state, self._unit_sys, [1, 0, 0, 0])
+            self.q = _import_value("orientation", state, self._unit_sys, [0.0, 1.0, 0.0, 0.0])
             if self.q.shape[0] == 3: # Euler angles
                 self.q = _euler_to_quaternion(self.q)
 
@@ -105,9 +105,8 @@ class Airplane:
                 raise IOError("{0} is not an allowable orientation definition.".format(self.q))
 
             # Set up velocity
-            try:
-                self.v = _import_value("velocity", state, self._unit_sys, -1)
-            except AttributeError: # The value can't be reshaped, therefore it is not a numpy array and has been improperly specified.
+            self.v = _import_value("velocity", state, self._unit_sys, None)
+            if not isinstance(self.v, np.ndarray):
                 raise IOError("For a rigid-body state definition, 'velocity' must be a 3-element vector.")
 
         # Aerodynamic definition
@@ -115,10 +114,10 @@ class Airplane:
             if "orientation" in list(state.keys()):
                 raise IOError("Orientation is not allowed as part of an aerodynamic state specification.")
 
-            self.q = np.asarray([1.0, 0.0, 0.0, 0.0])
+            self.q = np.asarray([0.0, 1.0, 0.0, 0.0])
 
             # Set up velocity
-            v_value = _import_value("velocity", state, self._unit_sys, -1)
+            v_value = _import_value("velocity", state, self._unit_sys, None)
             if isinstance(v_value, float): # Velocity magnitude
                 alpha = _import_value("alpha", state, self._unit_sys, 0.0)
                 beta = _import_value("beta", state, self._unit_sys, 0.0)
@@ -128,12 +127,14 @@ class Airplane:
                 C_B = np.cos(np.radians(beta))
                 S_B = np.sin(np.radians(beta))
 
-                self.v = np.zeros(3)
+                v = np.zeros(3)
                 denom = np.sqrt(1-S_a**2*S_B**2)
-                # This formulation gives the components of aircraft velocity
-                self.v[0] = v_value*C_a*C_B/denom
-                self.v[1] = v_value*C_a*S_B/denom
-                self.v[2] = v_value*S_a*C_B/denom
+                # This formulation gives the components of aircraft velocity in body-fixed coordinates
+                v[0] = v_value*C_a*C_B/denom
+                v[1] = v_value*C_a*S_B/denom
+                v[2] = v_value*S_a*C_B/denom
+
+                self.v = _quaternion_inverse_transform(self.q, v) # Transform to flat-earth coordinates
 
             elif isinstance(v_value, np.ndarray) and v_value.shape[0] == 3:
                 if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
