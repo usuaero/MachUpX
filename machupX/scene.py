@@ -258,7 +258,8 @@ class Scene:
     def _perform_geometry_calculations(self):
         # Performs calculations necessary for solving NLL which are only dependent on geometry.
         # This speeds up repeated calls to _solve(). This method should be called any time the 
-        # geometry is updated or an aircraft is added to the scene.
+        # geometry is updated, an aircraft is added to the scene, or the state of an aircraft 
+        # changes.
 
         # Geometry
         self._c_bar = np.zeros(self._N) # Average chord
@@ -271,6 +272,8 @@ class Scene:
         self._u_s = np.zeros((self._N,3))
 
         index = 0
+        self._airplane_names = []
+        self._segment_names = []
 
         # Loop through airplanes
         for i, (airplane_name, airplane_object) in enumerate(self.airplanes.items()):
@@ -889,8 +892,7 @@ class Scene:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
         self.airplanes[aircraft_name].set_state(state)
-        if self._num_aircraft != 1:
-            self._perform_geometry_calculations()
+        self._perform_geometry_calculations()
 
 
     def set_aircraft_control_state(self, control_state={}, aircraft_name=None):
@@ -978,14 +980,14 @@ class Scene:
         y_cent = y_lims[0]+0.5*y_diff
         z_cent = z_lims[0]+0.5*z_diff
 
-        x_lims[0] -= 0.5*max_diff/x_diff
-        x_lims[1] += 0.5*max_diff/x_diff
+        x_lims[0] = x_cent-0.5*max_diff
+        x_lims[1] = x_cent+0.5*max_diff
 
-        y_lims[0] -= 0.5*max_diff/y_diff
-        y_lims[1] += 0.5*max_diff/y_diff
+        y_lims[0] = y_cent-0.5*max_diff
+        y_lims[1] = y_cent+0.5*max_diff
 
-        z_lims[0] -= 0.5*max_diff/z_diff
-        z_lims[1] += 0.5*max_diff/z_diff
+        z_lims[0] = z_cent-0.5*max_diff
+        z_lims[1] = z_cent+0.5*max_diff
 
         # Set limits so it is a right-handed coordinate system with z pointing down
         ax.set_xlim3d(x_lims[1], x_lims[0])
