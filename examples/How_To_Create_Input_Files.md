@@ -78,6 +78,8 @@ In the flat-earth coordinate system, the x-axis points North, the y-axis points 
 points down. The origin of the flat-earth coordinate system is somewhat arbitrary, but it is assumed 
 to be at sea level.
 
+![alt text](CoordinateSystems.jpg "Coordinate Systems in MachUpX")
+
 For reference, see Phillips, "Mechanics of Flight", Fig. 7.1.2.
 
 ### Scene Object
@@ -209,12 +211,11 @@ deterimined by the user.
                         coordinates. Defaults to [0,0,0]
 
                     "orientation" : (vector, optional)
-                        Orientation of the aircraft in flat-earth coordinates. If this is a 3-element 
-                        vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, 
-                        phi]). If this is a 4-element vector it is assumed the quaternion formulation is 
-                        used where the first element is the scalar (i.e. [e0, ex, ey, ez]). This 
-                        quaternion should be from flat-earth coordinates to body-fixed coordinates. 
-                        Defaults to [1.0, 0.0, 0.0, 0.0].
+                        Orientation of the aircraft, going from flat-earth frame to body-fixed frame. 
+                        If this is a 3-element vector it is assumed the ZYX Euler angle formulation is 
+                        used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the 
+                        quaternion formulation is used where the first element is the scalar (i.e. 
+                        [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0].
 
                     "angular_rates" : (vector, optional)
                         Angular rate of the aircraft in body-fixed coordinates. Defaults to [0,0,0]
