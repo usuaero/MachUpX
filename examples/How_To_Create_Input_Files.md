@@ -78,7 +78,7 @@ In the flat-earth coordinate system, the x-axis points North, the y-axis points 
 points down. The origin of the flat-earth coordinate system is somewhat arbitrary, but it is assumed 
 to be at sea level.
 
-![alt text](CoordinateSystems.jpg "Coordinate Systems in MachUpX")
+![image](CoordinateSystems.jpg "Coordinate Systems in MachUpX")
 
 For reference, see Phillips, "Mechanics of Flight", Fig. 7.1.2.
 
