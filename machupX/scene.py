@@ -272,8 +272,6 @@ class Scene:
 
         index = 0
 
-        #TODO: Figure out if/when these calculations should happen in the earth-fixed frame
-
         # Loop through airplanes
         for i, (airplane_name, airplane_object) in enumerate(self.airplanes.items()):
             # Store airplane and segment names to make sure they are always accessed in the same order
@@ -328,9 +326,6 @@ class Scene:
         start_time = time.time()
 
         # Gather necessary variables
-        airplanes = []
-        segments = []
-
         # Atmosphere
         self._rho = np.zeros(self._N)
         self._mu = np.zeros(self._N)
@@ -992,9 +987,10 @@ class Scene:
         z_lims[0] -= 0.5*max_diff/z_diff
         z_lims[1] += 0.5*max_diff/z_diff
 
-        ax.set_xlim3d(*x_lims)
-        ax.set_ylim3d(*y_lims)
-        ax.set_zlim3d(*z_lims)
+        # Set limits so it is a right-handed coordinate system with z pointing down
+        ax.set_xlim3d(x_lims[1], x_lims[0])
+        ax.set_ylim3d(y_lims[0], y_lims[1])
+        ax.set_zlim3d(z_lims[1], z_lims[0])
 
         plt.show()
         plt.close()

@@ -158,7 +158,9 @@ deterimined by the user.
                 second column is densities. A 4 column array is a field where the first three columns 
                 are the position in flat-earth coordinates and the fourth column is the density. 
                 MachUp will linearly interpolate these data. These arrays can alternatively be stored 
-                as a csv file, in which case, this value should be the path to the file.
+                as a csv file, in which case, this value should be the path to the file. NOTE: Since 
+                MachUpX uses flat-earth coordinates for position, altitude values should be negative 
+                (i.e. 1000 ft above sea level would be -1000 ft).
                 
                 The following standard profiles can also be specified:
                 
