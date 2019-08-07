@@ -259,7 +259,8 @@ class Scene:
         # Performs calculations necessary for solving NLL which are only dependent on geometry.
         # This speeds up repeated calls to _solve(). This method should be called any time the 
         # geometry is updated, an aircraft is added to the scene, or the state of an aircraft 
-        # changes.
+        # changes. Note that all calculations occur in the flat-earth frame to all for multiple
+        # aircraft.
 
         # Geometry
         self._c_bar = np.zeros(self._N) # Average chord
@@ -288,18 +289,17 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Geometries
-                body_cp_locs = segment_object.control_points
-                self._PC[cur_slice,:] = body_cp_locs
+                self._PC[cur_slice,:] = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, segment_object.control_points)
                 self._c_bar[cur_slice] = segment_object.c_bar_cp
                 self._dS[cur_slice] = segment_object.dS
 
                 node_points = segment_object.nodes
-                self._P0[cur_slice,:] = node_points[:-1,:]
-                self._P1[cur_slice,:] = node_points[1:,:]
+                self._P0[cur_slice,:] = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, node_points[:-1,:])
+                self._P1[cur_slice,:] = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, node_points[1:,:])
 
-                self._u_a[cur_slice,:] = segment_object.u_a_cp
-                self._u_n[cur_slice,:] = segment_object.u_n_cp
-                self._u_s[cur_slice,:] = segment_object.u_s_cp
+                self._u_a[cur_slice,:] = _quaternion_inverse_transform(airplane_object.q, segment_object.u_a_cp)
+                self._u_n[cur_slice,:] = _quaternion_inverse_transform(airplane_object.q, segment_object.u_n_cp)
+                self._u_s[cur_slice,:] = _quaternion_inverse_transform(airplane_object.q, segment_object.u_s_cp)
 
                 index += num_cps
 
@@ -350,6 +350,9 @@ class Scene:
         # Velocities at control points
         self._cp_v_inf = np.zeros((self._N,3))
 
+        # Aircraft velocities
+        self._v_trans = np.zeros((self._num_aircraft,3))
+
         index = 0
 
         # Loop through airplanes
@@ -357,7 +360,7 @@ class Scene:
             airplane_object = self.airplanes[airplane_name]
 
             # Determine freestream velocity due to airplane translation
-            self._v_trans = -_quaternion_inverse_transform(airplane_object.q, airplane_object.v)
+            self._v_trans[i,:] = -airplane_object.v
 
             # Loop through segments
             for segment_name in self._segment_names[i]:
@@ -367,28 +370,27 @@ class Scene:
 
                 # Freestream velocity at control points
                 # Due to wind
-                global_cp_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, self._PC[cur_slice,:])
-                cp_v_wind = _quaternion_transform(airplane_object.q, self._get_wind(global_cp_locs))
+                cp_v_wind = self._get_wind(self._PC[cur_slice,:])
 
                 # Due to aircraft rotation
-                cp_v_rot = -np.cross(airplane_object.w, self._PC[cur_slice,:])
+                cp_v_rot = _quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, segment_object.control_points))
 
-                self._cp_v_inf[cur_slice,:] = self._v_trans+cp_v_wind+cp_v_rot
+                self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind+cp_v_rot
 
                 # Atmospheric density, speed of sound, and viscosity
-                self._rho[cur_slice] = self._get_density(global_cp_locs)
-                self._mu[cur_slice] = self._get_dyn_viscosity(global_cp_locs)
+                self._rho[cur_slice] = self._get_density(self._PC[cur_slice,:])
+                self._mu[cur_slice] = self._get_dyn_viscosity(self._PC[cur_slice,:])
 
                 # Freestream velocity at vortex nodes
                 # Due to wind
                 body_node_locs = segment_object.nodes
                 global_node_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, body_node_locs)
-                node_v_wind = _quaternion_transform(airplane_object.q, self._get_wind(global_node_locs))
+                node_v_wind = self._get_wind(global_node_locs)
 
                 # Due to aircraft rotation
-                node_v_rot = -np.cross(airplane_object.w, body_node_locs)
+                node_v_rot = _quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, body_node_locs))
 
-                node_v_inf = self._v_trans+node_v_wind+node_v_rot
+                node_v_inf = self._v_trans[i,:]+node_v_wind+node_v_rot
                 P0_v_inf[cur_slice,:] = node_v_inf[:-1,:]
                 P1_v_inf[cur_slice,:] = node_v_inf[1:,:]
 
@@ -562,6 +564,8 @@ class Scene:
         airfoil_params = np.concatenate((alpha[:,np.newaxis], Re[:,np.newaxis], M[:,np.newaxis]), axis=1)
         q_inf = 0.5*self._rho*V**2
 
+        r_CG = np.zeros((self._N,3))
+
         index = 0
 
         self._FM = {}
@@ -624,14 +628,10 @@ class Scene:
                     "total" : {}
                 }
 
-            # Determine freestream vector
-            v_wind = _quaternion_transform(airplane_object.q, self._get_wind(airplane_object.p_bar))
-            v_inf = self._v_trans + v_wind
+            # Determine freestream vector in body-fixed frame
+            v_inf = self._v_trans[i,:] + self._get_wind(airplane_object.p_bar)
             V_inf = np.linalg.norm(v_inf)
-            u_inf = (v_inf/V_inf).flatten()
-
-            # Center of gravity
-            r_CG = self._PC-airplane_object.CG[np.newaxis,:]
+            u_inf = _quaternion_transform(airplane_object.q, (v_inf/V_inf).flatten())
 
             # Determine reference parameters
             if non_dimensional:
@@ -646,12 +646,20 @@ class Scene:
                 num_cps = airplane_object.wing_segments[segment_name]._N
                 cur_slice = slice(index, index+num_cps)
 
+                # Radii from control points to the aircraft's center of gravity
+                r_CG[cur_slice,:] = self._PC[cur_slice,:]-(airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, airplane_object.CG))[np.newaxis,:]
+
                 # Determine viscid force
+                # Get drag coef and redimensionalize
                 CD = self.airplanes[airplane_name].wing_segments[segment_name].get_cp_CD(airfoil_params[cur_slice,:])
                 dD = q_inf[cur_slice]*self._dS[cur_slice]*CD
+
+                # Determine vector and translate back into body-fixed
                 dF_b_visc = dD[:,np.newaxis]*u[cur_slice]
-                F_b_visc = np.sum(dF_b_visc, axis=0)
+                F_b_visc = _quaternion_transform(airplane_object.q, np.sum(dF_b_visc, axis=0))
                 L_visc, D_visc, S_visc = self._rotate_aero_forces(F_b_visc, u_inf)
+
+                # Store
                 if non_dimensional:
                     self._FM[airplane_name]["viscous"]["Cx"][segment_name] = F_b_visc[0].item()/(q_ref*S_w)
                     self._FM[airplane_name]["viscous"]["Cy"][segment_name] = F_b_visc[1].item()/(q_ref*S_w)
@@ -670,8 +678,11 @@ class Scene:
                     self._FM[airplane_name]["viscous"]["FS"][segment_name] = S_visc
 
                 # Inviscid
-                F_b_inv = np.sum(dF_inv[cur_slice], axis=0)
+                # Determine vector and translate back into body-fixed
+                F_b_inv = _quaternion_transform(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
                 L_inv, D_inv, S_inv = self._rotate_aero_forces(F_b_inv, u_inf)
+
+                # Store
                 if non_dimensional:
                     self._FM[airplane_name]["inviscid"]["Cx"][segment_name] = F_b_inv[0].item()/(q_ref*S_w)
                     self._FM[airplane_name]["inviscid"]["Cy"][segment_name] = F_b_inv[1].item()/(q_ref*S_w)
@@ -690,9 +701,11 @@ class Scene:
                     self._FM[airplane_name]["inviscid"]["FS"][segment_name] = S_inv
 
                 # Determine viscid moment
-                Cm = self.airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(airfoil_params[cur_slice,:])
+                # Determine vector and rotate back to body-fixed
                 dM_visc = dD[:,np.newaxis]*np.cross(r_CG[cur_slice], u[cur_slice])
-                M_b_visc = np.sum(dM_visc, axis=0)
+                M_b_visc = _quaternion_transform(airplane_object.q, np.sum(dM_visc, axis=0))
+
+                # Store
                 if non_dimensional:
                     self._FM[airplane_name]["viscous"]["Cl"][segment_name] = M_b_visc[0].item()/(q_ref*S_w*l_ref_lat)
                     self._FM[airplane_name]["viscous"]["Cm"][segment_name] = M_b_visc[1].item()/(q_ref*S_w*l_ref_lon)
@@ -703,9 +716,17 @@ class Scene:
                     self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
 
                 # Determine inviscid moment
+                # Determine moment due to lift
                 dM_vortex = np.cross(r_CG[cur_slice,:], dF_inv[cur_slice,:])
-                dM_section = -(q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*Cm)[:,np.newaxis]*self._u_s[cur_slice] # Due to section moment coef
-                M_b_inv = np.sum(dM_section+dM_vortex, axis=0)
+
+                # Determine moment due to section moment coef
+                Cm = self.airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(airfoil_params[cur_slice,:])
+                dM_section = -(q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*Cm)[:,np.newaxis]*self._u_s[cur_slice]
+
+                # Rotate back to body-fixed
+                M_b_inv = _quaternion_transform(airplane_object.q, np.sum(dM_section+dM_vortex, axis=0))
+
+                #Store
                 if non_dimensional:
                     self._FM[airplane_name]["inviscid"]["Cl"][segment_name] = M_b_inv[0].item()/(q_ref*S_w*l_ref_lat)
                     self._FM[airplane_name]["inviscid"]["Cm"][segment_name] = M_b_inv[1].item()/(q_ref*S_w*l_ref_lon)
