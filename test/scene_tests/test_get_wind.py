@@ -101,7 +101,7 @@ def test_wind_array_atmos_profile():
 
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
@@ -137,7 +137,7 @@ def test_wind_array_atmos_profile_with_unit_conversion():
 
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
@@ -167,7 +167,7 @@ def test_wind_array_atmos_profile_from_file():
 
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
@@ -195,7 +195,7 @@ def test_wind_array_atmos_profile_from_file_with_units():
 
     for alt, correct_wind in zip(alts, winds): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         wind = scene._get_wind(position).flatten()
         assert np.allclose(wind, correct_wind, rtol=0.0, atol=1e-10) == True
 
@@ -217,8 +217,8 @@ def test_atmos_wind_field_from_file():
 
     scene = MX.Scene(altered_input_name)
 
-    positions = [[500,500,500],
-                 [0,0,1000],
+    positions = [[500,500,-500],
+                 [0,0,-1000],
                  [500,500,0]]
 
     winds = [[100,100,100],

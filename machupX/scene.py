@@ -109,7 +109,7 @@ class Scene:
                 raise IOError("{0} is not an allowable profile name.".format(rho))
 
             def density_getter(position):
-                return self._density_from_atmos_table(position[2], rho)
+                return self._density_from_atmos_table(-position[2], rho) # The position is negative since we're dealing in flat-earth coordinates
             
         # Array
         elif isinstance(rho, np.ndarray):
@@ -119,7 +119,7 @@ class Scene:
             if self._density_data.shape[1] is 2: # Density profile
 
                 def density_getter(position):
-                    return np.interp(position[2], self._density_data[:,0], self._density_data[:,1])
+                    return np.interp(-position[2], self._density_data[:,0], self._density_data[:,1])
 
             elif self._density_data.shape[1] is 4: # Density field
                 self._density_field_interpolator = sinterp.LinearNDInterpolator(self._density_data[:,:3],self._density_data[:,3])
@@ -184,9 +184,9 @@ class Scene:
                 elif self._wind_data.shape[1] is 4: # wind profile
 
                     def wind_getter(position):
-                        Vx =  np.interp(position[2], self._wind_data[:,0], self._wind_data[:,1])
-                        Vy =  np.interp(position[2], self._wind_data[:,0], self._wind_data[:,2])
-                        Vz =  np.interp(position[2], self._wind_data[:,0], self._wind_data[:,3])
+                        Vx =  np.interp(-position[2], self._wind_data[:,0], self._wind_data[:,1])
+                        Vy =  np.interp(-position[2], self._wind_data[:,0], self._wind_data[:,2])
+                        Vz =  np.interp(-position[2], self._wind_data[:,0], self._wind_data[:,3])
                         return np.asarray([Vx, Vy, Vz])
 
                 else:

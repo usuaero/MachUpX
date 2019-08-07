@@ -28,11 +28,11 @@ class Airfoil:
     """
 
 
-    def __init__(self, name, input_dict):
+    def __init__(self, name, input_dict={}):
 
         self.name = name
         self._input_dict = input_dict
-        self._type = _import_value("type", self._input_dict, "SI", None) # Unit system doesn't matter for these
+        self._type = _import_value("type", self._input_dict, "SI", "linear") # Unit system doesn't matter for these
 
         self._initialize_data()
 

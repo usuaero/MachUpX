@@ -112,7 +112,7 @@ def test_standard_atmos_with_english_units():
 
     for alt, rho in zip(alts, rhos): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         density = scene._get_density(position)
         assert np.allclose(density, rho, rtol=0.0, atol=1e-10) == True
 
@@ -138,7 +138,7 @@ def test_standard_atmos_with_SI_units():
 
     for alt, rho in zip(alts, rhos): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         density = scene._get_density(position)
         assert np.allclose(density, rho, rtol=0.0, atol=1e-10) == True
 
@@ -168,7 +168,7 @@ def test_density_array_atmos_profile():
 
     for alt, rho in zip(alts, rhos): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         density = scene._get_density(position)
         assert np.allclose(density, rho, rtol=0.0, atol=1e-10) == True
 
@@ -199,7 +199,7 @@ def test_array_atmos_profile_with_unit_conversion():
 
     for alt, rho in zip(alts, rhos): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         density = scene._get_density(position)
         assert np.allclose(density, rho, rtol=0.0, atol=1e-10) == True
 
@@ -225,7 +225,7 @@ def test_array_atmos_profile_from_file():
 
     for alt, rho in zip(alts, rhos): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         density = scene._get_density(position)
         assert np.allclose(density, rho, rtol=0.0, atol=1e-10) == True
 
@@ -251,7 +251,7 @@ def test_array_atmos_profile_from_file_with_units():
 
     for alt, rho in zip(alts, rhos): 
         position = np.random.random(3)*10000
-        position[2] = alt
+        position[2] = -alt
         density = scene._get_density(position)
         assert np.allclose(density, rho, rtol=0.0, atol=1e-10) == True
 
@@ -273,8 +273,8 @@ def test_atmos_field_from_file():
 
     scene = MX.Scene(altered_input_name)
 
-    positions = [[500,500,500],
-                 [0,0,1000],
+    positions = [[500,500,-500],
+                 [0,0,-1000],
                  [500,500,0]]
 
     densities = [0.125,0.15,0.15]

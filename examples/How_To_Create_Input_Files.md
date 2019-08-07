@@ -68,6 +68,18 @@ the default is always degrees. For airfoil parameters, measurements may only be 
 When specifying units in an array and one of the measurements is dimensionless (e.g. span fraction), "-" 
 should be used.
 
+### Coordinate Systems
+Throughout MachUpX, two coordinate systems are used. These are the body-fixed and flat-earth coordinate 
+systems. In the body-fixed coordinate system, the x-axis points forward out of the nose of the aircraft, 
+the y-axis points to the right along the wing, and the z-axis points down. The body-fixed coordinate 
+system has its origin at the aircraft's center of gravity.
+
+In the flat-earth coordinate system, the x-axis points North, the y-axis points East, and the z-axis 
+points down. The origin of the flat-earth coordinate system is somewhat arbitrary, but it is assumed 
+to be at sea level.
+
+For reference, see Phillips, "Mechanics of Flight", Fig. 7.1.2.
+
 ### Scene Object
 The following are keys which can be specified in the scene JSON object. NOTE: all keys not marked as
 optional are required. Key names typed in all capitals between carats (e.g. <KEY_VALUE>) are to be
@@ -183,24 +195,16 @@ deterimined by the user.
                     Describes the state of the aircraft.
 
                     "type" : (string)
-                        Specifies which definition of state is to be used. If given as "rigid_body", then 
-                        "position", "velocity", "orientation", and "angular_rates" can be  specified as 
-                        well. If given as "aerodynamic", then "position", "velocity", "angular_rates", 
-                        "alpha", and "beta" can be specified as well. Specifying both "rigid_body" and 
-                        "aerodynamic" state variables will throw an input error.
+                        Specifies which definition of state is to be used. The difference lies in how the 
+                        velocity is defined. If "type" is "rigid-body", then the velocity given must be 
+                        the translational velocity of the aircraft in flat-earth coordinates. If "type" is 
+                        "aerodynamic", the the velocity given describes the freestream vector at the 
+                        origin of the aircraft. This can be done by giving the vector in body-fixed 
+                        coordinates, or specifying a velocity magnitude and alpha and beta.
 
                     "position" : (vector, optional)
                         Position of the origin of the aircraft's body-fixed coordinate system in flat-earth
                         coordinates. Defaults to [0,0,0]
-
-                    "velocity" : (float or vector)
-                        In the case of "type" = "rigid_body":
-                            Velocity vector of the aircraft in flat-earth coordinates. Cannot be float.
-
-                        In the case of "type" = "aerodynamic":
-                            If a float, this is the magnitude of the local wind vector. If a vector, this 
-                            is the local freestream vector (i.e. u, v, and w). Specifying a velocity vector 
-                            will override definitions for "alpha" and "beta".
 
                     "orientation" : (vector, optional)
                         Orientation of the aircraft in flat-earth coordinates. If this is a 3-element 
@@ -212,6 +216,15 @@ deterimined by the user.
 
                     "angular_rates" : (vector, optional)
                         Angular rate of the aircraft in body-fixed coordinates. Defaults to [0,0,0]
+
+                    "velocity" : (float or vector)
+                        In the case of "type" = "rigid_body":
+                            Velocity vector of the aircraft in flat-earth coordinates. Cannot be float.
+
+                        In the case of "type" = "aerodynamic":
+                            If a float, this is the magnitude of the local wind vector. If a vector, this 
+                            is the local freestream vector (i.e. u, v, and w) and "alpha" and "beta" may 
+                            not be specified.
 
                     "alpha" : (float, optional)
                         Aerodynamic angle of attack. Defaults to 0.

@@ -18,8 +18,6 @@
                 "file" : "test/airplane_for_testing.json",
                 "state" : {
                     "type" : "aerodynamic",
-                    "position" : [0, 0, 1000],
-                    "angular_rates" : [0.0, 0.0, 0.0],
                     "velocity" : 100,
                     "alpha" : 2.0,
                     "beta" : 0.0
