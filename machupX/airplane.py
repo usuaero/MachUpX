@@ -23,6 +23,10 @@ class Airplane:
     control_state : dict
         Dictionary describing the initial state of the airplane's controls.
 
+    v_wind : ndarray
+        Vector giving the wind velocity in flat-earth coordinates at the 
+        aircraft's center of gravity.
+
     Returns
     -------
     Airplane
@@ -34,7 +38,7 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, airplane_input, unit_system, init_state={}, init_control_state={}):
+    def __init__(self, name, airplane_input, unit_system, init_state={}, init_control_state={}, v_wind=[0,0,0]):
 
         self.name = name
         self._unit_sys = unit_system
@@ -44,7 +48,7 @@ class Airplane:
         self._N = 0
 
         self._load_params(airplane_input)
-        self.set_state(init_state)
+        self.set_state(init_state, v_wind=v_wind)
         self._create_airfoil_database()
         self._create_origin_segment()
         self._load_wing_segments()
@@ -334,18 +338,6 @@ class Airplane:
             Number of control points on the aircraft.
         """
         return self._N
-
-
-    def get_v_inf(self):
-        """Returns the freestream velocity acting on the airplane due to its translation.
-        Note this does not account for wind. Wind must be handled at the Scene level.
-
-        Returns
-        -------
-        ndarray
-            Vector of freestream velocity.
-        """
-        return -_quaternion_transform(self.q, self.v)
 
 
     def set_control_state(self, control_state={}):

@@ -75,6 +75,11 @@ class Scene:
         # Store unit system
         self._unit_sys = self._input_dict.get("units","English")
 
+        # Setup atmospheric property getter functions
+        self._get_density = self._initialize_density_getter()
+        self._get_wind = self._initialize_wind_getter()
+        self._get_dyn_viscosity = self._initialize_viscosity_getter()
+
         # Initialize aircraft geometries
         for i, airplane_name in enumerate(self._input_dict["scene"]["aircraft"]):
             airplane_file = self._input_dict["scene"]["aircraft"][airplane_name]["file"]
@@ -82,11 +87,6 @@ class Scene:
             control_state = self._input_dict["scene"]["aircraft"][airplane_name].get("control_state",{})
 
             self.add_aircraft(airplane_name, airplane_file, state=state, control_state=control_state)
-
-        # Setup atmospheric property getter functions
-        self._get_density = self._initialize_density_getter()
-        self._get_wind = self._initialize_wind_getter()
-        self._get_dyn_viscosity = self._initialize_viscosity_getter()
 
 
     def _initialize_density_getter(self):
@@ -218,7 +218,9 @@ class Scene:
 
     
     def add_aircraft(self, airplane_name, airplane_input, state={}, control_state={}):
-        """Inserts an aircraft into the scene
+        """Inserts an aircraft into the scene. Note if an aircraft was already specified
+        in the input file, it has already been added to the scene. Access it through the 
+        airplanes member dict.
 
         Parameters
         ----------
@@ -234,17 +236,20 @@ class Scene:
         control_state : dict
             Dictionary describing the state of the controls.
 
-        Returns
-        -------
-
         Raises
         ------
         IOError
             If the input is invalid.
 
         """
+        # Determine the local wind vector for setting the state of the aircraft
+        aircraft_position = state.get("position", [0,0,0])
+        v_wind = self._get_wind(aircraft_position)
 
-        self.airplanes[airplane_name] = Airplane(airplane_name, airplane_input, self._unit_sys, init_state=state, init_control_state=control_state)
+        # Create and store the aircraft object
+        self.airplanes[airplane_name] = Airplane(airplane_name, airplane_input, self._unit_sys, init_state=state, init_control_state=control_state, v_wind=v_wind)
+
+        # Update member variables
         self._N += self.airplanes[airplane_name].get_num_cps()
         self._perform_geometry_calculations()
         self._num_aircraft += 1
@@ -253,19 +258,21 @@ class Scene:
     def _perform_geometry_calculations(self):
         # Performs calculations necessary for solving NLL which are only dependent on geometry.
         # This speeds up repeated calls to _solve(). This method should be called any time the 
-        # geometry is updated.
+        # geometry is updated or an aircraft is added to the scene.
 
         # Geometry
-        self._c_bar = np.zeros(self._N)
-        self._dS = np.zeros(self._N)
-        self._PC = np.zeros((self._N,3))
-        self._P0 = np.zeros((self._N,3))
-        self._P1 = np.zeros((self._N,3))
-        self._u_a = np.zeros((self._N,3))
+        self._c_bar = np.zeros(self._N) # Average chord
+        self._dS = np.zeros(self._N) # Differential planform area
+        self._PC = np.zeros((self._N,3)) # Control point location
+        self._P0 = np.zeros((self._N,3)) # Inbound vortex node location
+        self._P1 = np.zeros((self._N,3)) # Outbound vortex node location
+        self._u_a = np.zeros((self._N,3)) # Section unit vectors
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
 
         index = 0
+
+        #TODO: Figure out if/when these calculations should happen in the earth-fixed frame
 
         # Loop through airplanes
         for i, (airplane_name, airplane_object) in enumerate(self.airplanes.items()):
@@ -352,7 +359,7 @@ class Scene:
             airplane_object = self.airplanes[airplane_name]
 
             # Determine freestream velocity due to airplane translation
-            v_trans = airplane_object.get_v_inf()
+            self._v_trans = -_quaternion_inverse_transform(airplane_object.q, airplane_object.v)
 
             # Loop through segments
             for segment_name in self._segment_names[i]:
@@ -368,7 +375,7 @@ class Scene:
                 # Due to aircraft rotation
                 cp_v_rot = -np.cross(airplane_object.w, self._PC[cur_slice,:])
 
-                self._cp_v_inf[cur_slice,:] = v_trans+cp_v_wind+cp_v_rot
+                self._cp_v_inf[cur_slice,:] = self._v_trans+cp_v_wind+cp_v_rot
 
                 # Atmospheric density, speed of sound, and viscosity
                 self._rho[cur_slice] = self._get_density(global_cp_locs)
@@ -383,7 +390,7 @@ class Scene:
                 # Due to aircraft rotation
                 node_v_rot = -np.cross(airplane_object.w, body_node_locs)
 
-                node_v_inf = v_trans+node_v_wind+node_v_rot
+                node_v_inf = self._v_trans+node_v_wind+node_v_rot
                 P0_v_inf[cur_slice,:] = node_v_inf[:-1,:]
                 P1_v_inf[cur_slice,:] = node_v_inf[1:,:]
 
@@ -620,9 +627,8 @@ class Scene:
                 }
 
             # Determine freestream vector
-            v_trans = airplane_object.get_v_inf()
             v_wind = _quaternion_transform(airplane_object.q, self._get_wind(airplane_object.p_bar))
-            v_inf = v_trans + v_wind
+            v_inf = self._v_trans + v_wind
             V_inf = np.linalg.norm(v_inf)
             u_inf = (v_inf/V_inf).flatten()
 
