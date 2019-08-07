@@ -66,3 +66,26 @@ def test_rigid_body_velocity_with_wind():
     scene = MX.Scene(input_dict)
 
     assert np.allclose(scene.airplanes["test_plane"].v, [100, 100, 0], rtol=0.0, atol=1e-8)
+
+
+def test_get_alpha_and_beta():
+    # Tests the alpha and beta that are input are what are returned
+
+    # Load input
+    with open(input_file, 'r') as input_handle:
+        input_dict = json.load(input_handle)
+
+    v_wind = [100, 100, 0]
+    input_dict["scene"]["atmosphere"]["V_wind"] = v_wind
+    
+    aircraft_state = {}
+    aircraft_state["type"] = "aerodynamic"
+    aircraft_state["velocity"] = 100
+    aircraft_state["alpha"] = 5.0
+    aircraft_state["beta"] = 5.0
+    input_dict["scene"]["aircraft"]["test_plane"]["state"] = aircraft_state
+
+    scene = MX.Scene(input_dict)
+
+    assert abs(scene.airplanes["test_plane"].get_alpha(v_wind)-5.0)<1e-10
+    assert abs(scene.airplanes["test_plane"].get_beta(v_wind)-5.0)<1e-10

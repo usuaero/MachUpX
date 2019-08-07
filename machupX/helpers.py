@@ -149,6 +149,9 @@ def _quaternion_transform(q, v):
     v_trans[:,0] = q[0]*T[:,1] - q[1]*T[:,0] - q[2]*T[:,3] + q[3]*T[:,2]
     v_trans[:,1] = q[0]*T[:,2] + q[1]*T[:,3] - q[2]*T[:,0] - q[3]*T[:,1]
     v_trans[:,2] = q[0]*T[:,3] - q[1]*T[:,2] + q[2]*T[:,1] - q[3]*T[:,0]
+    
+    if single:
+        v_trans = v_trans.flatten()
 
     return v_trans
 

@@ -154,7 +154,7 @@ class Airplane:
 
 
     def get_alpha(self, v_wind=np.array([0, 0, 0])):
-        """Returns the aircraft's angle of attack.
+        """Returns the aircraft's angle of attack in degrees.
 
         Parameters
         ----------
@@ -162,11 +162,12 @@ class Airplane:
             The local wind vector at the aircraft body-fixed origin in flat-earth 
             coordinates. Defaults to [0.0, 0.0, 0.0].
         """
-        pass
+        v = _quaternion_transform(self.q, self.v-v_wind) # Determine velocity relative to the wind in the body-fixed frame
+        return np.degrees(np.arctan2(v[2], v[0]))
 
 
     def get_beta(self, v_wind=np.array([0, 0, 0])):
-        """Returns the aircraft's sideslip angle.
+        """Returns the aircraft's sideslip angle in degrees.
 
         Parameters
         ----------
@@ -174,7 +175,8 @@ class Airplane:
             The local wind vector at the aircraft body-fixed origin in flat-earth 
             coordinates. Defaults to [0.0, 0.0, 0.0].
         """
-        pass
+        v = _quaternion_transform(self.q, self.v-v_wind) # Determine velocity relative to the wind in the body-fixed frame
+        return np.degrees(np.arctan2(v[1], v[0]))
 
 
     def _initialize_controls(self, init_control_state):
