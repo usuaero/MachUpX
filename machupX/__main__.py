@@ -12,7 +12,10 @@ def _run_interactive_mode():
     print('Welcome to MachUpX Interactive. Type [?] for a list of available commands.')
     
     while True:
-        command = input(">>>")
+        command = input("MX>>")
+
+        print('Sorry, interactive mode is not yet functional. Try back later.')
+        break
         
         if command == 'q':
             break
@@ -29,7 +32,11 @@ def _run_prescribed_analyses(input_filename):
     
     # Run analyses
     for key in input_dict["run"]:
+
+        # Get options
         params = input_dict["run"].get(key, {})
+
+        # Solve forces
         if key == "forces":
             filename = params.get("output_file", input_filename.replace(".json", "_forces.json"))
             non_dimensional = params.get("non_dimensional", False)
@@ -38,11 +45,19 @@ def _run_prescribed_analyses(input_filename):
             print("\nCalculating aerodynamic forces...")
             scene.solve_forces(filename=filename, non_dimensional=non_dimensional, verbose=verbose)
     
-        elif key == "view":
+        # Wireframe
+        elif key == "display_wireframe":
             show_legend = params.get("show_legend", False)
     
-            print("Displaying wireframe...")
+            print("\nDisplaying wireframe...")
             scene.display_wireframe(show_legend=show_legend)
+
+        elif key == "aero_derivatives":
+            aircraft_name = params.get("aircraft_name", None)
+            filename = params.get("output_file", input_filename.replace(".json", "_derivatives.json"))
+
+            print("\nCalculating aerodynamic derivatives...")
+            scene.aircraft_derivatives(aircraft_name=aircraft_name, filename=filename)
 
 
 if __name__=="__main__":

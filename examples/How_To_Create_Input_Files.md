@@ -109,24 +109,22 @@ deterimined by the user.
             "verbose" : (boolean, optional)
                 Defaults to false
 
-        "view" : (dict, optional)
+        "display_wireframe" : (dict, optional)
             Displays a wireframe of the geometry of the scene/aircraft.
 
             "show_legend" : (boolean, optional)
                 If set to true, a legend will be included with the wireframe detailing which color 
                 corresponds to which wing segment. Defaults to false.
 
-        "stl" : ()
-            Outputs an stl file of the geometry of the scene/aircraft.
+        "aero_derivatives" : (dict, optional)
+            Calculates the stability, damping, and control derivatives at the current state
 
-        "igs" : ()
-            Outputs an igs file of the geometry of the scene/aircraft.
+            "aircraft_name" : (string)
+                The aircraft to calculate the derivatives of. If there is only one aircraft in the 
+                scene, this does not need to be specified.
 
-        "aero_derivatives" : ()
-
-        "state_derivatives" : ()
-
-        "distributions" : ()
+            "output_file" : (string, optional)
+                File to store the results in. Defaults to the input filename + "_derivatives".
 
     "solver" : (dict, optional)
         Specifies parameters regarding how the lifting-line equation is solved.
