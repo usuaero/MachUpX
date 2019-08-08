@@ -64,7 +64,6 @@ The following Python packages are required:
 
 numpy
 scipy
-scikit-aero (available at [https://github.com/AeroPython/scikit-aero](https://github.com/AeroPython/scikit-aero))
 
 ### Getting the Source Code
 

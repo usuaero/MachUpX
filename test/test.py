@@ -7,15 +7,6 @@ import subprocess as sp
 
 if __name__=="__main__":
     
-    sa = stand.StandardAtmosphere("English")
-    h = 50000
-    print(sa.T(h))
-    print(sa.P(h))
-    print(sa.rho(h))
-    print(sa.mu(h))
-    print(sa.nu(h))
-    print(sa.a(h))
-
     input_file = "test/input_for_testing.json"
 
     # Alter input
@@ -40,7 +31,6 @@ if __name__=="__main__":
     #scene.display_wireframe()
 
     FM = scene.solve_forces(verbose=True)
-    derivs = scene.aircraft_aerodynamic_derivatives()
 
     print(json.dumps(FM["test_plane"]["total"], indent=4))
     print(json.dumps(derivs, indent=4))

@@ -54,18 +54,31 @@ class StandardAtmosphere:
         Either in Pascals or lbf/ft^2.
         """
         H = self._geometric_to_geopotential(h)
-        b = 0
-        P = copy.copy(self._P_0)
-        while b < 6 and H > self._H_b[b]:
-            T_M_b = self._T_0+self._T_M_b[b]+273.15 # Layer base temp
-            H_lim = min(H, self._H_b[b+1])
-            if abs(self._L_M_b[b])<1e-6:
-                P *= np.exp((-self._g_0_prime*self._M_0*(H_lim-self._H_b[b])/(self._R_star*T_M_b)))
-            else:
-                exponent = (self._g_0_prime*self._M_0)/(self._R_star*self._L_M_b[b])
-                P *= (T_M_b/(T_M_b+self._L_M_b[b]*(H_lim-self._H_b[b])))**exponent
 
-            b += 1
+        if isinstance(H, float):
+            single = True
+            H_array = np.asarray(H)[np.newaxis]
+        else:
+            single = False
+            H_array = np.asarray(H)
+
+        P = np.ones(H_array.shape)*self._P_0
+        for i, H in enumerate(H_array):
+            b = 0
+
+            while b < 6 and H > self._H_b[b]:
+                T_M_b = self._T_0+self._T_M_b[b]+273.15 # Layer base temp
+                H_lim = min(H, self._H_b[b+1])
+                if abs(self._L_M_b[b])<1e-6:
+                    P[i] *= np.exp((-self._g_0_prime*self._M_0*(H_lim-self._H_b[b])/(self._R_star*T_M_b)))
+                else:
+                    exponent = (self._g_0_prime*self._M_0)/(self._R_star*self._L_M_b[b])
+                    P[i] *= (T_M_b/(T_M_b+self._L_M_b[b]*(H_lim-self._H_b[b])))**exponent
+
+                b += 1
+
+        if single:
+            P = P.item()
 
         if self._unit_sys == "English":
             return P*0.02088543815038
@@ -135,7 +148,7 @@ class StandardAtmosphere:
 
     def _geometric_to_geopotential(self, h):
         # Check the height is not too high
-        if self._unit_sys == "SI" and h > 86000.0:
+        if self._unit_sys == "SI" and (h>86000.0).any():
             raise IOError("Standard atmosphere only goes up to 86 km.")
 
         # Convert to SI if needs be

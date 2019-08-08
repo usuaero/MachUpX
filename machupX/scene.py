@@ -1,8 +1,8 @@
 from .helpers import _check_filepath, _convert_units, _vectorized_convert_units, _import_value, _quaternion_transform, _quaternion_inverse_transform
 from .airplane import Airplane
+from .standard_atmosphere import StandardAtmosphere
 
 import json
-from skaero.atmosphere import coesa
 import numpy as np
 import scipy.interpolate as sinterp
 import matplotlib.pyplot as plt
@@ -53,6 +53,7 @@ class Scene:
         self._N = 0
         self._num_aircraft = 0
 
+
         self._load_params(scene_input)
 
 
@@ -84,9 +85,9 @@ class Scene:
         self._unit_sys = self._input_dict.get("units","English")
 
         # Setup atmospheric property getter functions
+        self._atmos = StandardAtmosphere(unit_sys=self._unit_sys)
         self._get_density = self._initialize_density_getter()
         self._get_wind = self._initialize_wind_getter()
-        self._get_dyn_viscosity = self._initialize_viscosity_getter()
 
         # Initialize aircraft geometries
         for i, airplane_name in enumerate(self._input_dict["scene"]["aircraft"]):
@@ -101,7 +102,7 @@ class Scene:
 
         # Load value from dictionary
         input_dict = self._input_dict["scene"].get("atmosphere", {})
-        default_density = self._density_from_atmos_table(0.0, "standard")
+        default_density = self._atmos.rho(0.0)
         rho = _import_value("rho", input_dict, self._unit_sys, default_density)
 
         # Constant value
@@ -117,7 +118,7 @@ class Scene:
                 raise IOError("{0} is not an allowable profile name.".format(rho))
 
             def density_getter(position):
-                return self._density_from_atmos_table(-position[2], rho) # The position is negative since we're dealing in flat-earth coordinates
+                return self._atmos.rho(-position[2])
             
         # Array
         elif isinstance(rho, np.ndarray):
@@ -140,23 +141,6 @@ class Scene:
             raise IOError("Density improperly specified as {0}.".format(rho))
 
         return density_getter
-        
-
-    def _density_from_atmos_table(self, altitude, profile):
-        # Computes the density at a given altitude
-
-        if self._unit_sys == "English":
-            alt = _convert_units(altitude, "ft", "SI")
-        else: 
-            alt = altitude
-
-        if profile == "standard":
-            _,_,_,rho = coesa.table(alt)
-
-        if self._unit_sys == "English":
-            rho = _convert_units(rho, "kg/m^3", "English")
-
-        return rho
 
     
     def _initialize_wind_getter(self):
@@ -204,25 +188,6 @@ class Scene:
             raise IOError("Wind velocity improperly specified as {0}".format(V_wind))
 
         return wind_getter
-
-
-    def _initialize_viscosity_getter(self):
-        # Sets up the dynamic viscosity getter
-        
-        # Load value from dict
-        input_dict = self._input_dict["scene"].get("atmosphere", {})
-        if self._unit_sys == "English":
-            default_mu = 0.3836e-6
-        else:
-            default_mu = 18.37e-6
-
-        mu = _import_value("mu", input_dict, self._unit_sys, default_mu)
-        if isinstance(mu, float):
-            self._constant_mu = mu
-            def visc_getter(position):
-                return self._constant_mu
-
-        return visc_getter
 
 
     def _get_wind_at_aircraft_origin(self, aircraft_name=None):
@@ -353,17 +318,17 @@ class Scene:
         # Gather necessary variables
         # Atmosphere
         self._rho = np.zeros(self._N)
-        self._mu = np.zeros(self._N)
+        self._nu = np.zeros(self._N)
         self._a = np.ones(self._N)
 
         # Airfoil parameters
         alpha_approx = np.zeros(self._N)
-        Re = np.ones(self._N)*1e-6
+        Re = np.zeros(self._N)
         M = np.zeros(self._N)
-        airfoil_params = np.concatenate((alpha_approx[:,np.newaxis], Re[:,np.newaxis], M[:,np.newaxis]), axis=1)
         CLa = np.zeros(self._N)
         aL0 = np.zeros(self._N)
         esp_f_delta_f = np.zeros(self._N)
+        alpha_approx = np.zeros(self._N)
 
         # Velocities at vortex nodes
         P0_v_inf = np.zeros((self._N,3))
@@ -371,6 +336,8 @@ class Scene:
 
         # Velocities at control points
         self._cp_v_inf = np.zeros((self._N,3))
+        cp_V_inf = np.zeros(self._N)
+        cp_u_inf = np.zeros((self._N,3))
 
         # Aircraft velocities
         self._v_trans = np.zeros((self._num_aircraft,3))
@@ -398,10 +365,13 @@ class Scene:
                 cp_v_rot = _quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, segment_object.control_points-airplane_object.CG))
 
                 self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind+cp_v_rot
+                cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
+                cp_u_inf[cur_slice,:] = self._cp_v_inf[cur_slice]/cp_V_inf[cur_slice,np.newaxis]
 
                 # Atmospheric density, speed of sound, and viscosity
                 self._rho[cur_slice] = self._get_density(self._PC[cur_slice,:])
-                self._mu[cur_slice] = self._get_dyn_viscosity(self._PC[cur_slice,:])
+                self._a[cur_slice] = self._atmos.a(-self._PC[cur_slice,2])
+                self._nu[cur_slice] = self._atmos.nu(-self._PC[cur_slice,2])
 
                 # Freestream velocity at vortex nodes
                 # Due to wind
@@ -417,15 +387,18 @@ class Scene:
                 P1_v_inf[cur_slice,:] = node_v_inf[1:,:]
 
                 # Airfoil parameters
-                CLa[cur_slice] = segment_object.get_cp_CLa(airfoil_params[cur_slice,:])
-                aL0[cur_slice] = segment_object.get_cp_aL0(airfoil_params[cur_slice,:])
+                alpha_approx[cur_slice] = np.einsum('ij,ij->i', cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
+                Re[cur_slice] = cp_V_inf[cur_slice]*self._c_bar[cur_slice]/self._nu[cur_slice]
+                M[cur_slice] = cp_V_inf[cur_slice]/self._a[cur_slice]
+
+                airfoil_params = np.concatenate((alpha_approx[cur_slice,np.newaxis], Re[cur_slice,np.newaxis], M[cur_slice,np.newaxis]), axis=1)
+
+                CLa[cur_slice] = segment_object.get_cp_CLa(airfoil_params)
+                aL0[cur_slice] = segment_object.get_cp_aL0(airfoil_params)
                 esp_f_delta_f[cur_slice] = segment_object.get_cp_flap()
 
                 index += num_cps
 
-        # Control point velocities
-        cp_V_inf = np.linalg.norm(self._cp_v_inf, axis=1)
-        cp_u_inf = self._cp_v_inf/cp_V_inf[:,np.newaxis]
 
         # Vortex node velocities
         P0_V_inf = np.linalg.norm(P0_v_inf, axis=1)
@@ -454,7 +427,7 @@ class Scene:
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = cp_V_inf*CLa*self._dS*(np.einsum('ij,ij->i', cp_u_inf, self._u_n)-aL0+esp_f_delta_f)
+        b = cp_V_inf*CLa*self._dS*(alpha_approx-aL0+esp_f_delta_f)
 
         # Solve
         self._Gamma = np.linalg.solve(A, b)
@@ -503,7 +476,7 @@ class Scene:
             V_i = np.sqrt(np.einsum('ij,ij->i', v_i, v_i))
 
             alpha = np.arctan2(v_ni, v_ai)
-            Re = self._rho*V_i*self._c_bar/self._mu
+            Re = V_i*self._c_bar/self._nu
             M = V_i/self._a
             airfoil_params = np.concatenate((alpha[:,np.newaxis], Re[:,np.newaxis], M[:,np.newaxis]), axis=1)
 
@@ -542,7 +515,7 @@ class Scene:
             J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji
 
             CL_gamma_alpha = C_La[:,np.newaxis]*(v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(v_ni**2+v_ai**2)
-            CL_gamma_Re = C_LRe*self._c_bar*self._rho/(self._mu*V_i)[:,np.newaxis]*v_iji
+            CL_gamma_Re = C_LRe*self._c_bar/(self._nu*V_i)[:,np.newaxis]*v_iji
             CL_gamma_M = C_LM/(self._a*V_i)[:,np.newaxis]*v_iji
 
             J[:,:] -= (V_i**2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M)
