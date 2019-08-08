@@ -4,7 +4,7 @@ import numpy as np
 import copy
 
 class StandardAtmosphere:
-    """Defines a standard atmosphere according to the 1976 US Standard Atmosphere
+    """Defines a standard atmosphere according to the 1976 US Standard Atmosphere.
 
     Parameters
     ----------
@@ -129,7 +129,7 @@ class StandardAtmosphere:
         T = self.T(h)
 
         if self._unit_sys == "English":
-            T = (T-32)*5.0/9.0
+            T = T*5.0/9.0
 
         a = np.sqrt(self._gamma*self._R_star*T/self._M_0)
 
@@ -147,15 +147,29 @@ class StandardAtmosphere:
 
 
     def _geometric_to_geopotential(self, h):
+        # Converts the given height to geopotential meters.
+
+        # Check for single value vs array
+        if isinstance(h, float):
+            single = True
+            h_array = np.asarray(h)[np.newaxis]
+        else:
+            single = False
+            h_array = np.asarray(h)
+
         # Check the height is not too high
-        if self._unit_sys == "SI" and (h>86000.0).any():
+        if self._unit_sys == "SI" and (h_array>86000.0).any():
             raise IOError("Standard atmosphere only goes up to 86 km.")
 
         # Convert to SI if needs be
         if self._unit_sys == "English":
-            Z = h*0.3048
+            Z = h_array*0.3048
         else:
-            Z = h
+            Z = h_array
+
+        # Convert back to single value
+        if single:
+            Z = Z.item()
 
         # Convert
         return (self._r_0*Z)/(self._r_0+Z)
