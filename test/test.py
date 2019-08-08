@@ -1,10 +1,20 @@
 # This script is for me to test the functionality of whatever I'm working on at the moment.
+import machupX.standard_atmosphere as stand
 import machupX as MX
 import json
 import numpy as np
 import subprocess as sp
 
 if __name__=="__main__":
+    
+    sa = stand.StandardAtmosphere("English")
+    h = 50000
+    print(sa.T(h))
+    print(sa.P(h))
+    print(sa.rho(h))
+    print(sa.mu(h))
+    print(sa.nu(h))
+    print(sa.a(h))
 
     input_file = "test/input_for_testing.json"
 
