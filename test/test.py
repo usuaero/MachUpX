@@ -25,16 +25,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
 
     state["orientation"] = [np.sqrt(2)/2, 0, 0, np.sqrt(2)/2]
-    scene.add_aircraft("test_plane_0", airplane_dict, state=state, control_state=control_state)
+    scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    state["position"] = [50, 0, 0]
-    scene.add_aircraft("test_plane_1", airplane_dict, state=state, control_state=control_state)
-
-    scene.display_wireframe()
+    #scene.display_wireframe()
 
     FM = scene.solve_forces(verbose=True)
+    derivs = scene.aircraft_aerodynamic_derivatives()
 
-    print("Tail")
-    print(json.dumps(FM["test_plane_0"]["total"], indent=4))
-    print("Lead")
-    print(json.dumps(FM["test_plane_1"]["total"], indent=4))
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    print(json.dumps(derivs, indent=4))

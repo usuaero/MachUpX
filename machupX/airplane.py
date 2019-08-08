@@ -73,7 +73,6 @@ class Airplane:
         self.S_w = _import_value("area", self._input_dict.get("reference", {}), self._unit_sys, -1)
         self.l_ref_lon = _import_value("longitudinal_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
         self.l_ref_lat = _import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
-        self._control_names = self._input_dict.get("controls", [])
 
 
     def set_state(self, state, v_wind=np.array([0, 0, 0])):
@@ -90,8 +89,8 @@ class Airplane:
         """
 
         self.state_type = _import_value("type", state, self._unit_sys, None)
-        self.p_bar = _import_value("position", state, self._unit_sys, [0, 0, 0])
-        self.w = _import_value("angular_rates", state, self._unit_sys, [0, 0, 0])
+        self.p_bar = _import_value("position", state, self._unit_sys, [0.0, 0.0, 0.0])
+        self.w = _import_value("angular_rates", state, self._unit_sys, [0.0, 0.0, 0.0])
 
         # Set up orientation quaternion
         self.q = _import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
@@ -106,40 +105,37 @@ class Airplane:
         else:
             raise IOError("{0} is not an allowable orientation definition.".format(self.q))
 
+        # Velocity stored as the aircraft's velocity relative to the flat-earth frame
+        self.v = np.zeros(3)
+
         # Rigid-body definition
         if self.state_type == "rigid-body":
+
+            # Check for mixing of specification types
             if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
                 raise IOError("Alpha and beta are not allowed as part of a rigid-body state specification.")
 
-            # Set up velocity
-            self.v = _import_value("velocity", state, self._unit_sys, None) # The user has specified translational velocity in flat-earth coordinates, so wind doesn't matter
+            # Set value
+            self.v = _import_value("velocity", state, self._unit_sys, None)# The user has specified translational velocity in flat-earth coordinates, so wind doesn't matter
+
+            # Check it is a vector
             if not isinstance(self.v, np.ndarray):
                 raise IOError("For a rigid-body state definition, 'velocity' must be a 3-element vector.")
 
         # Aerodynamic definition
         elif self.state_type == "aerodynamic":
 
-            # Set up velocity
             v_value = _import_value("velocity", state, self._unit_sys, None)
-            if isinstance(v_value, float): # User has given a velocity magnitude, so alpha and beta are also needed
+
+            # User has given a velocity magnitude, so alpha and beta are also needed
+            if isinstance(v_value, float):
                 alpha = _import_value("alpha", state, self._unit_sys, 0.0)
                 beta = _import_value("beta", state, self._unit_sys, 0.0)
 
-                C_a = np.cos(np.radians(alpha))
-                S_a = np.sin(np.radians(alpha))
-                C_B = np.cos(np.radians(beta))
-                S_B = np.sin(np.radians(beta))
+                self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
 
-                v = np.zeros(3)
-                denom = np.sqrt(1-S_a**2*S_B**2)
-                # This formulation gives the components of aircraft velocity in body-fixed coordinates (Mech of Flight Eqs. 7.1.10-12)
-                v[0] = v_value*C_a*C_B/denom
-                v[1] = v_value*C_a*S_B/denom
-                v[2] = v_value*S_a*C_B/denom
-
-                self.v = _quaternion_inverse_transform(self.q, v)+v_wind # Transform to flat-earth coordinates and account for wind (Mech of Flight Eq. 7.1.1)
-
-            elif isinstance(v_value, np.ndarray) and v_value.shape[0] == 3: # User has given u, v, and w
+            # User has given u, v, and w
+            elif isinstance(v_value, np.ndarray) and v_value.shape[0] == 3:
                 if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
                     raise IOError("Alpha and beta may not be specified along with a freestream vector.")
 
@@ -147,43 +143,95 @@ class Airplane:
                 self.v = _quaternion_inverse_transform(self.q, -v_value)+v_wind
 
             else:
-                raise IOError("{0} is not an allowable velocity definition.", v_value)
+                raise IOError("{0} is not an allowable velocity definition.".format(v_value))
 
         else:
             raise IOError("{0} is not an acceptable state type.".format(state_type))
 
 
-    def get_alpha(self, v_wind=np.array([0, 0, 0])):
-        """Returns the aircraft's angle of attack in degrees.
+    def get_aerodynamic_state(self, v_wind=np.array([0, 0, 0])):
+        """Returns the aircraft's angle of attack, sideslip angle, and freestream velocity magnitude.
 
         Parameters
         ----------
         v_wind : ndarray
             The local wind vector at the aircraft body-fixed origin in flat-earth 
             coordinates. Defaults to [0.0, 0.0, 0.0].
+
+        Returns
+        -------
+        alpha : float
+            Angle of attack in degrees
+
+        beta : float
+            Sideslip angle in degrees
+
+        velocity : float
+            Magnitude of the freestream velocity
         """
-        v = _quaternion_transform(self.q, self.v-v_wind) # Determine velocity relative to the wind in the body-fixed frame
-        return np.degrees(np.arctan2(v[2], v[0]))
+        # Determine velocity relative to the wind in the body-fixed frame
+        v = _quaternion_transform(self.q, self.v-v_wind)
+
+        # Calculate values
+        alpha = np.degrees(np.arctan2(v[2], v[0]))
+        beta = np.degrees(np.arctan2(v[1], v[0]))
+        velocity = np.linalg.norm(v)
+        return alpha, beta, velocity
 
 
-    def get_beta(self, v_wind=np.array([0, 0, 0])):
-        """Returns the aircraft's sideslip angle in degrees.
+    def set_aerodynamic_state(self, **kwargs):
+        """Sets the velocity of the aircraft so that its angle of attack, sideslip angle, 
+        and freestream velocity are what is desired. If any one of these is not specified, 
+        it will default to the value in the current state.
 
         Parameters
         ----------
+        alpha : float
+            Desired angle of attack in degrees. Defaults to current angle of attack.
+
+        beta : float
+            Desired sideslip angle in degrees. Defaults to current sideslip angle.
+
+        velocity : float
+            Magnitude of the freestream velocity as seen by the aircraft.
+
         v_wind : ndarray
             The local wind vector at the aircraft body-fixed origin in flat-earth 
             coordinates. Defaults to [0.0, 0.0, 0.0].
         """
-        v = _quaternion_transform(self.q, self.v-v_wind) # Determine velocity relative to the wind in the body-fixed frame
-        return np.degrees(np.arctan2(v[1], v[0]))
+        # Determine the current state
+        v_wind = kwargs.get("v_wind", np.array([0,0,0]))
+        current_aero_state = self.get_aerodynamic_state(v_wind=v_wind)
+
+        # Determine the desired state
+        alpha = kwargs.get("alpha", current_aero_state[0])
+        beta = kwargs.get("beta", current_aero_state[1])
+        velocity = kwargs.get("velocity", current_aero_state[2])
+
+        # Calculate trigonometric values
+        C_a = np.cos(np.radians(alpha))
+        S_a = np.sin(np.radians(alpha))
+        C_B = np.cos(np.radians(beta))
+        S_B = np.sin(np.radians(beta))
+
+        # This formulation gives the components of aircraft velocity in body-fixed coordinates (Mech of Flight Eqs. 7.1.10-12)
+        v = np.zeros(3)
+        denom = np.sqrt(1-S_a**2*S_B**2)
+        v[0] = velocity*C_a*C_B/denom
+        v[1] = velocity*C_a*S_B/denom
+        v[2] = velocity*S_a*C_B/denom
+
+        # Transform to flat-earth coordinates and account for wind (Mech of Flight Eq. 7.1.1)
+        self.v = _quaternion_inverse_transform(self.q, v)+v_wind
 
 
     def _initialize_controls(self, init_control_state):
         # Initializes the control surfaces on the airplane
         self._control_symmetry = {}
+        self.control_names = []
         controls = self._input_dict.get("controls", {})
         for key in controls:
+            self.control_names.append(key)
             self._control_symmetry[key] = controls[key]["is_symmetric"]
 
         self.set_control_state(control_state=init_control_state)
@@ -353,7 +401,8 @@ class Airplane:
             here will cause a downward deflection of symmetric control surfaces and 
             downward deflection of the right surface for anti-symmetric control surfaces.
             Units may be specified as in the input file. Any deflections not given will 
-            default to zero.
+            default to zero; the previous state is not preserved
         """
+        self.current_control_state = control_state
         for _,wing_segment in self.wing_segments.items():
             wing_segment.apply_control(control_state, self._control_symmetry)

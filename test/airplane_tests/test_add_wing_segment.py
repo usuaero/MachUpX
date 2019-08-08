@@ -28,7 +28,7 @@ def test_all_wing_segments_get_added():
     scene = MX.Scene(input_file)
 
     # Check for each wing segment in both the tree and the dict
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for segment_name, segment_side in zip(wing_segments, wing_segment_sides):
 
         if segment_side == "left" or segment_side == "both":
@@ -38,7 +38,7 @@ def test_all_wing_segments_get_added():
             dict_segment = wing_dict[name]
 
             # Retrieve from tree
-            tree_segment = scene.airplanes["test_plane"]._get_wing_segment(name)
+            tree_segment = scene._airplanes["test_plane"]._get_wing_segment(name)
 
             # Make sure these reference the same object
             assert dict_segment is tree_segment
@@ -50,7 +50,7 @@ def test_all_wing_segments_get_added():
             dict_segment = wing_dict[name]
 
             # Retrieve from tree
-            tree_segment = scene.airplanes["test_plane"]._get_wing_segment(name)
+            tree_segment = scene._airplanes["test_plane"]._get_wing_segment(name)
 
             # Make sure these reference the same object
             assert dict_segment is tree_segment

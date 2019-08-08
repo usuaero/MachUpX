@@ -249,7 +249,9 @@ deterimined by the user.
 Describes an aircraft.
 
     "CG" : (vector, optional)
-        Location of the aircraft's center of gravity in body-fixed coordinates. Defaults to [0,0,0].
+        Location of the aircraft's center of gravity in body-fixed coordinates. Defaults to [0,0,0], 
+        as the origin of the body-fixed coordinate system is typically the aircraft's center of 
+        gravity.
 
     "weight" : (float)
         Weight of the aircraft.

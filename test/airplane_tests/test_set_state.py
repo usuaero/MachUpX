@@ -25,7 +25,7 @@ def test_aerodynamic_velocity_with_wind():
 
     scene = MX.Scene(input_dict)
 
-    assert np.allclose(scene.airplanes["test_plane"].v, [200, 0, 0], rtol=0.0, atol=1e-10)
+    assert np.allclose(scene._airplanes["test_plane"].v, [200, 0, 0], rtol=0.0, atol=1e-10)
 
 
 def test_complex_aerodynamic_velocity_with_wind():
@@ -46,7 +46,7 @@ def test_complex_aerodynamic_velocity_with_wind():
 
     scene = MX.Scene(input_dict)
 
-    assert np.allclose(scene.airplanes["test_plane"].v, [199.24325091, 108.682659390, 8.682659390], rtol=0.0, atol=1e-8)
+    assert np.allclose(scene._airplanes["test_plane"].v, [199.24325091, 108.682659390, 8.682659390], rtol=0.0, atol=1e-8)
 
 
 def test_rigid_body_velocity_with_wind():
@@ -65,7 +65,7 @@ def test_rigid_body_velocity_with_wind():
 
     scene = MX.Scene(input_dict)
 
-    assert np.allclose(scene.airplanes["test_plane"].v, [100, 100, 0], rtol=0.0, atol=1e-8)
+    assert np.allclose(scene._airplanes["test_plane"].v, [100, 100, 0], rtol=0.0, atol=1e-8)
 
 
 def test_get_alpha_and_beta():
@@ -87,5 +87,6 @@ def test_get_alpha_and_beta():
 
     scene = MX.Scene(input_dict)
 
-    assert abs(scene.airplanes["test_plane"].get_alpha(v_wind)-5.0)<1e-10
-    assert abs(scene.airplanes["test_plane"].get_beta(v_wind)-5.0)<1e-10
+    alpha, beta, velocity = scene._airplanes["test_plane"].get_aerodynamic_state(v_wind=v_wind)
+    assert abs(alpha-5.0)<1e-10
+    assert abs(beta-5.0)<1e-10

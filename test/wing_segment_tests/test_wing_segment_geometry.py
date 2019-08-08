@@ -43,7 +43,7 @@ def test_compute_straight_wing_root_location():
         "v_stab_right" : [-3.0, 0, -0.1]
     }
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         root_loc = wing_dict[key].get_root_loc()
         assert np.allclose(root_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -83,7 +83,7 @@ def test_compute_straight_wing_tip_location():
         "v_stab_right" : [-3, 0, -2.1]
     }
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
         assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -123,7 +123,7 @@ def test_compute_constant_swept_dihedral_wing_tip_location():
         "v_stab_right" : [-4.1547005383792515, 0, -2.1]
     }
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
         print(tip_loc[2])
@@ -166,7 +166,7 @@ def test_compute_variable_swept_dihedral_wing_tip_location():
         "v_stab_right" : [-3.7635094950781305, 0, -2.1]
     }
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
         assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
@@ -206,7 +206,7 @@ def test_twist_as_f_of_span():
     spans = [0.0, 0.1, 0.2]
     twists = [0.0, 0.017453292519943295, 0.03490658503988659]
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         for span, correct_twist in zip(spans, twists):
             twist = wing_dict[key].get_twist(span).item()
@@ -245,7 +245,7 @@ def test_node_generation():
     # Load scene
     scene = MX.Scene(altered_input_name)
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         print(wing_dict[key].nodes)
 
@@ -281,7 +281,7 @@ def test_cp_generation():
     # Load scene
     scene = MX.Scene(altered_input_name)
 
-    wing_dict = scene.airplanes["test_plane"].wing_segments
+    wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         print(wing_dict[key].control_points)
 
