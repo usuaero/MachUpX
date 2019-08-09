@@ -547,7 +547,7 @@ class Scene:
         return end_time-start_time
 
 
-    def _integrate_forces_and_moments(self, non_dimensional=False, verbose=False):
+    def _integrate_forces_and_moments(self, non_dimensional=True, dimensional=True, verbose=False):
         # Determines the forces and moments on each lifting surface
         start_time = time.time()
 
@@ -574,63 +574,28 @@ class Scene:
 
         self._FM = {}
 
+        empty_coef_dict = { "CL" : {}, "CD" : {}, "CS" : {}, "Cx" : {}, "Cy" : {}, "Cz" : {}, "Cl" : {}, "Cm" : {}, "Cn" : {}}
+
+        empty_FM_dict = { "FL" : {}, "FD" : {}, "FS" : {}, "Fx" : {}, "Fy" : {}, "Fz" : {}, "Mx" : {}, "My" : {}, "Mz" : {}}
+
         # Loop through airplanes
         for i, airplane_name in enumerate(self._airplane_names):
             airplane_object = self._airplanes[airplane_name]
             FM_inv_airplane_total = np.zeros(9)
             FM_vis_airplane_total = np.zeros(9)
+
+            # Initialize dictionary keys
+            self._FM[airplane_name] = {
+                "inviscid" : {},
+                "viscous" : {},
+                "total" : {}
+            }
             if non_dimensional:
-                self._FM[airplane_name] = {
-                    "inviscid" : {
-                        "CL" : {},
-                        "CD" : {},
-                        "CS" : {},
-                        "Cx" : {},
-                        "Cy" : {},
-                        "Cz" : {},
-                        "Cl" : {},
-                        "Cm" : {},
-                        "Cn" : {}
-                    },
-                    "viscous" : {
-                        "CL" : {},
-                        "CD" : {},
-                        "CS" : {},
-                        "Cx" : {},
-                        "Cy" : {},
-                        "Cz" : {},
-                        "Cl" : {},
-                        "Cm" : {},
-                        "Cn" : {}
-                    },
-                    "total" : {}
-                }
-            else:
-                self._FM[airplane_name] = {
-                    "inviscid" : {
-                        "FL" : {},
-                        "FD" : {},
-                        "FS" : {},
-                        "Fx" : {},
-                        "Fy" : {},
-                        "Fz" : {},
-                        "Mx" : {},
-                        "My" : {},
-                        "Mz" : {}
-                    },
-                    "viscous" : {
-                        "FL" : {},
-                        "FD" : {},
-                        "FS" : {},
-                        "Fx" : {},
-                        "Fy" : {},
-                        "Fz" : {},
-                        "Mx" : {},
-                        "My" : {},
-                        "Mz" : {}
-                    },
-                    "total" : {}
-                }
+                self._FM[airplane_name]["inviscid"].update(empty_coef_dict)
+                self._FM[airplane_name]["viscous"].update(empty_coef_dict)
+            if dimensional:
+                self._FM[airplane_name]["inviscid"].update(empty_FM_dict)
+                self._FM[airplane_name]["viscous"].update(empty_FM_dict)
 
             # Determine freestream vector in body-fixed frame
             v_inf = self._v_trans[i,:] + self._get_wind(airplane_object.p_bar)
@@ -672,7 +637,7 @@ class Scene:
                     self._FM[airplane_name]["viscous"]["CL"][segment_name] = L_visc/(q_ref*S_w)
                     self._FM[airplane_name]["viscous"]["CD"][segment_name] = D_visc/(q_ref*S_w)
                     self._FM[airplane_name]["viscous"]["CS"][segment_name] = S_visc/(q_ref*S_w)
-                else:
+                if dimensional:
                     self._FM[airplane_name]["viscous"]["Fx"][segment_name] = F_b_visc[0].item()
                     self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
                     self._FM[airplane_name]["viscous"]["Fz"][segment_name] = F_b_visc[2].item()
@@ -695,7 +660,7 @@ class Scene:
                     self._FM[airplane_name]["inviscid"]["CL"][segment_name] = L_inv/(q_ref*S_w)
                     self._FM[airplane_name]["inviscid"]["CD"][segment_name] = D_inv/(q_ref*S_w)
                     self._FM[airplane_name]["inviscid"]["CS"][segment_name] = S_inv/(q_ref*S_w)
-                else:
+                if dimensional:
                     self._FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_b_inv[0].item()
                     self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
                     self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
@@ -714,7 +679,7 @@ class Scene:
                     self._FM[airplane_name]["viscous"]["Cl"][segment_name] = M_b_visc[0].item()/(q_ref*S_w*l_ref_lat)
                     self._FM[airplane_name]["viscous"]["Cm"][segment_name] = M_b_visc[1].item()/(q_ref*S_w*l_ref_lon)
                     self._FM[airplane_name]["viscous"]["Cn"][segment_name] = M_b_visc[2].item()/(q_ref*S_w*l_ref_lat)
-                else:
+                if dimensional:
                     self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
                     self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
                     self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
@@ -735,7 +700,7 @@ class Scene:
                     self._FM[airplane_name]["inviscid"]["Cl"][segment_name] = M_b_inv[0].item()/(q_ref*S_w*l_ref_lat)
                     self._FM[airplane_name]["inviscid"]["Cm"][segment_name] = M_b_inv[1].item()/(q_ref*S_w*l_ref_lon)
                     self._FM[airplane_name]["inviscid"]["Cn"][segment_name] = M_b_inv[2].item()/(q_ref*S_w*l_ref_lat)
-                else:
+                if dimensional:
                     self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
                     self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
                     self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
@@ -789,7 +754,7 @@ class Scene:
                 self._FM[airplane_name]["total"]["Cm"] = FM_airplane_total[7].item()/(q_ref*S_w*l_ref_lon)
                 self._FM[airplane_name]["total"]["Cn"] = FM_airplane_total[8].item()/(q_ref*S_w*l_ref_lat)
 
-            else:
+            if dimensional:
                 # Store the total inviscid force and moment
                 self._FM[airplane_name]["inviscid"]["FL"]["total"] = FM_inv_airplane_total[0].item()
                 self._FM[airplane_name]["inviscid"]["FD"]["total"] = FM_inv_airplane_total[1].item()
@@ -852,7 +817,7 @@ class Scene:
         return L,D,S
 
 
-    def solve_forces(self, filename=None, non_dimensional=False, verbose=False):
+    def solve_forces(self, filename=None, non_dimensional=True, dimensional=True, verbose=False):
         """Solves the NLL equations to determine the forces and moments on the aircraft.
 
         Parameters
@@ -882,7 +847,7 @@ class Scene:
         nonlinear_time = 0.0
         if self._nonlinear_solver:
             nonlinear_time = self._solve_nonlinear(verbose=verbose)
-        integrate_time = self._integrate_forces_and_moments(non_dimensional=non_dimensional, verbose=verbose)
+        integrate_time = self._integrate_forces_and_moments(non_dimensional=non_dimensional, dimensional=dimensional, verbose=verbose)
 
         if verbose:
             print("Time to compute linear solution: {0} s".format(linear_time))
@@ -1138,22 +1103,22 @@ class Scene:
 
             # Perturb forward in alpha
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0+dtheta)
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dalpha_fwd = self._FM
 
             # Perturb backward in alpha
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0-dtheta)
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dalpha_bwd = self._FM
 
             # Perturb forward in beta
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0+dtheta) # We have to reset alpha on this one
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dbeta_fwd = self._FM
 
             # Perturb backward in beta
             self._airplanes[aircraft_name].set_aerodynamic_state(beta=beta_0-dtheta)
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dbeta_bwd = self._FM
 
             # Derivatives with respect to alpha
@@ -1230,42 +1195,42 @@ class Scene:
             omega_pert_p_fwd = copy.copy(omega_0)
             omega_pert_p_fwd[0] += dtheta_dot
             self._airplanes[aircraft_name].w = omega_pert_p_fwd
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dp_fwd = self._FM
 
             # Perturb backward in roll rate
             omega_pert_p_bwd = copy.copy(omega_0)
             omega_pert_p_bwd[0] -= dtheta_dot
             self._airplanes[aircraft_name].w = omega_pert_p_bwd
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dp_bwd = self._FM
 
             # Perturb forward in pitch rate
             omega_pert_q_fwd = copy.copy(omega_0)
             omega_pert_q_fwd[1] += dtheta_dot
             self._airplanes[aircraft_name].w = omega_pert_q_fwd
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dq_fwd = self._FM
 
             # Perturb backward in pitch rate
             omega_pert_q_bwd = copy.copy(omega_0)
             omega_pert_q_bwd[1] -= dtheta_dot
             self._airplanes[aircraft_name].w = omega_pert_q_bwd
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dq_bwd = self._FM
 
             # Perturb forward in yaw rate
             omega_pert_r_fwd = copy.copy(omega_0)
             omega_pert_r_fwd[2] += dtheta_dot
             self._airplanes[aircraft_name].w = omega_pert_r_fwd
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dr_fwd = self._FM
 
             # Perturb backward in yaw rate
             omega_pert_r_bwd = copy.copy(omega_0)
             omega_pert_r_bwd[2] -= dtheta_dot
             self._airplanes[aircraft_name].w = omega_pert_r_bwd
-            self.solve_forces(non_dimensional=True)
+            self.solve_forces(dimensional=False)
             FM_dr_bwd = self._FM
 
             # Reset state
@@ -1356,12 +1321,12 @@ class Scene:
                 #Perturb forward
                 pert_control_state[control_name] = curr_control_val + dtheta
                 aircraft_object.set_control_state(control_state=pert_control_state)
-                FM_fwd = self.solve_forces(non_dimensional=True)
+                FM_fwd = self.solve_forces(dimensional=False)
 
                 #Perturb forward
                 pert_control_state[control_name] = curr_control_val - dtheta
                 aircraft_object.set_control_state(control_state=pert_control_state)
-                FM_bwd = self.solve_forces(non_dimensional=True)
+                FM_bwd = self.solve_forces(dimensional=False)
 
                 # Reset state
                 pert_control_state[control_name] = curr_control_val
