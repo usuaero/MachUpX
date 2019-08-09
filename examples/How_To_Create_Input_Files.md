@@ -98,7 +98,7 @@ deterimined by the user.
         "forces" : (dict, optional)
             Calculates the aerodynamic forces and moments on the aircraft at the current state.
 
-            "output_file" : (string, optional)
+            "filename" : (string, optional)
                 File to store the results in. Defaults to the input filename + "_forces".
 
             "non_dimensional" : (boolean, optional)
@@ -116,35 +116,53 @@ deterimined by the user.
                 If set to true, a legend will be included with the wireframe detailing which color 
                 corresponds to which wing segment. Defaults to false.
 
+            "filename" : (str, optional)
+                File to save an image of the wireframe to. If specified, the wireframe will not be 
+                automatically displayed. If not specified, the wireframe will display to the user 
+                and not save.
+
         "aero_derivatives" : (dict, optional)
             Calculates the stability, damping, and control derivatives at the current state
 
-            "aircraft_name" : (string)
-                The aircraft to calculate the derivatives of. If there is only one aircraft in the 
-                scene, this does not need to be specified.
+            "aircraft" : (string, optional)
+                The aircraft to calculate the derivatives of. Defaults to all aircraft in the scene.
 
-            "output_file" : (string, optional)
+            "filename" : (string, optional)
                 File to store the results in. Defaults to the input filename + "_derivatives".
+
+        "distributions" : (dict, optional)
+            Gives the distribution of various parameters across each lifting surface.
+
+            "filename" : (string, optional)
+                File to store the results in. Defaults to the input filename + "_derivatives".
+
+            "make_plots" : (list, optional)
+                List of parameters to make plots of. A plot of the parameter as a function of span 
+                fraction for each wing segment will then be generated and saved. The following params 
+                can be listed for making plots: "cpx", "cpy", "cpz", "chord", "twist", "dihedral", 
+                "sweep", "area", "alpha", "Re", "M", "section_CL", "section_Cm", "section_parasitic_CD", 
+                and "section_aL0".
 
     "solver" : (dict, optional)
         Specifies parameters regarding how the lifting-line equation is solved.
 
-        "type" : (string)
+        "type" : (string, optional)
             Can be "linear" or "nonlinear". Defaults to "linear".
 
-        "convergence" : (float)
-            Defaults to 1e-10
+        "convergence" : (float, optional)
+            Defaults to 1e-10. Not necesary for linear solver.
 
-        "relaxation" : (float)
-            Defaults to 0.9.
+        "relaxation" : (float, optional)
+            Defaults to 0.9. Not necesary for linear solver.
 
-        "max_iterations" : (int)
-            Maximum number of iterations for the nonlinear solver. Defaults to 100
+        "max_iterations" : (int, optional)
+            Maximum number of iterations for the nonlinear solver. Defaults to 100. Not necesary 
+            for linear solver.
 
-    "units" : (string)
+    "units" : (string, optional)
         Specifies the units to be used for inputs and outputs. Can be "SI" or "English". Any units
         not explicitly defined for each value in the input objects will be assumed to be the standard
-        unit for that measurement in the system specified here.
+        unit for that measurement in the system specified here. Defaults to "English".
 
     "scene" : (dict)
 
@@ -216,7 +234,7 @@ deterimined by the user.
                         [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0].
 
                     "angular_rates" : (vector, optional)
-                        Angular rate of the aircraft in body-fixed coordinates. Defaults to [0,0,0]
+                        Angular rate of the aircraft in body-fixed coordinates. Defaults to [0.0, 0.0, 0.0].
 
                     "velocity" : (float or vector)
                         In the case of "type" = "rigid_body":
@@ -385,7 +403,7 @@ Describes an aircraft.
                     corresponds to outward). If "side" is specified as "both", this effect is mirrored.
                     Defaults to 0.
             
-            "span" : (float)
+            "semispan" : (float)
                 Length of the wing segment, discounting sweep. If "side" is specified as "both", the total
                 span of the segment is twice this value.
 
@@ -401,10 +419,14 @@ Describes an aircraft.
                 angle and washout of the wing segment. Defaults to 0.
 
             "dihedral" : (float, array, or string, optional)
-                Gives the dihedral of the wing segment. Defined the same as "twist". Defaults to 0.
+                Gives the dihedral of the wing segment. This is a solid-body rotation of the wing about 
+                the body x-axis. Defined the same as "twist". Defaults to 0.
 
             "sweep" : (float, array, or string, optional)
-                Gives the sweep angle of the wing segment. Defined the same as "twist". Defaults to 0.
+                Gives the sweep angle of the wing segment. Sweeping the wing is a shear tranformation, 
+                rather than a solid-body rotation. This means the amount of sweep will not affect the 
+                distance of the wingtip from the plane of symmetry. SweepDefined the same as "twist". 
+                Defaults to 0.
 
             "chord" : (float, array, or string, optional)
                 Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 1.0.

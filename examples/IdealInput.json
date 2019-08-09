@@ -22,7 +22,7 @@
                 "file" : "./Airplane.json",
                 "state" : {
                     "type" : "aerodynamic",
-                    "position" : [0, 0, 1000],
+                    "position" : [0, 0, -1000],
                     "angular_rates" : [0.0, 0.0, 0.0],
                     "velocity" : 100,
                     "alpha" : 0.0,

@@ -38,7 +38,7 @@ def _run_prescribed_analyses(input_filename):
 
         # Solve forces
         if key == "forces":
-            filename = params.get("output_file", input_filename.replace(".json", "_forces.json"))
+            filename = params.get("filename", input_filename.replace(".json", "_forces.json"))
             non_dimensional = params.get("non_dimensional", False)
             verbose = params.get("verbose", False)
     
@@ -48,16 +48,24 @@ def _run_prescribed_analyses(input_filename):
         # Wireframe
         elif key == "display_wireframe":
             show_legend = params.get("show_legend", False)
+            filename = params.get("filename", None)
     
             print("\nDisplaying wireframe...")
-            scene.display_wireframe(show_legend=show_legend)
+            scene.display_wireframe(show_legend=show_legend, filename=filename)
 
         elif key == "aero_derivatives":
-            aircraft_name = params.get("aircraft_name", None)
-            filename = params.get("output_file", input_filename.replace(".json", "_derivatives.json"))
+            aircraft = params.get("aircraft", None)
+            filename = params.get("filename", input_filename.replace(".json", "_derivatives.json"))
 
             print("\nCalculating aerodynamic derivatives...")
-            scene.aircraft_derivatives(aircraft_name=aircraft_name, filename=filename)
+            scene.aircraft_derivatives(aircraft=aircraft, filename=filename)
+
+        elif key == "distributions":
+            filename = params.get("filename", input_filename.replace(".json", "_distributions.json"))
+            make_plots = params.get("make_plots", [])
+
+            print("\nCalculating distributions...")
+            scene.distributions(filename=filename, make_plots=make_plots)
 
 
 if __name__=="__main__":

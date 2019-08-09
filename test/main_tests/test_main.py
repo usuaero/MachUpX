@@ -15,7 +15,8 @@ def test_main():
 
     input_dict["run"] = {
         "forces" : {},
-        "aero_derivatives" : {}
+        "aero_derivatives" : {},
+        "distributions" : {}
     }
 
     # Write new input to file
@@ -29,8 +30,10 @@ def test_main():
     # Check the proper files have been created
     assert os.path.exists(altered_input_name.replace(".json", "_forces.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_derivatives.json"))
+    assert os.path.exists(altered_input_name.replace(".json", "_distributions.json"))
 
     # Cleanup
     sp.run(["rm", altered_input_name.replace(".json", "_forces.json")])
     sp.run(["rm", altered_input_name.replace(".json", "_derivatives.json")])
+    sp.run(["rm", altered_input_name.replace(".json", "_distributions.json")])
     sp.run(["rm", altered_input_name])

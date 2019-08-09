@@ -1,9 +1,9 @@
 # This script is for me to test the functionality of whatever I'm working on at the moment.
-import machupX.standard_atmosphere as stand
 import machupX as MX
 import json
 import numpy as np
 import subprocess as sp
+import matplotlib.pyplot as plt
 
 if __name__=="__main__":
     
@@ -28,9 +28,7 @@ if __name__=="__main__":
     state["orientation"] = [np.sqrt(2)/2, 0, 0, np.sqrt(2)/2]
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe()
-
     FM = scene.solve_forces(verbose=True)
+    dist = scene.distributions(make_plots=["Re", "alpha", "M"])
 
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-    print(json.dumps(derivs, indent=4))

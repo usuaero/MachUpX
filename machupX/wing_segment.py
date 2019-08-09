@@ -69,7 +69,7 @@ class WingSegment:
 
         # Set global params
         self.is_main = self._input_dict.get("is_main", None)
-        self.b = _import_value("span", self._input_dict, self._unit_sys, None)
+        self.b = _import_value("semispan", self._input_dict, self._unit_sys, None)
         self._N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 
@@ -263,6 +263,9 @@ class WingSegment:
         self.control_points = self._get_section_ac_loc(self._cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
         self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
+        self.twist_cp = self.get_twist(self._cp_span_locs)
+        self.dihedral_cp = self.get_dihedral(self._cp_span_locs)
+        self.sweep_cp = self.get_sweep(self._cp_span_locs)
 
 
     def _setup_node_data(self):

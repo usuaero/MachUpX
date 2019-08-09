@@ -24,7 +24,7 @@
             "ID" : 1,
             "side" : "both",
             "is_main" : true,
-            "span" : 4.0,
+            "semispan" : 4.0,
             "airfoil" : "NACA_0010",
             "control_surface" : {
                 "chord_fraction" : 0.1,
@@ -43,7 +43,7 @@
                 "location" : "root",
                 "dx" : -3.0
             },
-            "span" : 2.0,
+            "semispan" : 2.0,
             "airfoil" : "NACA_0010",
             "control_surface" : {
                 "chord_fraction" : 0.5,
@@ -63,7 +63,7 @@
                 "dx" : -3.0,
                 "dz" : -0.1
             },
-            "span" : 2.0,
+            "semispan" : 2.0,
             "dihedral" : 90.0,
             "airfoil" : "NACA_0010",
             "control_surface" : {
