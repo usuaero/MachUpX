@@ -1379,6 +1379,10 @@ class Scene:
         else:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
 
+        alpha_original = {}
+        controls_original = {}
+        delta_flap_original = {}
+
         for i in range(iterations):
             if verbose: print("\nTrim iteration {0}".format(i))
 
@@ -1393,21 +1397,21 @@ class Scene:
                 # Store the current orientation, angle of attack, and control deflection
                 v_wind = self._get_wind(airplane_object.p_bar)
                 q0 = copy.copy(airplane_object.q)
-                alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
-                controls_original = copy.copy(airplane_object.current_control_state)
-                try:
-                    delta_flap_original = controls_original[control]
-                except KeyError:
-                    raise IOError("{0} has no {1}. Cannot be trimmed in pitch.".format(aircraft_name, control))
+                alpha_original[aircraft_name],_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
+                controls_original[aircraft_name] = copy.copy(airplane_object.current_control_state)
 
                 # Get residuals
                 R = self._get_aircraft_trim_residuals(aircraft_name)
 
                 # Declare initials
-                controls = copy.copy(controls_original)
-                alpha0 = copy.copy(alpha_original)
-                delta_flap0 = copy.copy(delta_flap_original)
+                controls = copy.copy(controls_original[aircraft_name])
+                alpha0 = copy.copy(alpha_original[aircraft_name])
+                try:
+                    delta_flap0 = copy.copy(controls_original[aircraft_name][control])
+                except KeyError:
+                    raise IOError("{0} has no {1}. Cannot be trimmed in pitch.".format(aircraft_name, control))
                 J = np.zeros((2,2))
+
                 if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
 
                 # Iterate until residuals go to zero. NEWTONS METHOD!! B)
@@ -1447,6 +1451,10 @@ class Scene:
                     "alpha" : alpha1,
                     control : delta_flap1
                 }
+
+        for aircraft_name in aircraft_names:
+            self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_original[aircraft_name])
+            self.set_aircraft_control_state(controls_original[aircraft_name], aircraft_name=aircraft_name)
 
         return trim_angles
 
