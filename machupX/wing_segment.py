@@ -731,7 +731,7 @@ class WingSegment:
 
 
     def apply_control(self, control_state, control_symmetry):
-        """Applies the control deflection to this wing segment's control surface deflection.
+        """Applies the control deflection in degrees to this wing segment's control surface deflection.
 
         Parameters
         ----------

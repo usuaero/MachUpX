@@ -26,9 +26,16 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
 
     state["orientation"] = [np.sqrt(2)/2, 0, 0, np.sqrt(2)/2]
+    state["velocity"] = 200
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    FM = scene.solve_forces(verbose=True)
-    dist = scene.distributions(make_plots=["Re", "alpha", "M"])
+    trim_angles = scene.aircraft_pitch_trim(verbose=True)
+    print(json.dumps(trim_angles, indent=4))
 
+    state["alpha"] = trim_angles["test_plane"]["alpha"]
+    control_state["elevator"] = trim_angles["test_plane"]["elevator"]
+    scene.set_aircraft_state(state=state)
+    scene.set_aircraft_control_state(control_state=control_state)
+
+    FM = scene.solve_forces(non_dimensional=False)
     print(json.dumps(FM["test_plane"]["total"], indent=4))

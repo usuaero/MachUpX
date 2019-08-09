@@ -182,7 +182,7 @@ class Airplane:
     def set_aerodynamic_state(self, **kwargs):
         """Sets the velocity of the aircraft so that its angle of attack, sideslip angle, 
         and freestream velocity are what is desired. If any one of these is not specified, 
-        it will default to the value in the current state.
+        it will default to the value in the current state. Does not affect the orientation.
 
         Parameters
         ----------
@@ -193,7 +193,8 @@ class Airplane:
             Desired sideslip angle in degrees. Defaults to current sideslip angle.
 
         velocity : float
-            Magnitude of the freestream velocity as seen by the aircraft.
+            Magnitude of the freestream velocity as seen by the aircraft. Defaults to the
+            current freestream velocity.
 
         v_wind : ndarray
             The local wind vector at the aircraft body-fixed origin in flat-earth 
