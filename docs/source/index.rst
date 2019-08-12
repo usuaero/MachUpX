@@ -14,13 +14,3 @@ Welcome to MachUpX's documentation!
    userinterface
    HowToCreateInputFiles
    SceneObject
-   contents
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
