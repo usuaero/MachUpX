@@ -52,15 +52,15 @@ When specifying column units in files, these are also appended as another row:
 
 The following measurements can be defined with the accompanying units:
 
-| Measurement                   | Acceptable Units                  |
-|-------------------------------|-----------------------------------|
-| Position/displacement/length: | "ft", "m", "in", "cm"             |
-| Area:                         | "ft^2", "m^2"                     |
-| Velocity:                     | "ft/s", "m/s", "mph", "kph", "kn" |
-| Angular deflection/position:  | "deg", "rad"                      |
-| Angular rate:                 | "deg/s", "rad/s"                  |
-| Density:                      | "slug/ft^3", "kg/m^3"             |
-| Weight:                       | "lbf", "N"                        |
+    | Measurement                   | Acceptable Units                  |
+    |-------------------------------|-----------------------------------|
+    | Position/displacement/length: | "ft", "m", "in", "cm"             |
+    | Area:                         | "ft^2", "m^2"                     |
+    | Velocity:                     | "ft/s", "m/s", "mph", "kph", "kn" |
+    | Angular deflection/position:  | "deg", "rad"                      |
+    | Angular rate:                 | "deg/s", "rad/s"                  |
+    | Density:                      | "slug/ft^3", "kg/m^3"             |
+    | Weight:                       | "lbf", "N"                        |
 
 Except for angular measurements, the first unit listed is the default for "English" units. The second is 
 the default for "SI". For measurements of state and control deflections, as well as airframe geometry, 
