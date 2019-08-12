@@ -5,6 +5,7 @@ Welcome to MachUpX
    :maxdepth: 2
    :caption: Contents:
 
+   README
    installation
    userinterface
    HowToCreateInputFiles
