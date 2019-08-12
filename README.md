@@ -48,7 +48,7 @@ print(FM)
 
 ## Documentation
 
-In depth documentation, can be found at [ReadTheDocs](https://machupx.readthedocs.io)
+In-depth documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io).
 
 Specific help with API functions can be found in the docstrings.
 

@@ -214,11 +214,12 @@ deterimined by the user.
 
                     "type" : (string)
                         Specifies which definition of state is to be used. The difference lies in how the 
-                        velocity is defined. If "type" is "rigid-body", then the velocity given must be 
-                        the translational velocity of the aircraft in flat-earth coordinates. If "type" is 
-                        "aerodynamic", the the velocity given describes the freestream vector at the 
-                        origin of the aircraft. This can be done by giving the vector in body-fixed 
-                        coordinates, or specifying a velocity magnitude and alpha and beta.
+                        velocity and orientation are defined. If "type" is "rigid-body", then the velocity 
+                        given must be the translational velocity of the aircraft in flat-earth coordinates 
+                        and "orientation" must be specified. If "type" is "aerodynamic", the the velocity 
+                        given is the magnitude of the freestream velocity vector at the origin of the 
+                        aircraft. "alpha" and "beta" must then also be specified, which set the orientation 
+                        of the aircraft.
 
                     "position" : (vector, optional)
                         Position of the origin of the aircraft's body-fixed coordinate system in flat-earth
@@ -229,7 +230,8 @@ deterimined by the user.
                         If this is a 3-element vector it is assumed the ZYX Euler angle formulation is 
                         used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the 
                         quaternion formulation is used where the first element is the scalar (i.e. 
-                        [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0].
+                        [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body-
+                        fixed frame with the flat-earth frame.
 
                     "angular_rates" : (vector, optional)
                         Angular rate of the aircraft in body-fixed coordinates. Defaults to [0.0, 0.0, 0.0].
@@ -239,9 +241,8 @@ deterimined by the user.
                             Velocity vector of the aircraft in flat-earth coordinates. Cannot be float.
 
                         In the case of "type" = "aerodynamic":
-                            If a float, this is the magnitude of the local wind vector. If a vector, this 
-                            is the local freestream vector (i.e. u, v, and w) and "alpha" and "beta" may 
-                            not be specified.
+                            Magnitude of the freestream velocity vector at the origin of the aircraft. Cannot
+                            be a vector.
 
                     "alpha" : (float, optional)
                         Aerodynamic angle of attack. Defaults to 0.
