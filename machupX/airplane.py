@@ -81,7 +81,7 @@ class Airplane:
         ----------
         state : dict
             A dictionary describing the state of the aircraft. Same specification 
-            as given in How_To_Create_Input_Files.
+            as given in Creating Input Files for MachUpX.
 
         v_wind : ndarray
             The local wind vector at the aircraft body-fixed origin in flat-earth 
@@ -92,55 +92,47 @@ class Airplane:
         self.p_bar = _import_value("position", state, self._unit_sys, [0.0, 0.0, 0.0])
         self.w = _import_value("angular_rates", state, self._unit_sys, [0.0, 0.0, 0.0])
 
-        # Set up orientation quaternion
-        self.q = _import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
-        if self.q.shape[0] == 3: # Euler angles
-            self.q = _euler_to_quaternion(self.q)
-
-        elif self.q.shape[0] == 4: # Quaternion
-            # Check magnitude
-            if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
-                raise IOError("Magnitude of orientation quaternion must be 1.0.")
-
-        else:
-            raise IOError("{0} is not an allowable orientation definition.".format(self.q))
-
-        # Velocity stored as the aircraft's velocity relative to the flat-earth frame
-        self.v = np.zeros(3)
-
-        # Rigid-body definition
+        # Handle rigid-body definition
         if self.state_type == "rigid-body":
-
             # Check for mixing of specification types
             if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
                 raise IOError("Alpha and beta are not allowed as part of a rigid-body state specification.")
 
-            # Set value
+            # Set up orientation quaternion
+            self.q = _import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
+
+            if self.q.shape[0] == 3: # Euler angles
+                self.q = _euler_to_quaternion(self.q)
+
+            elif self.q.shape[0] == 4: # Quaternion
+                # Check magnitude
+                if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
+                    raise IOError("Magnitude of orientation quaternion must be 1.0.")
+
+            else:
+                raise IOError("{0} is not an allowable orientation definition.".format(self.q))
+
+            # Set up velocity
             self.v = _import_value("velocity", state, self._unit_sys, None)# The user has specified translational velocity in flat-earth coordinates, so wind doesn't matter
 
             # Check it is a vector
             if not isinstance(self.v, np.ndarray):
                 raise IOError("For a rigid-body state definition, 'velocity' must be a 3-element vector.")
 
-        # Aerodynamic definition
+        # Handle aerodynamic definition
         elif self.state_type == "aerodynamic":
 
             v_value = _import_value("velocity", state, self._unit_sys, None)
 
             # User has given a velocity magnitude, so alpha and beta are also needed
             if isinstance(v_value, float):
+                self.v = np.array([1.0, 0.0, 0.0]) # Align the velocity with North initially
+                self.q = np.array([1.0, 0.0, 0.0, 0.0]) # Align the body-fixed and earth-fixed axes initially
+
                 alpha = _import_value("alpha", state, self._unit_sys, 0.0)
                 beta = _import_value("beta", state, self._unit_sys, 0.0)
 
                 self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
-
-            # User has given u, v, and w
-            elif isinstance(v_value, np.ndarray) and v_value.shape[0] == 3:
-                if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
-                    raise IOError("Alpha and beta may not be specified along with a freestream vector.")
-
-                # The negative of u, v, and w gives the aircraft's body-fixed velocity relative to the wind
-                self.v = _quaternion_inverse_transform(self.q, -v_value)+v_wind
 
             else:
                 raise IOError("{0} is not an allowable velocity definition.".format(v_value))
@@ -151,6 +143,7 @@ class Airplane:
 
     def get_aerodynamic_state(self, v_wind=np.array([0, 0, 0])):
         """Returns the aircraft's angle of attack, sideslip angle, and freestream velocity magnitude.
+        Assumes a bank angle of zero.
 
         Parameters
         ----------
@@ -180,9 +173,9 @@ class Airplane:
 
 
     def set_aerodynamic_state(self, **kwargs):
-        """Sets the velocity of the aircraft so that its angle of attack, sideslip angle, 
-        and freestream velocity are what is desired. If any one of these is not specified, 
-        it will default to the value in the current state. Does not affect the orientation.
+        """Sets the orientation of the aircraft so that its angle of attack and 
+        sideslip angle are what is desired. Scales the freestream velocity according 
+        to what is desired. Assumes a bank angle of zero.
 
         Parameters
         ----------
@@ -200,6 +193,8 @@ class Airplane:
             The local wind vector at the aircraft body-fixed origin in flat-earth 
             coordinates. Defaults to [0.0, 0.0, 0.0].
         """
+
+        # This takes the current velocity vector and scales it according to the desired magnitude
         # Determine the current state
         v_wind = kwargs.get("v_wind", np.array([0,0,0]))
         current_aero_state = self.get_aerodynamic_state(v_wind=v_wind)
@@ -209,21 +204,37 @@ class Airplane:
         beta = kwargs.get("beta", current_aero_state[1])
         velocity = kwargs.get("velocity", current_aero_state[2])
 
+        # Scale velocity relative to the wind frame
+        self.v = v_wind+(self.v-v_wind)*velocity/current_aero_state[2]
+
         # Calculate trigonometric values
         C_a = np.cos(np.radians(alpha))
         S_a = np.sin(np.radians(alpha))
         C_B = np.cos(np.radians(beta))
         S_B = np.sin(np.radians(beta))
 
-        # This formulation gives the components of aircraft velocity in body-fixed coordinates (Mech of Flight Eqs. 7.1.10-12)
-        v = np.zeros(3)
+        # Determine freestream velocity components in body-fixed frame (Mech of Flight Eqs. 7.1.10-12)
+        v_inf_b = np.zeros(3)
         denom = np.sqrt(1-S_a**2*S_B**2)
-        v[0] = velocity*C_a*C_B/denom
-        v[1] = velocity*C_a*S_B/denom
-        v[2] = velocity*S_a*C_B/denom
+        v_inf_b[0] = -velocity*C_a*C_B/denom
+        v_inf_b[1] = -velocity*C_a*S_B/denom
+        v_inf_b[2] = -velocity*S_a*C_B/denom
+        u_inf_b = v_inf_b/np.linalg.norm(v_inf_b)
 
-        # Transform to flat-earth coordinates and account for wind (Mech of Flight Eq. 7.1.1)
-        self.v = _quaternion_inverse_transform(self.q, v)+v_wind
+        # Determine freestream velocity in earth-fixed frame
+        v_inf_f = v_wind-self.v
+        u_inf_f = v_inf_f/np.linalg.norm(v_inf_f)
+
+        # Calculate quaternion which will rotate freestream vector from the earth-fixed frame to the body-fixed frame
+        self.q = np.zeros(4)
+        if not (abs(u_inf_f-u_inf_b)>1e-10).any(): # Opposite vectors
+            self.q[0] = 0.0
+            self.q[1:] = np.cross(u_inf_f, np.array([1.0, 0.0, 0.0])) # Rotation about an arbitrary axis
+            self.q = self.q/np.linalg.norm(self.q)
+        else:
+            self.q[1:] = np.cross(u_inf_f, u_inf_b)
+            self.q[0] = np.sqrt(2)+np.inner(u_inf_f, u_inf_b)
+            self.q = self.q/np.linalg.norm(self.q)
 
 
     def _initialize_controls(self, init_control_state):

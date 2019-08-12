@@ -194,9 +194,6 @@ deterimined by the user.
                 fourth through sixth columns are velocity components in flat-earth coordinates. These 
                 arrays can alternatively be stored as a csv file, in which case, this value should be 
                 the path to the file. 
-                
-                NOTE: This does not affect computation for all aircraft where the "type" of the 
-                "state" is specified as "aerodynamic".
 
                 Defaults to no wind.
 
