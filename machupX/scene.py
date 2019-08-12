@@ -16,37 +16,13 @@ class Scene:
     Parameters
     ----------
     scene_input : string or dict
-        Dictionary or path to the JSON object specifying the scene parameters. 
-        For information on creating input files, see examples/How_To_Create_Input_Files.
+        Dictionary or path to the JSON object specifying the scene parameters (see
+        'Creating Input Files for MachUp').
 
     Raises
     ------
     IOError
         If input filepath or filename is invalid
-
-    Methods
-    -------
-    add_aircraft()
-
-    set_aircraft_state()
-
-    set_aircraft_control_state()
-
-    solve_forces()
-
-    display_wireframe()
-
-    aircraft_derivatives()
-
-    aircraft_stability_derivatives()
-
-    aircraft_damping_derivatives()
-
-    aircraft_control_derivatives()
-    
-    distributions()
-
-    get_aircraft_reference_geometry()
     """
 
     def __init__(self, scene_input):
@@ -860,7 +836,7 @@ class Scene:
         ----------
         state : dict
             Dictionary describing the state as specified in 
-            How_To_Create_Input_Files. The state type may be 
+            'Creating Input Files for MachUp'. The state type may be 
             aerodynamic or rigid-body, regardless of how the 
             state was originally specified. Any values not given 
             default to their original defaults. The previous 
@@ -894,12 +870,8 @@ class Scene:
         Parameters
         ----------
         control_state : dict
-            Dictionary describing the control state:
-
-            {
-                "<CONTROL_NAME>" : deflection, float
-                ...
-            }
+            Dictionary describing the control state. Each key value pair should be
+            the name of the control and its deflection in degrees.
 
         aircraft_name : str
             The name of the aircraft to set the state of. If there
@@ -1342,9 +1314,6 @@ class Scene:
 
         pitch_control : dict
             A set of key-value pairs specifying which control is used by each aircraft for pitch control.
-            {
-                "<AIRCRAFT_NAME>" : "<CONTROL_NAME>"
-            }
             Defaults to "elevator" for any unspecified aircraft.
 
         iterations : int
@@ -1358,12 +1327,8 @@ class Scene:
         Returns
         -------
         trim_angles : dict
-            {
-                "<AIRCRAFT_NAME>" : {
-                    "alpha" : 0.0,
-                    "<CONTROL_NAME>" : 0.0
-                }
-            }
+            The angle of attack and deflection of the specified control required to trim the aircraft in 
+            pitch in the current state.
         """
         trim_angles = {}
 
@@ -1492,9 +1457,6 @@ class Scene:
         -------
         ac_loc : dict
             The location of the aerodynamic center in body-fixed coordinates for each aircraft.
-            {
-                "<AIRCRAFT_NAME>" : [0.0, 0.0, 0.0]
-            }
         """
 
         # Specify the aircraft

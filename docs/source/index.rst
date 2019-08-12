@@ -10,6 +10,11 @@ Welcome to MachUpX's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   installation
+   userinterface
+   HowToCreateInputFiles
+   SceneObject
+
 
 
 Indices and tables

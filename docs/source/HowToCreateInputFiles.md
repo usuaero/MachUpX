@@ -14,7 +14,7 @@ When using the JSON objects, only the scene object is passed to MachUp. As long 
 other JSON objects are properly specified in the scene object, MachUp will automatically load all other
 required objects.
 
-### Units
+## Units
 
 MachUp allows the user to specify the units for each value if they desire. For float values, this is done
 by making the value a list where the first element is the actual value and the second element is a string
@@ -68,7 +68,7 @@ the default is always degrees. For airfoil parameters, measurements may only be 
 When specifying units in an array and one of the measurements is dimensionless (e.g. span fraction), "-" 
 should be used.
 
-### Coordinate Systems
+## Coordinate Systems
 Throughout MachUpX, two coordinate systems are used. These are the body-fixed and flat-earth coordinate 
 systems. In the body-fixed coordinate system, the x-axis points forward out of the nose of the aircraft, 
 the y-axis points to the right along the wing, and the z-axis points down. The body-fixed coordinate 
@@ -80,9 +80,7 @@ to be at sea level.
 
 ![image](CoordinateSystems.jpg "Coordinate Systems in MachUpX")
 
-For reference, see Phillips, "Mechanics of Flight", Fig. 7.1.2.
-
-### Scene Object
+## Scene Object
 The following are keys which can be specified in the scene JSON object. NOTE: all keys not marked as
 optional are required. Key names typed in all capitals between carats (e.g. <KEY_VALUE>) are to be
 deterimined by the user.
@@ -261,7 +259,7 @@ deterimined by the user.
                     "<CONTROL_NAME>" : (float)
                         Control surface deflection.
 
-### Aircraft Object
+## Aircraft Object
 Describes an aircraft.
 
     "CG" : (vector, optional)
@@ -482,6 +480,6 @@ Describes an aircraft.
                             control deflection will be multiplied by this value and then applied to the
                             control surface.
 
-### Airfoil Data File
+## Airfoil Data File
 An airfoil in MachUp can be defined as each coefficient being a function of angle of attack and Reynolds
 number. This is done by specifying a path to a csv file describing the airfoil coefficients.
