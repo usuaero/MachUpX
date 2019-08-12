@@ -48,7 +48,7 @@ print(FM)
 
 ## Documentation
 
-For help on creating input files, see examples/How_To_Create_Input_Files.
+In depth documentation, can be found at [ReadTheDocs](https://www.readthedocs.org)
 
 Specific help with API functions can be found in the docstrings.
 
