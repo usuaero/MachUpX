@@ -1046,7 +1046,7 @@ class Scene:
         # Export to file
         if filename is not None:
             with open(filename, 'w') as output_handle:
-                json.dump(derivs, output_handle)
+                json.dump(derivs, output_handle, indent=4)
 
         return derivs
 
@@ -1562,9 +1562,9 @@ class Scene:
 
                 # Geometry
                 dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice])
-                dist[airplane_name][segment_name]["twist"] = segment_object.twist_cp
-                dist[airplane_name][segment_name]["dihedral"] = segment_object.dihedral_cp
-                dist[airplane_name][segment_name]["sweep"] = segment_object.sweep_cp
+                dist[airplane_name][segment_name]["twist"] = list(segment_object.twist_cp)
+                dist[airplane_name][segment_name]["dihedral"] = list(segment_object.dihedral_cp)
+                dist[airplane_name][segment_name]["sweep"] = list(segment_object.sweep_cp)
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
 
                 # Airfoil info
@@ -1580,7 +1580,7 @@ class Scene:
 
         if filename is not None:
             with open(filename, 'w') as output_handle:
-                json.dump(dist, filename)
+                json.dump(dist, output_handle, indent=4)
 
         for param in make_plots:
             for segment_name, segment_dist in dist["test_plane"].items():

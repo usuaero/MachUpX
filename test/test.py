@@ -29,6 +29,12 @@ if __name__=="__main__":
     state["velocity"] = 200
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
+    state["orientation"] = [np.sqrt(2)/2, 0, 0, np.sqrt(2)/2]
+    state["position"] = [0, 50, 0]
+    scene.add_aircraft("test_plane_1", airplane_dict, state=state, control_state=control_state)
+    
+    scene.display_wireframe()
+
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False)
     print(json.dumps(FM["test_plane"]["total"], indent=4))

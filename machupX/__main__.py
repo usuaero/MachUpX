@@ -39,11 +39,12 @@ def _run_prescribed_analyses(input_filename):
         # Solve forces
         if key == "forces":
             filename = params.get("filename", input_filename.replace(".json", "_forces.json"))
-            non_dimensional = params.get("non_dimensional", False)
-            verbose = params.get("verbose", False)
+            dimensional = params.get("dimensional", True)
+            non_dimensional = params.get("non_dimensional", True)
+            verbose = params.get("verbose", True)
     
             print("\nCalculating aerodynamic forces...")
-            scene.solve_forces(filename=filename, non_dimensional=non_dimensional, verbose=verbose)
+            scene.solve_forces(filename=filename, dimensional=dimensional, non_dimensional=non_dimensional, verbose=verbose)
     
         # Wireframe
         elif key == "display_wireframe":
@@ -53,6 +54,7 @@ def _run_prescribed_analyses(input_filename):
             print("\nDisplaying wireframe...")
             scene.display_wireframe(show_legend=show_legend, filename=filename)
 
+        # Aerodynamic derivatives
         elif key == "aero_derivatives":
             aircraft = params.get("aircraft", None)
             filename = params.get("filename", input_filename.replace(".json", "_derivatives.json"))
@@ -60,6 +62,7 @@ def _run_prescribed_analyses(input_filename):
             print("\nCalculating aerodynamic derivatives...")
             scene.aircraft_derivatives(aircraft=aircraft, filename=filename)
 
+        # Distributions
         elif key == "distributions":
             filename = params.get("filename", input_filename.replace(".json", "_distributions.json"))
             make_plots = params.get("make_plots", [])

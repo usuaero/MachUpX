@@ -102,9 +102,9 @@ deterimined by the user.
                 File to store the results in. Defaults to the input filename + "_forces".
 
             "non_dimensional" : (boolean, optional)
-                Whether results should be returned as dimensional or nondimensional. If false, will return
+                Whether results should include nondimensional coefficients. If false, will return
                 forces and moments in "lbf" and "ft-lbf" or "N" and "Nm", depending on how "units" is 
-                specified. Defaults to false.
+                specified. Defaults to true.
 
             "verbose" : (boolean, optional)
                 Defaults to false
