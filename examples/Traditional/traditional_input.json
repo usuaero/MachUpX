@@ -1,0 +1,40 @@
+{
+    "tag" : "Example input file using a traditional airplane",
+    "run" : {
+        "display_wireframe" : {
+            "show_legend" : true
+        },
+        "forces" : {
+            "non_dimensional" : false
+        },
+        "pitch_trim" : {
+            "set_state_to_trim" : true
+        },
+        "aero_derivatives" : {}
+    },
+    "solver" : {
+        "type" : "nonlinear",
+        "convergence" : 1e-10,
+        "relaxation" : 0.9
+    },
+    "units" : "English",
+    "scene" : {
+        "atmosphere" : {},
+        "aircraft" : {
+            "traditional_airplane" : {
+                "file" : "traditional_airplane.json",
+                "state" : {
+                    "type" : "aerodynamic",
+                    "velocity" : 100,
+                    "alpha" : 2.0,
+                    "beta" : 0.0
+                },
+                "control_state" : {
+                    "elevator" : 0.0,
+                    "rudder" : 0.0,
+                    "aileron" : 0.0
+                }
+            }
+        }
+    }
+}

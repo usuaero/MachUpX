@@ -70,6 +70,18 @@ def _run_prescribed_analyses(input_filename):
             print("\nCalculating distributions...")
             scene.distributions(filename=filename, make_plots=make_plots)
 
+        # Pitch trim
+        elif key == "pitch_trim":
+            aircraft = params.get("aircraft", None)
+            pitch_control = params.get("pitch_control", {})
+            iterations = params.get("iterations", 1)
+            set_trim_state = params.get("set_trim_state", True)
+            verbose = params.get("verbose", False)
+            filename = params.get("filename", input_filename.replace(".json", "_trim_angles.json"))
+
+            print("Trimming aircraft in pitch...")
+            scene.aircraft_pitch_trim(aircraft=aircraft, pitch_control=pitch_control, filename=filename, iterations=iterations, set_trim_state=set_trim_state, verbose=verbose)
+
 
 if __name__=="__main__":
     

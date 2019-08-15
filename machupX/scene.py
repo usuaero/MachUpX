@@ -1304,7 +1304,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_pitch_trim(self, aircraft=None, pitch_control={}, iterations=1, verbose=False):
+    def aircraft_pitch_trim(self, aircraft=None, pitch_control={}, filename=None, iterations=1, set_trim_state=True, verbose=False):
         """Returns the required angle of attack and elevator deflection for trim at the current state.
 
         Parameters
@@ -1319,6 +1319,11 @@ class Scene:
         iterations : int
             The number of times to loop through and trim each aircraft. Multiple iterations may be required 
             for situations where each aircraft heavily influences the others. Defaults to 1.
+
+        set_trim_state : bool
+            If set to True, once trim is determined, the state of the aircraft will be set to this trim state. If
+            False, the state of the aircraft will return to what it was before this method was called. Defaults 
+            to True.
 
         verbose : bool
             If set to true, information will be output about the progress of Newton's method. Defaults to 
@@ -1417,9 +1422,21 @@ class Scene:
                     control : delta_flap1
                 }
 
-        for aircraft_name in aircraft_names:
-            self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_original[aircraft_name])
-            self.set_aircraft_control_state(controls_original[aircraft_name], aircraft_name=aircraft_name)
+        # If the user wants, set the state to the new trim state
+        if set_trim_state:
+            for aircraft_name in aircraft_names:
+                self._airplanes[aircraft_name].set_aerodynamic_state(alpha=trim_angles[aircraft_name]["alpha"])
+                self.set_aircraft_control_state(trim_angles[aircraft_name][pitch_control.get(aircraft_name, "elevator")], aircraft_name=aircraft_name)
+
+        else: # Return to the original state
+            for aircraft_name in aircraft_names:
+                self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_original[aircraft_name])
+                self.set_aircraft_control_state(controls_original[aircraft_name], aircraft_name=aircraft_name)
+
+        # Output results to file
+        if filename is not None:
+            with open(filename, 'w') as file_handle:
+                json.dump(trim_angles, file_handle, indent=4)
 
         return trim_angles
 

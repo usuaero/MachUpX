@@ -1,0 +1,100 @@
+{
+    "CG" : [0,0,0],
+    "weight" : 100.0,
+    "reference" : {
+        "area" : 8.0,
+        "longitudinal_length" : 1.0,
+        "lateral_length" : 4.0
+    },
+    "controls" : {
+        "aileron" : {
+            "is_symmetric" : false
+        },
+        "elevator" : {
+            "is_symmetric" : true
+        },
+        "rudder" : {
+            "is_symmetric" : false
+        }
+    },
+    "airfoils" : {
+        "NACA_2410" : {
+            "type" : "linear",	
+            "aL0" : -0.0368,
+            "CLa" : 6.1976,
+            "CmL0" : -0.0525,
+            "Cma" : 0.0326,
+            "CD0" : 0.00569,
+            "CD1" : -0.00450,
+            "CD2" : 0.01040,
+            "CL_max" : 1.4
+        },
+        "NACA_0010" : {
+            "type" : "linear",
+            "aL0" : 0.0,
+            "CLa" : 6.4336,
+            "CmL0" : 0.0,
+            "Cma" : 0.00,
+            "CD0" : 0.00513,
+            "CD1" : 0.0,
+            "CD2" : 0.0984,
+            "CL_max" : 1.4
+        }
+    },
+    "wings" : {
+        "main_wing" : {
+            "ID" : 1,
+            "side" : "both",
+            "is_main" : true,
+            "semispan" : 4.0,
+            "airfoil" : "NACA_2410",
+            "control_surface" : {
+                "chord_fraction" : 0.1,
+                "control_mixing" : {
+                    "aileron" : 1.0
+                }
+            },
+            "grid" : 40
+        },
+        "h_stab" : {
+            "ID" : 2,
+            "side" : "both",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "location" : "root",
+                "dx" : -3.0
+            },
+            "semispan" : 2.0,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "elevator" : 1.0
+                }
+            },
+            "grid" : 40
+        },
+        "v_stab" : {
+            "ID" : 3,
+            "side" : "left",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "location" : "root",
+                "dx" : -3.0,
+                "dz" : -0.1
+            },
+            "semispan" : 2.0,
+            "dihedral" : 90.0,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "rudder" : 1.0
+                }
+            },
+            "grid" : 40
+        }
+    }
+}

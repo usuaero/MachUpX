@@ -194,9 +194,8 @@ class Airplane:
             coordinates. Defaults to [0.0, 0.0, 0.0].
         """
 
-        # This takes the current velocity vector and scales it according to the desired magnitude
         # Determine the current state
-        v_wind = kwargs.get("v_wind", np.array([0,0,0]))
+        v_wind = kwargs.get("v_wind", np.array([0.0, 0.0, 0.0]))
         current_aero_state = self.get_aerodynamic_state(v_wind=v_wind)
 
         # Determine the desired state
@@ -204,14 +203,29 @@ class Airplane:
         beta = kwargs.get("beta", current_aero_state[1])
         velocity = kwargs.get("velocity", current_aero_state[2])
 
-        # Scale velocity relative to the wind frame
-        self.v = v_wind+(self.v-v_wind)*velocity/current_aero_state[2]
+        # This takes the current velocity vector and scales it according to the desired magnitude
+        # Scale freestream velocity and determine its direction in earth-fixed coordinates
+        v_inf_f = (self.v-v_wind)*velocity/current_aero_state[2]
+        self.v = v_wind+v_inf_f
+        u_inf_f = v_inf_f/np.linalg.norm(v_inf_f)
+
+        # Determine the unit vectors of the wind frame in earth-fixed coordinates
+        u_x_w_f = u_inf_f # x-axis aligned with wind vector
+        u_y_w_f = np.cross(np.array([0.0, 0.0, 1.0]), u_inf_f) # y-axis perpendicular to the vertical plane occupied by the wind vector
+        u_z_w_f = np.cross(u_x_w_f, u_y_w_f) # complete right-handed coordinate system
+
+        # Determine the unit vectors of the body-fixed frame in earth-fixed coordinates
+        # For now, we are going to assume the bank angle is 0
 
         # Calculate trigonometric values
         C_a = np.cos(np.radians(alpha))
         S_a = np.sin(np.radians(alpha))
         C_B = np.cos(np.radians(beta))
         S_B = np.sin(np.radians(beta))
+
+        C = np.zeros((3,3))
+
+        u_x_b_f = 0
 
         # Determine freestream velocity components in body-fixed frame (Mech of Flight Eqs. 7.1.10-12)
         v_inf_b = np.zeros(3)
@@ -221,18 +235,15 @@ class Airplane:
         v_inf_b[2] = -velocity*S_a*C_B/denom
         u_inf_b = v_inf_b/np.linalg.norm(v_inf_b)
 
-        # Determine freestream velocity in earth-fixed frame
-        v_inf_f = v_wind-self.v
-        u_inf_f = v_inf_f/np.linalg.norm(v_inf_f)
-
         # Calculate quaternion which will rotate freestream vector from the earth-fixed frame to the body-fixed frame
         self.q = np.zeros(4)
+
         if not (abs(u_inf_f-u_inf_b)>1e-10).any(): # Opposite vectors
             self.q[0] = 0.0
             self.q[1:] = np.cross(u_inf_f, np.array([1.0, 0.0, 0.0])) # Rotation about an arbitrary axis
             self.q = self.q/np.linalg.norm(self.q)
         else:
-            self.q[1:] = np.cross(u_inf_f, u_inf_b)
+            self.q[1:] = -np.cross(u_inf_f, u_inf_b)
             self.q[0] = np.sqrt(2)+np.inner(u_inf_f, u_inf_b)
             self.q = self.q/np.linalg.norm(self.q)
 
