@@ -237,15 +237,17 @@ class Airplane:
 
         # Calculate quaternion which will rotate freestream vector from the earth-fixed frame to the body-fixed frame
         self.q = np.zeros(4)
+        self.q[0] = np.cos(np.radians(2)/2)
+        self.q[2] = np.sin(np.radians(2)/2)
 
-        if not (abs(u_inf_f-u_inf_b)>1e-10).any(): # Opposite vectors
-            self.q[0] = 0.0
-            self.q[1:] = np.cross(u_inf_f, np.array([1.0, 0.0, 0.0])) # Rotation about an arbitrary axis
-            self.q = self.q/np.linalg.norm(self.q)
-        else:
-            self.q[1:] = -np.cross(u_inf_f, u_inf_b)
-            self.q[0] = np.sqrt(2)+np.inner(u_inf_f, u_inf_b)
-            self.q = self.q/np.linalg.norm(self.q)
+        #if not (abs(u_inf_f-u_inf_b)>1e-10).any(): # Opposite vectors
+        #    self.q[0] = 0.0
+        #    self.q[1:] = np.cross(u_inf_f, np.array([1.0, 0.0, 0.0])) # Rotation about an arbitrary axis
+        #    self.q = self.q/np.linalg.norm(self.q)
+        #else:
+        #    self.q[1:] = -np.cross(u_inf_f, u_inf_b)
+        #    self.q[0] = np.sqrt(2)+np.inner(u_inf_f, u_inf_b)
+        #    self.q = self.q/np.linalg.norm(self.q)
 
 
     def _initialize_controls(self, init_control_state):

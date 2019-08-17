@@ -516,14 +516,14 @@ class Scene:
         induced_vels = self._Gamma[:,np.newaxis,np.newaxis]*self._V_ji
         v = self._cp_v_inf+np.sum(induced_vels, axis=0)
         dF_inv = (self._rho*self._Gamma)[:,np.newaxis]*np.cross(v, self._dl)
-        self._CL = np.linalg.norm(dF_inv, axis=1)*np.sign(self._Gamma)
+        self._dL = np.linalg.norm(dF_inv, axis=1)*np.sign(self._Gamma)
 
         # Calculate conditions for determining viscid contributions
         V = np.sqrt(np.einsum('ij,ij->i', v, v))
         u = v/V[:,np.newaxis]
         alpha = np.arctan2(np.einsum('ij,ij->i', v, self._u_n), np.einsum('ij,ij->i', v, self._u_a))
         airfoil_params = np.concatenate((alpha[:,np.newaxis], self._Re[:,np.newaxis], self._M[:,np.newaxis]), axis=1)
-        q_inf = 0.5*self._rho*V**2
+        self._q_inf = 0.5*self._rho*V**2
 
         # Store lift, drag, and moment coefficient distributions
         self._CD = np.zeros(self._N)
@@ -582,7 +582,7 @@ class Scene:
                 # Determine viscid force
                 # Get drag coef and redimensionalize
                 self._CD[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_CD(airfoil_params[cur_slice,:])
-                dD = q_inf[cur_slice]*self._dS[cur_slice]*self._CD[cur_slice]
+                dD = self._q_inf[cur_slice]*self._dS[cur_slice]*self._CD[cur_slice]
 
                 # Determine vector and translate back into body-fixed
                 dF_b_visc = dD[:,np.newaxis]*u[cur_slice]
@@ -651,7 +651,7 @@ class Scene:
 
                 # Determine moment due to section moment coef
                 self._Cm[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(airfoil_params[cur_slice,:])
-                dM_section = -(q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*self._Cm[cur_slice])[:,np.newaxis]*self._u_s[cur_slice]
+                dM_section = -(self._q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*self._Cm[cur_slice])[:,np.newaxis]*self._u_s[cur_slice]
 
                 # Rotate back to body-fixed
                 M_b_inv = _quaternion_transform(airplane_object.q, np.sum(dM_section+dM_vortex, axis=0))
@@ -1547,7 +1547,7 @@ class Scene:
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
 
                 # Airfoil info
-                dist[airplane_name][segment_name]["section_CL"] = list(self._CL[cur_slice])
+                dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/(self._q_inf[cur_slice]*self._dS[cur_slice]))
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
