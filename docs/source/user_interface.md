@@ -1,7 +1,7 @@
-#User Interface
+# User Interface
 MachUpX can be used in one of two ways, either through the command line or though the Python API.
 
-##Command Line
+## Command Line
 MachUpX is run from the command line using the "-m" option to the Python interpreter. For example:
 
 ```python
@@ -10,7 +10,7 @@ python -m machupX example_input.json
 
 will run the analyses listed in example_input.json. The various results are saved as files to be accessed by the user.
 
-##Python API
+## Python API
 MachUpX can also be imported as a module through the Python interpreter and its functionality can then be accessed through the Scene class. For example:
 
 ```python
