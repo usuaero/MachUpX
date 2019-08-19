@@ -7,6 +7,6 @@ Welcome to MachUpX
 
    introduction
    installation
-   userinterface
-   HowToCreateInputFiles
-   SceneObject
+   user_interface
+   creating_input_files
+   scene_object
