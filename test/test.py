@@ -36,7 +36,7 @@ if __name__=="__main__":
     print(json.dumps(FM["test_plane"]["total"], indent=4))
     print(scene._airplanes["test_plane"].get_aerodynamic_state())
 
-    dist = scene.distributions(make_plots=["section_CL"])
+    dist = scene.distributions(filename="dist.txt")
 
     print(json.dumps(dist["test_plane"]["main_wing_right"]["section_CL"], indent=4))
     print(json.dumps(dist["test_plane"]["main_wing_right"]["section_parasitic_CD"], indent=4))

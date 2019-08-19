@@ -1497,7 +1497,7 @@ class Scene:
         Parameters
         ----------
         filename : str
-            Output file to write the distributions to. Defaults to no file.
+            Output file to write the distributions to. Saves as a .txt file. Defaults to no file.
 
         make_plots : list
             List of keys from the dist dictionary to make plots of. A plot of the parameter as a function 
@@ -1508,7 +1508,7 @@ class Scene:
         -------
         dist : dict
             A dictionary containing lists of each parameter at each control point. The keys are the
-            aircraft names. The nested keys are then "span_frac", cpx", "cpy", "cpz", "chord", "twist", 
+            aircraft names. The nested keys are then "span_frac", "cpx", "cpy", "cpz", "chord", "twist", 
             "dihedral", "sweep", "area", "alpha", "Re", "M", "section_CL", "section_Cm", "section_parasitic_CD", 
             and "section_aL0".
         """
@@ -1518,6 +1518,30 @@ class Scene:
         dist = {}
 
         index = 0
+
+        # Setup table for saving to .txt file
+        if filename is not None:
+            item_types = [("aircraft", "U18"),
+                          ("segment", "U18"),
+                          ("span_frac", "float"),
+                          ("cpx", "float"),
+                          ("cpy", "float"),
+                          ("cpz", "float"),
+                          ("chord", "float"),
+                          ("twist", "float"),
+                          ("dihedral", "float"),
+                          ("sweep", "float"),
+                          ("area", "float"),
+                          ("alpha", "float"),
+                          ("Re", "float"),
+                          ("M", "float"),
+                          ("section_CL", "float"),
+                          ("section_Cm", "float"),
+                          ("section_parasitic_CD", "float"),
+                          ("section_aL0","float")]
+
+            table_data = np.zeros(self._N, dtype=item_types)
+
 
         # Loop through airplanes
         for i, airplane_name in enumerate(self._airplane_names):
@@ -1555,12 +1579,49 @@ class Scene:
                 dist[airplane_name][segment_name]["Re"] = list(self._Re[cur_slice])
                 dist[airplane_name][segment_name]["M"] = list(self._M[cur_slice])
 
+                # Save to data table
+                if filename is not None:
+                    # Names
+                    table_data[cur_slice]["aircraft"] = airplane_name
+                    table_data[cur_slice]["segment"] = segment_name
+
+                    # Control point locations
+                    table_data[cur_slice]["span_frac"] = dist[airplane_name][segment_name]["span_frac"]
+                    table_data[cur_slice]["cpx"] = dist[airplane_name][segment_name]["cpx"]
+                    table_data[cur_slice]["cpy"] = dist[airplane_name][segment_name]["cpy"]
+                    table_data[cur_slice]["cpz"] = dist[airplane_name][segment_name]["cpz"]
+
+                    # Geometry
+                    table_data[cur_slice]["chord"] = dist[airplane_name][segment_name]["chord"]
+                    table_data[cur_slice]["twist"] = dist[airplane_name][segment_name]["twist"]
+                    table_data[cur_slice]["dihedral"] = dist[airplane_name][segment_name]["dihedral"]
+                    table_data[cur_slice]["sweep"] = dist[airplane_name][segment_name]["sweep"]
+                    table_data[cur_slice]["area"] = dist[airplane_name][segment_name]["area"]
+
+                    # Airfoil info
+                    table_data[cur_slice]["section_CL"] = dist[airplane_name][segment_name]["section_CL"]
+                    table_data[cur_slice]["section_Cm"] = dist[airplane_name][segment_name]["section_Cm"]
+                    table_data[cur_slice]["section_parasitic_CD"] = dist[airplane_name][segment_name]["section_parasitic_CD"]
+                    table_data[cur_slice]["section_aL0"] = dist[airplane_name][segment_name]["section_aL0"]
+                    table_data[cur_slice]["alpha"] = dist[airplane_name][segment_name]["alpha"]
+                    table_data[cur_slice]["Re"] = dist[airplane_name][segment_name]["Re"]
+                    table_data[cur_slice]["M"] = dist[airplane_name][segment_name]["M"]
+
                 index += num_cps
 
+        # Save distributions to .txt file
         if filename is not None:
-            with open(filename, 'w') as output_handle:
-                json.dump(dist, output_handle, indent=4)
+            
+            # Define header and output format
+            header = "{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20}".format(
+                "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Area", "Alpha",
+                "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
+            # Save
+            np.savetxt(filename, table_data, fmt=format_string, header=header)
+
+        # Create plots specified by the user
         for param in make_plots:
             for segment_name, segment_dist in dist["test_plane"].items():
                 plt.figure()
