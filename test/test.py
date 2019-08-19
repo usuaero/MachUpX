@@ -25,12 +25,11 @@ if __name__=="__main__":
     # Load scene
     scene = MX.Scene(input_dict)
 
-    state["alpha"] = 10.0
+    state["alpha"] = 2.0
     state["velocity"] = 200
-    state["angular_rates"] = [20.0, 0.0, 0.0]
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe()
+    scene.display_wireframe(show_vortices=False)
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False)
@@ -43,18 +42,9 @@ if __name__=="__main__":
     print(json.dumps(dist["test_plane"]["main_wing_right"]["section_parasitic_CD"], indent=4))
     print(json.dumps(dist["test_plane"]["main_wing_right"]["section_Cm"], indent=4))
 
-    #trim_angles = scene.aircraft_pitch_trim(verbose=True)
-    #print(json.dumps(trim_angles, indent=4))
+    trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
+    print(json.dumps(trim_angles, indent=4))
 
-    #print("Original state")
-    #FM = scene.solve_forces(non_dimensional=False)
-    #print(json.dumps(FM["test_plane"]["total"], indent=4))
-
-    #state["alpha"] = trim_angles["test_plane"]["alpha"]
-    #control_state["elevator"] = trim_angles["test_plane"]["elevator"]
-    #scene.set_aircraft_state(state=state)
-    #scene.set_aircraft_control_state(control_state=control_state)
-
-    #print("Trim state")
-    #FM = scene.solve_forces(non_dimensional=False)
-    #print(json.dumps(FM["test_plane"]["total"], indent=4))
+    print("Trim state")
+    FM = scene.solve_forces(non_dimensional=False)
+    print(json.dumps(FM["test_plane"]["total"], indent=4))

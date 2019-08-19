@@ -945,10 +945,10 @@ class Scene:
                 # Add vortices
                 if show_vortices:
                     vortex_points = np.zeros((num_cps*4,3))
-                    vortex_points[::4,:] = self._P0[cur_slice]+self._P0_u_inf[cur_slice]
+                    vortex_points[::4,:] = self._P0[cur_slice]+self._P0_u_inf[cur_slice]*2*airplane_object.l_ref_lon
                     vortex_points[1:num_cps*4+1:4,:] = self._P0[cur_slice]
                     vortex_points[2:num_cps*4+2:4,:] = self._P1[cur_slice]
-                    vortex_points[3:num_cps*4+3:4,:] = self._P1[cur_slice]+self._P1_u_inf[cur_slice]
+                    vortex_points[3:num_cps*4+3:4,:] = self._P1[cur_slice]+self._P1_u_inf[cur_slice]*2*airplane_object.l_ref_lon
                     ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
 
                 # Figure out if the segment just added increases any needed axis limits
@@ -1459,7 +1459,8 @@ class Scene:
         if set_trim_state:
             for aircraft_name in aircraft_names:
                 self._airplanes[aircraft_name].set_aerodynamic_state(alpha=trim_angles[aircraft_name]["alpha"])
-                self.set_aircraft_control_state(trim_angles[aircraft_name][pitch_control.get(aircraft_name, "elevator")], aircraft_name=aircraft_name)
+                control_name = pitch_control.get(aircraft_name, "elevator")
+                self.set_aircraft_control_state({control_name : trim_angles[aircraft_name][control_name]}, aircraft_name=aircraft_name)
 
         else: # Return to the original state
             for aircraft_name in aircraft_names:
