@@ -5,7 +5,7 @@ MachUpX can be used in one of two ways, either through the command line or thoug
 MachUpX is run from the command line using the "-m" option to the Python interpreter. For example:
 
 ```python
-$ python -m machupX example_input.json
+python -m machupX example_input.json
 ```
 
 will run the analyses listed in example_input.json. The various results are saved as files to be accessed by the user.
