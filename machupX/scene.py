@@ -370,18 +370,18 @@ class Scene:
 
         # Vortex node velocities
         P0_V_inf = np.linalg.norm(P0_v_inf, axis=1)
-        P0_u_inf = P0_v_inf/P0_V_inf[:,np.newaxis]
+        self._P0_u_inf = P0_v_inf/P0_V_inf[:,np.newaxis]
 
         P1_V_inf = np.linalg.norm(P1_v_inf, axis=1)
-        P1_u_inf = P1_v_inf/P1_V_inf[:,np.newaxis]
+        self._P1_u_inf = P1_v_inf/P1_V_inf[:,np.newaxis]
 
         # Influence of vortex segment 0
-        denom = (self._rj0i_mag*(self._rj0i_mag-np.einsum('ijk,ijk->ij', P0_u_inf[np.newaxis], self._rj0i)))
-        V_ji_due_to_0 = -np.cross(P0_u_inf, self._rj0i)/denom[:,:,np.newaxis]
+        denom = (self._rj0i_mag*(self._rj0i_mag-np.einsum('ijk,ijk->ij', self._P0_u_inf[np.newaxis], self._rj0i)))
+        V_ji_due_to_0 = -np.cross(self._P0_u_inf, self._rj0i)/denom[:,:,np.newaxis]
 
         # Influence of vortex segment 1
-        denom = (self._rj1i_mag*(self._rj1i_mag-np.einsum('ijk,ijk->ij', P1_u_inf[np.newaxis], self._rj1i)))
-        V_ji_due_to_1 = np.cross(P1_u_inf, self._rj1i)/denom[:,:,np.newaxis]
+        denom = (self._rj1i_mag*(self._rj1i_mag-np.einsum('ijk,ijk->ij', self._P1_u_inf[np.newaxis], self._rj1i)))
+        V_ji_due_to_1 = np.cross(self._P1_u_inf, self._rj1i)/denom[:,:,np.newaxis]
 
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + self._V_ji_due_to_bound + V_ji_due_to_1)
         self._V_ji_trans = self._V_ji.transpose((1,0,2))
@@ -890,11 +890,15 @@ class Scene:
         self._airplanes[aircraft_name].set_control_state(control_state)
 
 
-    def display_wireframe(self, show_legend=False, filename=None):
+    def display_wireframe(self, show_vortices=True, show_legend=False, filename=None):
         """Displays a 3D wireframe plot of the scene.
 
         Parameters
         ----------
+        show_vortices : bool
+            If this is set to True, the distribution of horseshoe vortices along each lifting surface will be 
+            shown. Defaults to True.
+
         show_legend : bool
             If this is set to True, a legend will appear detailing which color corresponds to which wing segment.
             Otherwise, the wing segments are all black.
@@ -907,24 +911,47 @@ class Scene:
 
         segment_names = []
 
+        # Setup 3D figure
         fig = plt.figure(figsize=plt.figaspect(1.0))
         ax = fig.gca(projection='3d')
 
+        # This matters for setting up the plot axis limits
         first_segment = True
+
+        # If the user wants the vortices displayed, make sure the NLL equation has been solved first
+        if show_vortices and not self._solved:
+            self.solve_forces(non_dimensional=False, dimensional=False)
+
+        index = 0
 
         # Loop through airplanes
         for airplane_name, airplane_object in self._airplanes.items():
 
             # Loop through segments
             for segment_name, segment_object in airplane_object.wing_segments.items():
-                segment_names.append(segment_name)
+                num_cps = segment_object._N
+                cur_slice = slice(index, index+num_cps)
 
-                points = airplane_object.p_bar+_quaternion_transform(airplane_object.q, segment_object.get_outline_points())
-                if show_legend: # Then colors matter
+                # Get the outline points and transform to earth-fixed
+                points = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, segment_object.get_outline_points())
+
+                # Decide if colors matter and the segment names need to be stored
+                if show_legend:
                     ax.plot(points[:,0], points[:,1], points[:,2], '-')
+                    segment_names.append(segment_name)
                 else:
                     ax.plot(points[:,0], points[:,1], points[:,2], 'k-')
 
+                # Add vortices
+                if show_vortices:
+                    vortex_points = np.zeros((num_cps*4,3))
+                    vortex_points[::4,:] = self._P0[cur_slice]+self._P0_u_inf[cur_slice]
+                    vortex_points[1:num_cps*4+1:4,:] = self._P0[cur_slice]
+                    vortex_points[2:num_cps*4+2:4,:] = self._P1[cur_slice]
+                    vortex_points[3:num_cps*4+3:4,:] = self._P1[cur_slice]+self._P1_u_inf[cur_slice]
+                    ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
+
+                # Figure out if the segment just added increases any needed axis limits
                 if first_segment:
                     x_lims = [min(points[:,0].flatten()), max(points[:,0].flatten())]
                     y_lims = [min(points[:,1].flatten()), max(points[:,1].flatten())]
@@ -935,24 +962,29 @@ class Scene:
                     y_lims = [min(y_lims[0], min(points[:,1].flatten())), max(y_lims[1], max(points[:,1].flatten()))]
                     z_lims = [min(z_lims[0], min(points[:,2].flatten())), max(z_lims[1], max(points[:,2].flatten()))]
 
+                index += num_cps
 
+        # Add legend
         if show_legend:
             ax.legend(segment_names)
 
+        # Set axis labels
         ax.set_xlabel('x')
         ax.set_ylabel('y')
         ax.set_zlabel('z')
 
-        # Set axes to the same scale
+        # Find out which axis has the widest limits
         x_diff = x_lims[1]-x_lims[0]
         y_diff = y_lims[1]-y_lims[0]
         z_diff = z_lims[1]-z_lims[0]
         max_diff = max([x_diff, y_diff, z_diff])
 
+        # Determine the center of each set of axis limits
         x_cent = x_lims[0]+0.5*x_diff
         y_cent = y_lims[0]+0.5*y_diff
         z_cent = z_lims[0]+0.5*z_diff
 
+        # Scale the axis limits so they all have the same width as the widest set
         x_lims[0] = x_cent-0.5*max_diff
         x_lims[1] = x_cent+0.5*max_diff
 
@@ -967,6 +999,7 @@ class Scene:
         ax.set_ylim3d(y_lims[0], y_lims[1])
         ax.set_zlim3d(z_lims[1], z_lims[0])
 
+        # Output figure
         if filename is not None:
             plt.savefig(filename)
         else:
