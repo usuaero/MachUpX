@@ -72,14 +72,14 @@ When specifying units in an array and one of the measurements is dimensionless (
 should be used.
 
 ## Coordinate Systems
-Throughout MachUpX, two coordinate systems are used. These are the body-fixed and flat-earth coordinate 
+Throughout MachUpX, two coordinate systems are used. These are the body-fixed and earth-fixed coordinate 
 systems. In the body-fixed coordinate system, the x-axis points forward out of the nose of the aircraft, 
 the y-axis points to the right along the wing, and the z-axis points down. The body-fixed coordinate 
 system has its origin at the aircraft's center of gravity.
 
-In the flat-earth coordinate system, the x-axis points North, the y-axis points East, and the z-axis 
-points down. The origin of the flat-earth coordinate system is somewhat arbitrary, but it is assumed 
-to be at sea level.
+In the earth-fixed coordinate system, the x-axis points North, the y-axis points East, and the z-axis 
+points down. The origin of the earth-fixed coordinate system is somewhat arbitrary, but it is assumed 
+to be at sea level. In this coordinate system, the earth is assumed to be flat.
 
 ![image](CoordinateSystems.jpg "Coordinate Systems in MachUpX")
 
