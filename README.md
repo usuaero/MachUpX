@@ -95,6 +95,7 @@ Testing is accomplished using the pytest module. Run tests using the command:
 ## Support
 
 Contact doug.hunsaker@usu.edu or cory.goates@aggiemail.usu.edu with any questions.
+For bugs, create a new issue on the Github repo.
 
 ## License
 

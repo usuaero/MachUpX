@@ -105,8 +105,8 @@ if __name__=="__main__":
     print('|          This software comes with           |')
     print('| ABSOLUTELY NO WARRANTY EXPRESSED OR IMPLIED |')
     print('|                                             |')
-    print('|           Submit bug reports to:            |')
-    print('|           doug.hunsaker@usu.edu             |')
+    print('|           Submit bug reports on             |')
+    print('|                  github                     |')
     print('-----------------------------------------------')
 
     # Check for interactive mode
