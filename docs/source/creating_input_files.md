@@ -21,46 +21,49 @@ by making the value a list where the first element is the actual value and the s
 specifying the units. For example:
 
 ```python
-"area" : [6.75,"ft^2"]
+"area" : [6.75, "ft^2"]
 ```
 
 For vector inputs, such as position and velocity, the units are simply appended to the vector:
 
 ```python
-"velocity" : [100,13,0,"ft/s"]
+"velocity" : [100.0, 13.0, 0.0, "ft/s"]
 ```
 
 For array inputs, such as a density profile or chord distribution, the units are appended as another row
 in the array:
 
 ```python
-"rho" : [[0.0,1.225],
-         [2000.0,1.0066],
-         [4000.0,0.81935],
-         ["m","kg/m^3"]]
+"rho" : [[0.0, 1.225],
+         [2000.0, 1.0066],
+         [4000.0, 0.81935],
+         ["m", "kg/m^3"]]
 ```
 
 When specifying column units in files, these are also appended as another row:
 
 ```python
 # File: density_profile.csv
-0.0,1.225,
-2000.0,1.0066,
-4000.0,0.81935,
+0.0, 1.225,
+2000.0, 1.0066,
+4000.0, 0.81935,
 "m", "kg/m^3"
 ```
 
 The following measurements can be defined with the accompanying units:
 
-    | Measurement                   | Acceptable Units                  |
-    |-------------------------------|-----------------------------------|
-    | Position/displacement/length: | "ft", "m", "in", "cm"             |
-    | Area:                         | "ft^2", "m^2"                     |
-    | Velocity:                     | "ft/s", "m/s", "mph", "kph", "kn" |
-    | Angular deflection/position:  | "deg", "rad"                      |
-    | Angular rate:                 | "deg/s", "rad/s"                  |
-    | Density:                      | "slug/ft^3", "kg/m^3"             |
-    | Weight:                       | "lbf", "N"                        |
+| Measurement                   | Acceptable Units                  |
+| ----------------------------- | --------------------------------- |
+| Position/displacement/length: | "ft", "m", "in", "cm"             |
+| Area:                         | "ft^2", "m^2"                     |
+| Velocity:                     | "ft/s", "m/s", "mph", "kph", "kn" |
+| Angular deflection/position:  | "deg", "rad"                      |
+| Angular rate:                 | "deg/s", "rad/s"                  |
+| Density:                      | "slug/ft^3", "kg/m^3"             |
+| Weight:                       | "lbf", "N"                        |
+
+Note the carat is required in units containing powers. Otherwise, MachUpX will not recognize the unit 
+specification.
 
 Except for angular measurements, the first unit listed is the default for "English" units. The second is 
 the default for "SI". For measurements of state and control deflections, as well as airframe geometry, 
@@ -488,3 +491,5 @@ Describes an aircraft.
 ## Airfoil Data File
 An airfoil in MachUp can be defined as each coefficient being a function of angle of attack and Reynolds
 number. This is done by specifying a path to a csv file describing the airfoil coefficients.
+
+THIS FUNCTIONALITY IS NOT YET AVAILABLE IN MACHUPX
