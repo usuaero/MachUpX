@@ -1,0 +1,37 @@
+{
+    "tag" : "Example input file using a flying wing",
+    "run" : {
+        "display_wireframe" : {
+            "show_legend" : true
+        },
+        "forces" : {
+            "non_dimensional" : false
+        },
+        "pitch_trim" : {
+            "set_state_to_trim" : true
+        },
+        "aero_derivatives" : {}
+    },
+    "solver" : {
+        "type" : "linear"
+    },
+    "units" : "English",
+    "scene" : {
+        "atmosphere" : {},
+        "aircraft" : {
+            "flying_wing" : {
+                "file" : "flying_wing.json",
+                "state" : {
+                    "type" : "aerodynamic",
+                    "velocity" : 100,
+                    "alpha" : 2.0,
+                    "beta" : 0.0
+                },
+                "control_state" : {
+                    "elevator" : 0.0,
+                    "aileron" : 0.0
+                }
+            }
+        }
+    }
+}
