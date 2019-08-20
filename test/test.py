@@ -29,22 +29,22 @@ if __name__=="__main__":
     state["velocity"] = 200
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=False)
+    scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
     print(scene._airplanes["test_plane"].get_aerodynamic_state())
 
-    dist = scene.distributions(make_plots=["section_CL"])
-
-    print(json.dumps(dist["test_plane"]["main_wing_right"]["section_CL"], indent=4))
-    print(json.dumps(dist["test_plane"]["main_wing_right"]["section_parasitic_CD"], indent=4))
-    print(json.dumps(dist["test_plane"]["main_wing_right"]["section_Cm"], indent=4))
-
     trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
-    print(json.dumps(trim_angles, indent=4))
+    print(json.dumps(trim_angles["test_plane"], indent=4))
 
     print("Trim state")
     FM = scene.solve_forces(non_dimensional=False)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
+
+    ac_loc = scene.aircraft_aero_center()
+    print(json.dumps(ac_loc["test_plane"], indent=4))
+
+    derivs = scene.aircraft_derivatives()
+    print(json.dumps(derivs["test_plane"]["stability"], indent=4))

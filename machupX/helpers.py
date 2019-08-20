@@ -2,6 +2,7 @@
 
 import os
 import numpy as np
+import copy
 
 def _check_filepath(input_filename, correct_ext):
     # Check correct file extension and that file exists
@@ -181,6 +182,31 @@ def _quaternion_inverse_transform(q, v):
         v_trans = v_trans.flatten()
     
     return v_trans
+
+
+def _quat_times(quat0, quat1):
+    # Multiplies the two quaternions together and returns the resulting quaternion. Can handle being passed a
+    # vector
+
+    # Check for vectors
+    if quat0.size[0] == 3:
+        q0 = np.concatenate((np.zeros(1), quat0))
+    else:
+        q0 = copy.copy(quat0)
+
+    if quat1.size[0] == 3:
+        q1 = np.concatenate((np.zeros(1), quat1))
+    else:
+        q1 = copy.copy(quat1)
+
+    # Multiply
+    q = np.zeros(4)
+    q[0] = q0[0]*q1[0]-q0[1]*q1[1]-q0[2]*q1[2]-q0[3]*q1[3]
+    q[1] = q0[0]*q1[1]+q0[1]*q1[0]+q0[2]*q1[3]-q0[3]*q1[2]
+    q[2] = q0[0]*q1[2]-q0[1]*q1[3]+q0[2]*q1[0]+q0[3]*q1[1]
+    q[3] = q0[0]*q1[3]+q0[1]*q1[2]-q0[2]*q1[1]+q0[3]*q1[0]
+
+    return q
 
 
 def _euler_to_quaternion(E):

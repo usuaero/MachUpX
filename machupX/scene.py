@@ -1361,7 +1361,7 @@ class Scene:
 
         Returns
         -------
-        trim_angles : dict
+        dict
             The angle of attack and deflection of the specified control required to trim the aircraft in 
             pitch in the current state.
         """
@@ -1491,196 +1491,18 @@ class Scene:
         return 0.5*rho*V*V
 
 
-    def aircraft_trim(self, aircraft=None, filename=None, iterations=1, set_trim_state=True, verbose=False):
-        """ Determines the required orientation and control deflections for the aircraft at the current position and 
-        velocity. Will use all available controls.
-
-        Parameters
-        ----------
-        aircraft : str or list
-            The name(s) of the aircraft to trim. Defaults to all aircraft in the scene.
-
-        iterations : int
-            The number of times to loop through and trim each aircraft. Multiple iterations may be required 
-            for situations where each aircraft heavily influences the others. Defaults to 1.
-
-        set_trim_state : bool
-            If set to True, once trim is determined, the state of the aircraft will be set to this trim state. If
-            False, the state of the aircraft will return to what it was before this method was called. Defaults 
-            to True.
-
-        verbose : bool
-            If set to true, information will be output about the progress of Newton's method. Defaults to 
-            False.
-
-        Returns
-        -------
-        trim_angles : dict
-            The angle of attack and deflection of the specified control required to trim the aircraft in 
-            pitch in the current state.
-        """
-        trim_angles = {}
-
-        if verbose: print("\nTrimming...")
-
-        # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = self._airplanes.keys()
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
-
-        # Declare dictionaries for storing the original state
-        q_original = {}
-        controls_original = {}
-
-        for i in range(iterations):
-            if verbose: print("\nTrim iteration {0}".format(i))
-
-            for aircraft_name in aircraft_names:
-                airplane_object = self._airplanes[aircraft_name]
-
-                # Setup command line output
-                if verbose:
-                    print("Trimming {0}.".format(aircraft_name))
-                    header = "{0:<20}{1:<20}{2:<20}{3:<20}".format("q0", "qx", "qy", "qz")
-                    for control in airplane_object.control_names:
-                        header += "{0:<20}".format(control)
-                    header += "{0:<25}{1:<25}{2:<25}{3:<25}{4:<25}{5:<25}".format("Fx", "Fy", "Fz", "Mx", "My", "Mz")
-                    print(header)
-
-                # Store the current orientation and control deflection
-                v_wind = self._get_wind(airplane_object.p_bar)
-                q_original[aircraft_name] = copy.copy(airplane_object.q)
-                controls_original[aircraft_name] = copy.copy(airplane_object.current_control_state)
-
-                # Get residuals
-                R = self._get_aircraft_trim_residuals(aircraft_name)
-
-                # Declare initials
-                q = copy.copy(q_original[aircraft_name])
-                controls = copy.copy(controls_original[aircraft_name])
-                num_controls = len(airplane_object.control_names)
-                J = np.zeros((3+num_controls,6))
-
-                # Output progress
-                if verbose:
-                    info = "{0:<20}{1:<20}{2:<20}{3:<20}".format(q[0], q[1], q[2], q[3])
-                    for control in airplane_object.control_names:
-                        info += "{0:<20}".format(controls[control])
-                    info += "{0:<25}{1:<25}{2:<25}{3:<25}{4:<25}{5:<25}".format(R[0], R[1], R[2], R[3], R[4], R[5])
-                    print(info)
-
-                # Iterate until residuals go to zero.
-                while (abs(R)>1e-10).any():
-
-                    # Determine Jacobian
-                    quat_derivs = self.aircraft_orientation_derivatives(aircraft=aircraft_name)
-                    cont_derivs = self.aircraft_control_derivatives(aircraft=aircraft_name)
-                    J[0,0] = stab_derivs[aircraft_name]["CL,a"]
-                    J[0,1] = cont_derivs[aircraft_name]["CL,d"+control]
-                    J[1,0] = stab_derivs[aircraft_name]["Cm,a"]
-                    J[1,1] = cont_derivs[aircraft_name]["Cm,d"+control]
-
-                    # Calculate update
-                    delta = np.linalg.solve(J,-R)
-
-                    # Update angle of attack
-                    alpha1 = alpha0 + np.degrees(delta[0])
-                    airplane_object.set_aerodynamic_state(alpha=alpha1)
-
-                    # Update control
-                    delta_flap1 = delta_flap0 + np.degrees(delta[1])
-                    controls[control] = delta_flap1
-                    airplane_object.set_control_state(controls)
-
-                    # Update for next iteration
-                    alpha0 = alpha1
-                    delta_flap0 = delta_flap1
-
-                    # Determine new residuals
-                    R = self._get_aircraft_pitch_trim_residuals(aircraft_name=aircraft_name)
-
-                    if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
-
-                trim_angles[aircraft_name] = {
-                    "alpha" : alpha1,
-                    control : delta_flap1
-                }
-
-        # If the user wants, set the state to the new trim state
-        if set_trim_state:
-            for aircraft_name in aircraft_names:
-                self._airplanes[aircraft_name].set_aerodynamic_state(alpha=trim_angles[aircraft_name]["alpha"])
-                control_name = pitch_control.get(aircraft_name, "elevator")
-                self.set_aircraft_control_state({control_name : trim_angles[aircraft_name][control_name]}, aircraft_name=aircraft_name)
-
-        else: # Return to the original state
-            for aircraft_name in aircraft_names:
-                self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_original[aircraft_name])
-                self.set_aircraft_control_state(controls_original[aircraft_name], aircraft_name=aircraft_name)
-
-        # Output results to file
-        if filename is not None:
-            with open(filename, 'w') as file_handle:
-                json.dump(trim_angles, file_handle, indent=4)
-
-        return trim_angles
-
-
-    def _get_aircraft_trim_residuals(self, aircraft_name):
-        # Returns the residual forces and moments acting on the aircraft
-        FM = self.solve_forces(dimensional=False)
-
-        # Offset forces with weight
-        W_b = _quaternion_transform(self._airplanes[aircraft_name].q, self._airplanes[aircraft_name].W*np.array([0.0, 0.0, 1.0]))
-        C_W_b = W_b/(self._get_aircraft_q_inf(aircraft_name)*self._airplanes[aircraft_name].S_w)
-        RX = FM[aircraft_name]["total"]["Cx"]+C_W_b[0]
-        RY = FM[aircraft_name]["total"]["Cy"]+C_W_b[1]
-        RZ = FM[aircraft_name]["total"]["Cz"]+C_W_b[2]
-
-        # Zero moment
-        Rl = FM[aircraft_name]["total"]["Cl"]
-        Rm = FM[aircraft_name]["total"]["Cm"]
-        Rn = FM[aircraft_name]["total"]["Cn"]
-
-        return np.array([RX, RY, RZ, Rl, Rm, Rn])
-
-
-    def aircraft_orientation_derivatives(self, aircraft=None):
-        """Returns the force and moment derivatives with respect to orientation.
-        NOT IMPLEMENTED
-        """
-
-        # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = self._airplanes.keys()
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
-
-        pass
-
-
     def aircraft_aero_center(self, aircraft=None):
         """Returns the location of the aerodynamic center of the aircraft at the current state.
-        NOT IMPLEMENTED
 
         Parameters
         ----------
         aircraft : str or list
-            The name(s) of the aircraft to determine the aerodynamic derivatives 
+            The name(s) of the aircraft to determine the aerodynamic center 
             of. Defaults to all aircraft in the scene.
 
         Returns
         -------
-        ac_loc : dict
+        dict
             The location of the aerodynamic center in body-fixed coordinates for each aircraft.
         """
 
@@ -1694,7 +1516,54 @@ class Scene:
         else:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
 
-        pass
+        ac_loc = {}
+
+        # Loop through aircraft
+        for aircraft_name in aircraft_names:
+            airplane_object = self._airplanes[aircraft_name]
+            v_wind = self._get_wind(airplane_object.p_bar)
+
+            # Calculate derivatives
+            # Original state
+            FM1 = self.solve_forces(dimensional=False)[aircraft_name]["total"]
+
+            a0, B0, V0 = airplane_object.get_aerodynamic_state(v_wind=v_wind)
+            delta = 0.5
+
+            # Perturb forward
+            airplane_object.set_aerodynamic_state(alpha=a0-delta, beta=B0, velocity=V0, v_wind=v_wind)
+            FM0 = self.solve_forces(dimensional=False)[aircraft_name]["total"]
+
+            # Perturb backward
+            airplane_object.set_aerodynamic_state(alpha=a0+delta, beta=B0, velocity=V0, v_wind=v_wind)
+            FM2 = self.solve_forces(dimensional=False)[aircraft_name]["total"]
+
+            # Reset aircraft state
+            airplane_object.set_aerodynamic_state(alpha=a0, beta=B0, velocity=V0, v_wind=v_wind)
+
+            # First derivatives
+            CA_a = (-FM2["Cx"]+FM0["Cx"])/(2.0*delta)
+            CN_a = (-FM2["Cz"]+FM0["Cz"])/(2.0*delta)
+            Cm_a = (FM2["Cm"]-FM0["Cm"])/(2.0*delta)
+
+            # Second derivatives
+            CA_a2 = (-FM2["Cx"]+2.0*FM1["Cx"]-FM0["Cx"])/delta**2
+            CN_a2 = (-FM2["Cz"]+2.0*FM1["Cz"]-FM0["Cz"])/delta**2
+            Cm_a2 = (FM2["Cm"]-2.0*FM1["Cm"]+FM0["Cm"])/delta**2
+
+            # Calculate locations (I pulled this from MachUp Pro)
+            denom = CN_a*CA_a2-CA_a*CN_a2
+            x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom
+            z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom
+
+            # Moment at aerodynamic center
+            Cm_ac = FM1["Cm"]-x_ac*FM1["Cz"]+z_ac*FM1["Cx"]
+
+            # Redimensionalize
+            l_ref = airplane_object.l_ref_lon
+            ac_loc[aircraft_name] = [-x_ac*l_ref, 0.0, -z_ac*l_ref]
+
+        return ac_loc
 
 
     def distributions(self, filename=None, make_plots=[]):
