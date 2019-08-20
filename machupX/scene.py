@@ -1551,7 +1551,7 @@ class Scene:
             CN_a2 = (-FM2["Cz"]+2.0*FM1["Cz"]-FM0["Cz"])/delta**2
             Cm_a2 = (FM2["Cm"]-2.0*FM1["Cm"]+FM0["Cm"])/delta**2
 
-            # Calculate locations (I pulled this from MachUp Pro)
+            # Calculate locations (Mech of Flight Eqs. 4.8.29-31)
             denom = CN_a*CA_a2-CA_a*CN_a2
             x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom
             z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom

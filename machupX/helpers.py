@@ -98,6 +98,13 @@ def _import_value(key, dict_of_vals, system, default_value):
     elif isinstance(val, list):
         if any(isinstance(row, list) for row in val): # Array
             is_array = True
+
+        elif val[0] == "elliptic": # User wants an elliptic chord distribution
+            if len(val) == 3: # Unit specified
+                root_chord = _convert_units(val[1], val[2], system)
+            else:
+                root_chord = val[1]
+            return_value = ("elliptic", root_chord)
         
         elif isinstance(val[-1], str): # Float or vector with units
             converted_val = _vectorized_convert_units(val[:-1], val[-1], system)

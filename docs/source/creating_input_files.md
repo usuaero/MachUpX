@@ -443,7 +443,16 @@ Describes an aircraft.
                 to 0.
 
             "chord" : float, array, or string, optional
-                Gives the chord length of the wing segment. Defined the same as "twist". Defaults to 1.0.
+                Gives the chord length of the wing segment. Defined the same as "twist". Can optionally be 
+                specified as elliptic using the following definition:
+
+                    "chord" : ["elliptic", 1.0]
+
+                Where the number is the root chord length. Units can be specified using:
+
+                    "chord" : ["elliptic", 1.0, "ft"]
+
+                Defaults to 1.0.
 
             "ac_offset" : float, array, or string, optional
                 Gives the offset of the section aerodynamic center from the quarter chord as a fraction 

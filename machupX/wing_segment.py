@@ -109,17 +109,25 @@ class WingSegment:
 
     def _initialize_getters(self):
         # Sets getters for functions which are a function of span
+
+        # Twist
         twist_data = _import_value("twist", self._input_dict, self._unit_sys, 0)
         self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True)
 
+        # Dihedral
         dihedral_data = _import_value("dihedral", self._input_dict, self._unit_sys, 0)
         self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True)
 
+        # Sweep
         sweep_data = _import_value("sweep", self._input_dict, self._unit_sys, 0)
         self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True)
 
+        # Chord
         chord_data = _import_value("chord", self._input_dict, self._unit_sys, 1.0)
-        self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
+        if isinstance(chord_data, tuple): # Elliptic distribution
+            self.get_chord = self._build_elliptic_chord_dist(chord_data[1])
+        else: # Linear distribution
+            self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
 
         ac_offset_data = _import_value("ac_offset", self._input_dict, self._unit_sys, 0)
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
@@ -165,6 +173,17 @@ class WingSegment:
                 return data
 
         return getter
+
+
+    def _build_elliptic_chord_dist(self, root_chord):
+        # Creates a getter which will return the chord length as a function of span fraction.
+        self._root_chord = root_chord
+
+        def getter(span_frac):
+            return self._root_chord*np.sqrt(1-span_frac**2)
+
+        return getter
+
 
     def _initialize_airfoils(self, airfoil_dict):
         # Picks out the airfoils used in this wing segment and stores them. Also 
