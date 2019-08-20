@@ -1,0 +1,92 @@
+{
+    "CG" : [0,0,0],
+    "weight" : 20.0,
+    "reference" : {
+    },
+    "controls" : {
+        "aileron" : {
+            "is_symmetric" : false
+        },
+        "elevator" : {
+            "is_symmetric" : true
+        },
+        "rudder" : {
+            "is_symmetric" : false
+        }
+    },
+    "airfoils" : {
+        "NACA_0010" : {
+            "type" : "linear",
+            "aL0" : 0.0,
+            "CLa" : 6.4336,
+            "CmL0" : 0.0,
+            "Cma" : 0.00,
+            "CD0" : 0.00513,
+            "CD1" : 0.0,
+            "CD2" : 0.0984,
+            "CL_max" : 1.4
+        }
+    },
+    "wings" : {
+        "main_wing" : {
+            "ID" : 1,
+            "side" : "both",
+            "is_main" : true,
+            "semispan" : 2.0,
+            "chord" : [[0.0, 0.5],
+                       [1.0, 0.4]],
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.2,
+                "control_mixing" : {
+                    "aileron" : 1.0
+                }
+            },
+            "grid" : 40
+        },
+        "h_stab" : {
+            "ID" : 2,
+            "side" : "both",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "location" : "root",
+                "dx" : -1.0
+            },
+            "semispan" : 0.5,
+            "sweep" : 20.0,
+            "chord" : 0.4,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "elevator" : 1.0
+                }
+            },
+            "grid" : 40
+        },
+        "v_stab" : {
+            "ID" : 3,
+            "side" : "left",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "location" : "root",
+                "dx" : -1.0,
+                "dz" : -0.1
+            },
+            "semispan" : 0.5,
+            "sweep" : 20.0,
+            "chord" : 0.4,
+            "dihedral" : 90.0,
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.5,
+                "control_mixing" : {
+                    "rudder" : 1.0
+                }
+            },
+            "grid" : 40
+        }
+    }
+}

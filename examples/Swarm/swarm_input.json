@@ -1,0 +1,82 @@
+{
+    "tag" : "Example input file for modelling a swarm of small drones.",
+    "run" : {
+        "display_wireframe" : {
+            "show_legend" : true,
+            "show_vortices" : false
+        },
+        "forces" : {
+            "non_dimensional" : false
+        },
+        "aero_derivatives" : {}
+    },
+    "solver" : {
+        "type" : "linear"
+    },
+    "units" : "English",
+    "scene" : {
+        "atmosphere" : {},
+        "aircraft" : {
+            "drone0" : {
+                "file" : "swarming_drone.json",
+                "state" : {
+                    "type" : "rigid-body",
+                    "position" : [0.0, 0.0, -55.0],
+                    "velocity" : [40.0, 0.0, 0.0, "kn"],
+                    "orientation" : [0.9961946980917455, 0.0, 0.08715574274765817, 0.0],
+                    "angular_rates" : [0.0, 0.0, 0.0]
+                },
+                "control_state" : {
+                    "elevator" : 0.0,
+                    "rudder" : 0.0,
+                    "aileron" : 0.0
+                }
+            },
+            "drone1" : {
+                "file" : "swarming_drone.json",
+                "state" : {
+                    "type" : "rigid-body",
+                    "position" : [-10.0, -10.0, -50.0],
+                    "velocity" : [40.0, 0.0, 0.0, "kn"],
+                    "orientation" : [0.9961946980917455, 0.0, 0.08715574274765817, 0.0],
+                    "angular_rates" : [0.0, 0.0, 0.0]
+                },
+                "control_state" : {
+                    "elevator" : 0.0,
+                    "rudder" : 0.0,
+                    "aileron" : 0.0
+                }
+            },
+            "drone2" : {
+                "file" : "swarming_drone.json",
+                "state" : {
+                    "type" : "rigid-body",
+                    "position" : [-10.0, 10.0, -50.0],
+                    "velocity" : [40.0, 0.0, 0.0, "kn"],
+                    "orientation" : [0.9961946980917455, 0.0, 0.08715574274765817, 0.0],
+                    "angular_rates" : [0.0, 0.0, 0.0]
+                },
+                "control_state" : {
+                    "elevator" : 0.0,
+                    "rudder" : 0.0,
+                    "aileron" : 0.0
+                }
+            },
+            "drone3" : {
+                "file" : "swarming_drone.json",
+                "state" : {
+                    "type" : "rigid-body",
+                    "position" : [-10.0, 0.0, -50.0],
+                    "velocity" : [40.0, 0.0, 0.0, "kn"],
+                    "orientation" : [0.9961946980917455, 0.0, 0.08715574274765817, 0.0],
+                    "angular_rates" : [0.0, 0.0, 0.0]
+                },
+                "control_state" : {
+                    "elevator" : 0.0,
+                    "rudder" : 0.0,
+                    "aileron" : 0.0
+                }
+            }
+        }
+    }
+}
