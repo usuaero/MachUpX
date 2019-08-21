@@ -64,7 +64,7 @@ def _run_prescribed_analyses(input_filename):
 
         # Distributions
         elif key == "distributions":
-            filename = params.get("filename", input_filename.replace(".json", "_distributions.json"))
+            filename = params.get("filename", input_filename.replace(".json", "_distributions.txt"))
             make_plots = params.get("make_plots", [])
 
             print("\nCalculating distributions...")
@@ -72,15 +72,22 @@ def _run_prescribed_analyses(input_filename):
 
         # Pitch trim
         elif key == "pitch_trim":
-            aircraft = params.get("aircraft", None)
-            pitch_control = params.get("pitch_control", {})
-            iterations = params.get("iterations", 1)
+            pitch_control = params.get("pitch_control", "elevator")
             set_trim_state = params.get("set_trim_state", True)
             verbose = params.get("verbose", False)
-            filename = params.get("filename", input_filename.replace(".json", "_trim_angles.json"))
+            filename = params.get("filename", input_filename.replace(".json", "_pitch_trim.json"))
 
             print("Trimming aircraft in pitch...")
-            scene.aircraft_pitch_trim(aircraft=aircraft, pitch_control=pitch_control, filename=filename, iterations=iterations, set_trim_state=set_trim_state, verbose=verbose)
+            scene.aircraft_pitch_trim(pitch_control=pitch_control, filename=filename, set_trim_state=set_trim_state, verbose=verbose)
+
+        # Aerodynamic center
+        elif key == "aero_center":
+            aircraft = params.get("aircraft", None)
+            filename = params.get("filename", input_filename.replace(".json", "_aero_center.json"))
+            verbose = params.get("verbose", False)
+
+            print("Calculating location of aerodynamic center...")
+            scene.aircraft_aero_center(aircraft=aircraft, filename=filename, verbose=verbose)
 
 
 if __name__=="__main__":

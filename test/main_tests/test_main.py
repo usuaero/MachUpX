@@ -16,7 +16,9 @@ def test_main():
     input_dict["run"] = {
         "forces" : {},
         "aero_derivatives" : {},
-        "distributions" : {}
+        "distributions" : {},
+        "pitch_trim" : {},
+        "aero_center" : {}
     }
 
     # Write new input to file
@@ -25,15 +27,19 @@ def test_main():
         json.dump(input_dict, new_input_handle)
 
     # Run MachUp
-    sp.run(["python", "-m", "machupX", altered_input_name])
+    sp.run(["python3", "-m", "machupX", altered_input_name])
 
     # Check the proper files have been created
     assert os.path.exists(altered_input_name.replace(".json", "_forces.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_derivatives.json"))
-    assert os.path.exists(altered_input_name.replace(".json", "_distributions.json"))
+    assert os.path.exists(altered_input_name.replace(".json", "_distributions.txt"))
+    assert os.path.exists(altered_input_name.replace(".json", "_pitch_trim.json"))
+    assert os.path.exists(altered_input_name.replace(".json", "_aero_center.json"))
 
     # Cleanup
     sp.run(["rm", altered_input_name.replace(".json", "_forces.json")])
     sp.run(["rm", altered_input_name.replace(".json", "_derivatives.json")])
-    sp.run(["rm", altered_input_name.replace(".json", "_distributions.json")])
+    sp.run(["rm", altered_input_name.replace(".json", "_distributions.txt")])
+    sp.run(["rm", altered_input_name.replace(".json", "_pitch_trim.json")])
+    sp.run(["rm", altered_input_name.replace(".json", "_aero_center.json")])
     sp.run(["rm", altered_input_name])

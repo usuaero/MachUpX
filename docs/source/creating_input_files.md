@@ -126,7 +126,7 @@ deterimined by the user.
         "aero_derivatives" : dict, optional
             Calculates the stability, damping, and control derivatives at the current state.
 
-            "aircraft" : string, optional
+            "aircraft" : list, optional
                 The aircraft to calculate the derivatives of. Defaults to all aircraft in the scene.
 
             "filename" : string, optional
@@ -144,6 +144,37 @@ deterimined by the user.
                 can be listed for making plots: "cpx", "cpy", "cpz", "chord", "twist", "dihedral", 
                 "sweep", "area", "alpha", "Re", "M", "section_CL", "section_Cm", "section_parasitic_CD", 
                 and "section_aL0".
+
+        "pitch_trim" : dict, optional
+            Trims the aircraft in pitch. THIS SHOULD ONLY BE USED IN THE CASE OF ONE AIRCRAFT IN THE 
+            SCENE AND NO WIND.
+
+            pitch_control : str
+                The name of the control that should be used to trim in pitch. Defaults to "elevator".
+
+            "filename" : string, optional
+                File to store the results in. Defaults to the input filename + "_pitch_trim".
+
+            set_trim_state : bool
+                If set to True, once trim is determined, the state of the aircraft will be set to this 
+                trim state. If False, the state of the aircraft will return to what it was before this 
+                method was called. Defaults to True.
+
+            verbose : bool
+                If set to true, information will be output about the progress of Newton's method. Defaults to 
+                False.
+
+        "aero_center" : dict, optional
+            Calculates the location of the aerodynamic center at the current state.
+
+            "aircraft" : list, optional
+                The aircraft to calculate the aerodynamic centers of. Defaults to all aircraft in the scene.
+
+            "filename" : string, optional
+                File to store the results in. Defaults to the input filename + "_aero_center".
+
+            "verbose" : boolean, optional
+                Defaults to false
 
     "solver" : dict, optional
         Specifies parameters regarding how the lifting-line equation is solved.
@@ -469,7 +500,7 @@ Describes an aircraft.
 
             "grid" : uint, optional
                 Number of horseshoe vortices used to model the wing segment in the numerical lifting-line
-                algorithm. Defaults to 40.
+                algorithm. This is the number of horseshoe vortices per semispan. Defaults to 40.
 
             "use_clustering" : bool, optional
                 If true, control points will be distributed using cosine clusering. Otherwise, points will

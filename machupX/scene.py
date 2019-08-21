@@ -1334,21 +1334,17 @@ class Scene:
         return derivs
 
 
-    def aircraft_pitch_trim(self, aircraft=None, pitch_control={}, filename=None, iterations=1, set_trim_state=True, verbose=False):
+    def aircraft_pitch_trim(self, pitch_control="elevator", filename=None, set_trim_state=True, verbose=False):
         """Returns the required angle of attack and elevator deflection for trim at the current state.
+        THIS SHOULD ONLY BE USED IN THE CASE OF ONE AIRCRAFT IN THE SCENE AND NO WIND.
 
         Parameters
         ----------
-        aircraft : str or list
-            The name(s) of the aircraft to trim. Defaults to all aircraft in the scene.
+        pitch_control : str
+            The name of the control that should be used to trim in pitch. Defaults to "elevator".
 
-        pitch_control : dict
-            A set of key-value pairs specifying which control is used by each aircraft for pitch control.
-            Defaults to "elevator" for any unspecified aircraft.
-
-        iterations : int
-            The number of times to loop through and trim each aircraft. Multiple iterations may be required 
-            for situations where each aircraft heavily influences the others. Defaults to 1.
+        filename : str
+            File to output the results to. Defaults to no file.
 
         set_trim_state : bool
             If set to True, once trim is determined, the state of the aircraft will be set to this trim state. If
@@ -1369,99 +1365,89 @@ class Scene:
 
         if verbose: print("\nTrimming...")
 
-        # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = self._airplanes.keys()
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+        # Make sure there is only one aircraft in the scene and the wind is constant
+        aircraft_names = list(self._airplanes.keys())
+        if len(aircraft_names) != 1:
+            raise IOError("aircraft_pitch_trim() may not be used when there is more than one aircraft in the scene.")
+        try:
+            self._constant_wind
+        except:
+            raise IOError("aircraft_pitch_trim() may not be used when the wind is not constant.")
 
-        alpha_original = {}
-        controls_original = {}
+        # Get the aircraft object
+        aircraft_name = aircraft_names[0]
+        airplane_object = self._airplanes[aircraft_name]
 
-        for i in range(iterations):
-            if verbose: print("\nTrim iteration {0}".format(i))
+        # Setup output
+        if verbose:
+            print("Trimming {0} using {1}.".format(aircraft_name, pitch_control))
+            print("{0:<20}{1:<20}{2:<25}{3:<25}".format("Alpha", pitch_control, "Lift Residual", "Moment Residual"))
 
-            for aircraft_name in aircraft_names:
-                control = pitch_control.get(aircraft_name, "elevator")
-                airplane_object = self._airplanes[aircraft_name]
+        # Store the current orientation, angle of attack, and control deflection
+        v_wind = self._get_wind(airplane_object.p_bar)
+        q0 = copy.copy(airplane_object.q)
+        alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
+        controls_original = copy.copy(airplane_object.current_control_state)
 
-                if verbose:
-                    print("Trimming {0} using {1}.".format(aircraft_name, control))
-                    print("{0:<20}{1:<20}{2:<25}{3:<25}".format("Alpha", control, "Lift Residual", "Moment Residual"))
+        # Get residuals
+        R = self._get_aircraft_pitch_trim_residuals(aircraft_name)
 
-                # Store the current orientation, angle of attack, and control deflection
-                v_wind = self._get_wind(airplane_object.p_bar)
-                q0 = copy.copy(airplane_object.q)
-                alpha_original[aircraft_name],_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
-                controls_original[aircraft_name] = copy.copy(airplane_object.current_control_state)
+        # Declare initials
+        controls = copy.copy(controls_original)
+        alpha0 = copy.copy(alpha_original)
+        try:
+            delta_flap0 = copy.copy(controls_original[pitch_control])
+        except KeyError:
+            raise IOError("{0} has no {1}. Cannot be trimmed in pitch.".format(aircraft_name, control))
+        J = np.zeros((2,2))
 
-                # Get residuals
-                R = self._get_aircraft_pitch_trim_residuals(aircraft_name)
+        if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
 
-                # Declare initials
-                controls = copy.copy(controls_original[aircraft_name])
-                alpha0 = copy.copy(alpha_original[aircraft_name])
-                try:
-                    delta_flap0 = copy.copy(controls_original[aircraft_name][control])
-                except KeyError:
-                    raise IOError("{0} has no {1}. Cannot be trimmed in pitch.".format(aircraft_name, control))
-                J = np.zeros((2,2))
+        # Iterate until residuals go to zero.
+        while (abs(R)>1e-10).any():
 
-                if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
+            # Determine Jacobian
+            stab_derivs = self.aircraft_stability_derivatives()
+            cont_derivs = self.aircraft_control_derivatives()
+            J[0,0] = stab_derivs[aircraft_name]["CL,a"]
+            J[0,1] = cont_derivs[aircraft_name]["CL,d"+pitch_control]
+            J[1,0] = stab_derivs[aircraft_name]["Cm,a"]
+            J[1,1] = cont_derivs[aircraft_name]["Cm,d"+pitch_control]
 
-                # Iterate until residuals go to zero.
-                while (abs(R)>1e-10).any():
+            # Calculate update
+            delta = np.linalg.solve(J,-R)
 
+            # Update angle of attack
+            alpha1 = alpha0 + np.degrees(delta[0])
+            airplane_object.set_aerodynamic_state(alpha=alpha1)
 
-                    # Determine Jacobian
-                    stab_derivs = self.aircraft_stability_derivatives(aircraft=aircraft_name)
-                    cont_derivs = self.aircraft_control_derivatives(aircraft=aircraft_name)
-                    J[0,0] = stab_derivs[aircraft_name]["CL,a"]
-                    J[0,1] = cont_derivs[aircraft_name]["CL,d"+control]
-                    J[1,0] = stab_derivs[aircraft_name]["Cm,a"]
-                    J[1,1] = cont_derivs[aircraft_name]["Cm,d"+control]
+            # Update control
+            delta_flap1 = delta_flap0 + np.degrees(delta[1])
+            controls[pitch_control] = delta_flap1
+            airplane_object.set_control_state(controls)
 
-                    # Calculate update
-                    delta = np.linalg.solve(J,-R)
+            # Update for next iteration
+            alpha0 = alpha1
+            delta_flap0 = delta_flap1
 
-                    # Update angle of attack
-                    alpha1 = alpha0 + np.degrees(delta[0])
-                    airplane_object.set_aerodynamic_state(alpha=alpha1)
+            # Determine new residuals
+            R = self._get_aircraft_pitch_trim_residuals(aircraft_name=aircraft_name)
 
-                    # Update control
-                    delta_flap1 = delta_flap0 + np.degrees(delta[1])
-                    controls[control] = delta_flap1
-                    airplane_object.set_control_state(controls)
+            if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
 
-                    # Update for next iteration
-                    alpha0 = alpha1
-                    delta_flap0 = delta_flap1
-
-                    # Determine new residuals
-                    R = self._get_aircraft_pitch_trim_residuals(aircraft_name=aircraft_name)
-
-                    if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
-
-                trim_angles[aircraft_name] = {
-                    "alpha" : alpha1,
-                    control : delta_flap1
-                }
+        trim_angles[aircraft_name] = {
+            "alpha" : alpha1,
+            pitch_control : delta_flap1
+        }
 
         # If the user wants, set the state to the new trim state
         if set_trim_state:
-            for aircraft_name in aircraft_names:
-                self._airplanes[aircraft_name].set_aerodynamic_state(alpha=trim_angles[aircraft_name]["alpha"])
-                control_name = pitch_control.get(aircraft_name, "elevator")
-                self.set_aircraft_control_state({control_name : trim_angles[aircraft_name][control_name]}, aircraft_name=aircraft_name)
+            airplane_object.set_aerodynamic_state(alpha=alpha1)
+            self.set_aircraft_control_state({pitch_control : delta_flap1}, aircraft_name=aircraft_name)
 
         else: # Return to the original state
-            for aircraft_name in aircraft_names:
-                self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_original[aircraft_name])
-                self.set_aircraft_control_state(controls_original[aircraft_name], aircraft_name=aircraft_name)
+            airplane_object.set_aerodynamic_state(alpha=alpha_original)
+            self.set_aircraft_control_state(controls_original, aircraft_name=aircraft_name)
 
         # Output results to file
         if filename is not None:
@@ -1491,7 +1477,7 @@ class Scene:
         return 0.5*rho*V*V
 
 
-    def aircraft_aero_center(self, aircraft=None):
+    def aircraft_aero_center(self, aircraft=None, filename=None, verbose=False):
         """Returns the location of the aerodynamic center of the aircraft at the current state.
 
         Parameters
@@ -1499,6 +1485,14 @@ class Scene:
         aircraft : str or list
             The name(s) of the aircraft to determine the aerodynamic center 
             of. Defaults to all aircraft in the scene.
+
+        filename : str
+            Name of a .json file to output the aerodynamic center locations to.
+            Defaults to no file.
+
+        verbose : bool
+            If set to true, information will be output about the progress of Newton's method. Defaults to 
+            False.
 
         Returns
         -------
@@ -1520,10 +1514,12 @@ class Scene:
 
         # Loop through aircraft
         for aircraft_name in aircraft_names:
+            if verbose: print("Calculating the aerodynamic center for {0}...".format(aircraft_name))
             airplane_object = self._airplanes[aircraft_name]
             v_wind = self._get_wind(airplane_object.p_bar)
 
             # Calculate derivatives
+            if verbose: print("Calculating derivatives...")
             # Original state
             FM1 = self.solve_forces(dimensional=False)[aircraft_name]["total"]
 
@@ -1552,6 +1548,7 @@ class Scene:
             Cm_a2 = (FM2["Cm"]-2.0*FM1["Cm"]+FM0["Cm"])/delta**2
 
             # Calculate locations (Mech of Flight Eqs. 4.8.29-31)
+            if verbose: print("Calculating AC location...")
             denom = CN_a*CA_a2-CA_a*CN_a2
             x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom
             z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom
@@ -1562,6 +1559,10 @@ class Scene:
             # Redimensionalize
             l_ref = airplane_object.l_ref_lon
             ac_loc[aircraft_name] = [-x_ac*l_ref, 0.0, -z_ac*l_ref]
+
+        if filename is not None:
+            with open(filename, 'w') as output_handle:
+                json.dump(ac_loc, output_handle, indent=4)
 
         return ac_loc
 

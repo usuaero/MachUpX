@@ -44,8 +44,5 @@ if __name__=="__main__":
     FM = scene.solve_forces(non_dimensional=False)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
 
-    ac_loc = scene.aircraft_aero_center()
-    print(json.dumps(ac_loc["test_plane"], indent=4))
-
     derivs = scene.aircraft_derivatives()
     print(json.dumps(derivs["test_plane"]["stability"], indent=4))
