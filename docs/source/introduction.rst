@@ -8,7 +8,3 @@ MachUpX Has been built with both simple aerodynamic analysis and full-state flig
 Those users already familiar with previous versions of MachUp (Pro/4/5/Py) will find the interface with MachUpX to be similar. However, attempts have not been made to ensure compatibility between previous versions of MachUp and MachUpX. If the user wishes to use analysis scripts/input files from previous versions of MachUp with MachUpX, modifications will have to be made. For this reason, significant effort has been made to provide clear and thorough documentation for MachUpX.
 
 Examples for using the MachUpX API/command line interface can be found in the examples/ directory of the source code.
-
-Unlike previous versions of MachUp, MachUpX is in active development, and we encourage users to submit bug reports on the Github repo. We will continually push bug fixes to the 'master' branch. Suggested improvements are also welcome but will be developed in separate branches. When a new version is ready to be released, we will merge all developed improvements into the 'master' branch.
-
-For questions, please contact doug.hunsaker@usu.edu or cory.goates@aggiemail.usu.edu.
