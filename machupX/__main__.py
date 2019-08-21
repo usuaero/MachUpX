@@ -14,7 +14,7 @@ def _run_interactive_mode():
     while True:
         command = input("MX>>")
 
-        print('Sorry, interactive mode is not yet functional. Try back later.')
+        print('Sorry, interactive mode is not yet available. Try back later.')
         break
         
         if command == 'q':
@@ -89,6 +89,10 @@ def _run_prescribed_analyses(input_filename):
             print("Calculating location of aerodynamic center...")
             scene.aircraft_aero_center(aircraft=aircraft, filename=filename, verbose=verbose)
 
+        # Unrecognized command
+        else:
+            raise RuntimeWarning("{0} is not recognized as a valid run command.".format(key))
+
 
 if __name__=="__main__":
     
@@ -105,21 +109,28 @@ if __name__=="__main__":
     print('|               BB           BB               |')
     print('|              BB        BBBBBB               |')
     print('|                                             |')
-    print('|                MachUpX 0.1                  |')
+    print('|                MachUpX 1.0                  |')
     print('|                                             |')
     print('|        (c) USU Aero Lab, LLC, 2019          |')
     print('|                                             |')
     print('|          This software comes with           |')
     print('| ABSOLUTELY NO WARRANTY EXPRESSED OR IMPLIED |')
     print('|                                             |')
-    print('|           Submit bug reports on             |')
-    print('|                  github                     |')
+    print('|        Submit bug reports on Github         |')
+    print('|                                             |')
     print('-----------------------------------------------')
 
     # Check for interactive mode
     if "-i" in sys.argv:
         _run_interactive_mode()
+
     else:
         # Get input filename from command line arguments
         input_filename = sys.argv[-1]
+
+        # Check for valid input
+        if ".json" not in input_filename:
+            raise IOError("Please specify a .json input file (got {0}).".format(input_filename))
+
+        # Run
         _run_prescribed_analyses(input_filename)
