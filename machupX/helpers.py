@@ -4,14 +4,14 @@ import os
 import numpy as np
 import copy
 
-def _check_filepath(input_filename, correct_ext):
+def check_filepath(input_filename, correct_ext):
     # Check correct file extension and that file exists
     if correct_ext not in input_filename:
         raise IOError("File {0} has the wrong extension. Expected a {1} file.".format(input_filename, correct_ext))
     if not os.path.exists(input_filename):
         raise IOError("Cannot find file {0}.".format(input_filename))
 
-def _convert_units(in_value, units, system):
+def convert_units(in_value, units, system):
     # Converts the given value from the specified units to the default for the system chosen
     if units == "-":
         return in_value
@@ -67,9 +67,8 @@ def _convert_units(in_value, units, system):
     except KeyError:
         raise IOError("Improper units specified; {0} is not an allowable unit definition.".format(units))
 
-_vectorized_convert_units = np.vectorize(_convert_units)
 
-def _import_value(key, dict_of_vals, system, default_value):
+def import_value(key, dict_of_vals, system, default_value):
     # Imports value from a dictionary. Handles importing arrays from files and 
     # unit conversions. If default_value is -1, then this value must be 
     # specified in the input (i.e. an error is thrown if -1 is returned).
@@ -87,7 +86,7 @@ def _import_value(key, dict_of_vals, system, default_value):
         return_value = float(val)
 
     elif isinstance(val, str) and ".csv" in val: # Filepath containing array
-        _check_filepath(val, ".csv")
+        check_filepath(val, ".csv")
         with open(val, 'r') as array_file:
             val = np.genfromtxt(array_file, delimiter=',', dtype=None, encoding='utf-8')
             is_array = True
@@ -101,13 +100,13 @@ def _import_value(key, dict_of_vals, system, default_value):
 
         elif val[0] == "elliptic": # User wants an elliptic chord distribution
             if len(val) == 3: # Unit specified
-                root_chord = _convert_units(val[1], val[2], system)
+                root_chord = convert_units(val[1], val[2], system)
             else:
                 root_chord = val[1]
             return_value = ("elliptic", root_chord)
         
         elif isinstance(val[-1], str): # Float or vector with units
-            converted_val = _vectorized_convert_units(val[:-1], val[-1], system)
+            converted_val = vectorized_convert_units(val[:-1], val[-1], system)
 
             try:
                 return_value = converted_val.item() # Float
@@ -128,7 +127,7 @@ def _import_value(key, dict_of_vals, system, default_value):
             val = np.asarray(val)
             units = val[-1,:]
             data = val[:-1,:].astype(float)
-            return_value = _vectorized_convert_units(data, units, system)
+            return_value = vectorized_convert_units(data, units, system)
 
         else: # Array without units
             #TODO: Allow this to handle arrays specifying a distribution of airfoils
@@ -137,7 +136,10 @@ def _import_value(key, dict_of_vals, system, default_value):
     return return_value
 
 
-def _quaternion_transform(q, v):
+vectorized_convert_units = np.vectorize(convert_units)
+
+
+def quaternion_transform(q, v):
     # Transforms the vector v from the global frame to a frame having an orientation described by q.
     if len(v.shape) == 1:
         v = v[np.newaxis]
@@ -164,7 +166,7 @@ def _quaternion_transform(q, v):
     return v_trans
 
 
-def _quaternion_inverse_transform(q, v):
+def quaternion_inverse_transform(q, v):
     # Transforms the vector v from a frame having an orientation described by q to the global frame.
     if len(v.shape) == 1:
         v = v[np.newaxis]
@@ -191,7 +193,7 @@ def _quaternion_inverse_transform(q, v):
     return v_trans
 
 
-def _quat_times(quat0, quat1):
+def quat_times(quat0, quat1):
     # Multiplies the two quaternions together and returns the resulting quaternion. Can handle being passed a
     # vector
 
@@ -216,7 +218,7 @@ def _quat_times(quat0, quat1):
     return q
 
 
-def _euler_to_quaternion(E):
+def euler_to_quaternion(E):
     # Converts the Euler angles phi, theta, psi to an orientation quaternion
     q = np.zeros(4)
 
@@ -237,7 +239,7 @@ def _euler_to_quaternion(E):
     return q
 
 
-def _quaternion_to_euler(q):
+def quaternion_to_euler(q):
     # Converts an orientation quaternion to Euler angles
     E = np.zeros(3)
 

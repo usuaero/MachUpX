@@ -1,4 +1,4 @@
-from .helpers import _check_filepath, _convert_units, _vectorized_convert_units, _import_value, _quaternion_transform, _quaternion_inverse_transform
+from .helpers import *
 from .airplane import Airplane
 from .standard_atmosphere import StandardAtmosphere
 
@@ -42,7 +42,7 @@ class Scene:
 
         # File
         if isinstance(scene_input, str):
-            _check_filepath(scene_input,".json")
+            check_filepath(scene_input,".json")
             with open(scene_input) as input_json_handle:
                 self._input_dict = json.load(input_json_handle)
 
@@ -83,7 +83,7 @@ class Scene:
         # Load value from dictionary
         input_dict = self._input_dict["scene"].get("atmosphere", {})
         default_density = self._atmos.rho(0.0)
-        rho = _import_value("rho", input_dict, self._unit_sys, default_density)
+        rho = import_value("rho", input_dict, self._unit_sys, default_density)
 
         # Constant value
         if isinstance(rho, float):
@@ -128,7 +128,7 @@ class Scene:
         # Load value from dict
         input_dict = self._input_dict["scene"].get("atmosphere", {})
         default_wind = [0,0,0]
-        V_wind = _import_value("V_wind", input_dict, self._unit_sys, default_wind)
+        V_wind = import_value("V_wind", input_dict, self._unit_sys, default_wind)
 
         if isinstance(V_wind, np.ndarray):
 
@@ -241,17 +241,17 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Geometries
-                self._PC[cur_slice,:] = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, segment_object.control_points)
+                self._PC[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, segment_object.control_points)
                 self._c_bar[cur_slice] = segment_object.c_bar_cp
                 self._dS[cur_slice] = segment_object.dS
 
                 node_points = segment_object.nodes
-                self._P0[cur_slice,:] = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, node_points[:-1,:])
-                self._P1[cur_slice,:] = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, node_points[1:,:])
+                self._P0[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, node_points[:-1,:])
+                self._P1[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, node_points[1:,:])
 
-                self._u_a[cur_slice,:] = _quaternion_inverse_transform(airplane_object.q, segment_object.u_a_cp)
-                self._u_n[cur_slice,:] = _quaternion_inverse_transform(airplane_object.q, segment_object.u_n_cp)
-                self._u_s[cur_slice,:] = _quaternion_inverse_transform(airplane_object.q, segment_object.u_s_cp)
+                self._u_a[cur_slice,:] = quaternion_inverse_transform(airplane_object.q, segment_object.u_a_cp)
+                self._u_n[cur_slice,:] = quaternion_inverse_transform(airplane_object.q, segment_object.u_n_cp)
+                self._u_s[cur_slice,:] = quaternion_inverse_transform(airplane_object.q, segment_object.u_s_cp)
 
                 index += num_cps
 
@@ -330,7 +330,7 @@ class Scene:
                 cp_v_wind = self._get_wind(self._PC[cur_slice,:])
 
                 # Due to aircraft rotation (about the aircraft's center of gravity)
-                cp_v_rot = _quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, segment_object.control_points-airplane_object.CG))
+                cp_v_rot = quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, segment_object.control_points-airplane_object.CG))
 
                 self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind+cp_v_rot
                 cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
@@ -344,11 +344,11 @@ class Scene:
                 # Freestream velocity at vortex nodes
                 # Due to wind
                 body_node_locs = segment_object.nodes
-                global_node_locs = airplane_object.p_bar + _quaternion_inverse_transform(airplane_object.q, body_node_locs)
+                global_node_locs = airplane_object.p_bar + quaternion_inverse_transform(airplane_object.q, body_node_locs)
                 node_v_wind = self._get_wind(global_node_locs)
 
                 # Due to aircraft rotation (about the aircraft's center of gravity)
-                node_v_rot = _quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, body_node_locs-airplane_object.CG))
+                node_v_rot = quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, body_node_locs-airplane_object.CG))
 
                 node_v_inf = self._v_trans[i,:]+node_v_wind+node_v_rot
                 P0_v_inf[cur_slice,:] = node_v_inf[:-1,:]
@@ -561,7 +561,7 @@ class Scene:
             # Determine freestream vector in body-fixed frame
             v_inf = self._v_trans[i,:] + self._get_wind(airplane_object.p_bar)
             V_inf = np.linalg.norm(v_inf)
-            u_inf = _quaternion_transform(airplane_object.q, (v_inf/V_inf).flatten())
+            u_inf = quaternion_transform(airplane_object.q, (v_inf/V_inf).flatten())
 
             # Determine reference parameters
             if non_dimensional:
@@ -577,7 +577,7 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Radii from control points to the aircraft's center of gravity
-                r_CG[cur_slice,:] = self._PC[cur_slice,:]-(airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, airplane_object.CG))[np.newaxis,:]
+                r_CG[cur_slice,:] = self._PC[cur_slice,:]-(airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, airplane_object.CG))[np.newaxis,:]
 
                 # Determine viscid force
                 # Get drag coef and redimensionalize
@@ -586,7 +586,7 @@ class Scene:
 
                 # Determine vector and translate back into body-fixed
                 dF_b_visc = dD[:,np.newaxis]*u[cur_slice]
-                F_b_visc = _quaternion_transform(airplane_object.q, np.sum(dF_b_visc, axis=0))
+                F_b_visc = quaternion_transform(airplane_object.q, np.sum(dF_b_visc, axis=0))
                 L_visc, D_visc, S_visc = self._rotate_aero_forces(F_b_visc, u_inf)
 
                 # Store
@@ -609,7 +609,7 @@ class Scene:
 
                 # Inviscid
                 # Determine vector and translate back into body-fixed
-                F_b_inv = _quaternion_transform(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
+                F_b_inv = quaternion_transform(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
                 L_inv, D_inv, S_inv = self._rotate_aero_forces(F_b_inv, u_inf)
 
                 # Store
@@ -633,7 +633,7 @@ class Scene:
                 # Determine viscid moment
                 # Determine vector and rotate back to body-fixed
                 dM_visc = dD[:,np.newaxis]*np.cross(r_CG[cur_slice], u[cur_slice])
-                M_b_visc = _quaternion_transform(airplane_object.q, np.sum(dM_visc, axis=0))
+                M_b_visc = quaternion_transform(airplane_object.q, np.sum(dM_visc, axis=0))
 
                 # Store
                 if non_dimensional:
@@ -654,7 +654,7 @@ class Scene:
                 dM_section = -(self._q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*self._Cm[cur_slice])[:,np.newaxis]*self._u_s[cur_slice]
 
                 # Rotate back to body-fixed
-                M_b_inv = _quaternion_transform(airplane_object.q, np.sum(dM_section+dM_vortex, axis=0))
+                M_b_inv = quaternion_transform(airplane_object.q, np.sum(dM_section+dM_vortex, axis=0))
 
                 #Store
                 if non_dimensional:
@@ -931,7 +931,7 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Get the outline points and transform to earth-fixed
-                points = airplane_object.p_bar+_quaternion_inverse_transform(airplane_object.q, segment_object.get_outline_points())
+                points = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, segment_object.get_outline_points())
 
                 # Decide if colors matter and the segment names need to be stored
                 if show_legend:

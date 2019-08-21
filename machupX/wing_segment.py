@@ -1,9 +1,10 @@
-from .helpers import _check_filepath,_vectorized_convert_units,_import_value
+from .helpers import *
 
 import json
 import numpy as np
 import scipy.integrate as integ
 import scipy.interpolate as interp
+
 
 class WingSegment:
     """A class defining a segment of a lifting surface.
@@ -69,7 +70,7 @@ class WingSegment:
 
         # Set global params
         self.is_main = self._input_dict.get("is_main", None)
-        self.b = _import_value("semispan", self._input_dict, self._unit_sys, None)
+        self.b = import_value("semispan", self._input_dict, self._unit_sys, None)
         self._N = self._input_dict.get("grid", 40)
         self._use_clustering = self._input_dict.get("use_clustering", True)
 
@@ -111,25 +112,25 @@ class WingSegment:
         # Sets getters for functions which are a function of span
 
         # Twist
-        twist_data = _import_value("twist", self._input_dict, self._unit_sys, 0)
+        twist_data = import_value("twist", self._input_dict, self._unit_sys, 0)
         self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True)
 
         # Dihedral
-        dihedral_data = _import_value("dihedral", self._input_dict, self._unit_sys, 0)
+        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, 0)
         self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True)
 
         # Sweep
-        sweep_data = _import_value("sweep", self._input_dict, self._unit_sys, 0)
+        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, 0)
         self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True)
 
         # Chord
-        chord_data = _import_value("chord", self._input_dict, self._unit_sys, 1.0)
+        chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0)
         if isinstance(chord_data, tuple): # Elliptic distribution
             self.get_chord = self._build_elliptic_chord_dist(chord_data[1])
         else: # Linear distribution
             self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
 
-        ac_offset_data = _import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+        ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
 
@@ -191,7 +192,7 @@ class WingSegment:
 
         # Get which airfoils are specified for this segment
         default_airfoil = list(airfoil_dict.keys())[0]
-        airfoil = _import_value("airfoil", self._input_dict, self._unit_sys, default_airfoil)
+        airfoil = import_value("airfoil", self._input_dict, self._unit_sys, default_airfoil)
 
         self._airfoils = []
         self._airfoil_spans = []
@@ -249,7 +250,7 @@ class WingSegment:
             self._cp_in_control_surface = (self._cp_span_locs >= root_span) & (self._cp_span_locs <= tip_span)
 
             # Determine the flap chord fractions at each control point
-            chord_data = _import_value("chord_fraction", control_dict, self._unit_sys, 0.25)
+            chord_data = import_value("chord_fraction", control_dict, self._unit_sys, 0.25)
             if isinstance(chord_data, float): # Constant chord fraction
                 self._cp_flap_chord_frac[self._cp_in_control_surface] = chord_data
             else: # Variable chord fraction
@@ -771,7 +772,7 @@ class WingSegment:
         # Determine flap deflection
         self._delta_flap = 0.0
         for key in control_state:
-            deflection = _import_value(key, control_state, self._unit_sys, 0.0)
+            deflection = import_value(key, control_state, self._unit_sys, 0.0)
             if self._side == "right" or control_symmetry[key]:
                 self._delta_flap += deflection*self._control_mixing.get(key, 0.0)
             else:

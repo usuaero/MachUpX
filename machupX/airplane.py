@@ -1,4 +1,4 @@
-from .helpers import _check_filepath, _import_value, _quaternion_transform, _quaternion_inverse_transform, _euler_to_quaternion, _quaternion_to_euler
+from .helpers import *
 from .wing_segment import WingSegment
 from .airfoil import Airfoil
 
@@ -59,7 +59,7 @@ class Airplane:
     def _load_params(self, airplane_input):
         if isinstance(airplane_input, str):
             # Load JSON object
-            _check_filepath(airplane_input, ".json")
+            check_filepath(airplane_input, ".json")
             with open(airplane_input) as json_handle:
                 self._input_dict = json.load(json_handle)
         elif isinstance(airplane_input, dict):
@@ -68,11 +68,11 @@ class Airplane:
             raise IOError("{0} is not an allowed airplane definition. Must be path or dictionary.".format(airplane_input))
 
         # Set airplane global params
-        self.CG = _import_value("CG", self._input_dict, self._unit_sys, [0,0,0])
-        self.W = _import_value("weight", self._input_dict, self._unit_sys, None)
-        self.S_w = _import_value("area", self._input_dict.get("reference", {}), self._unit_sys, -1)
-        self.l_ref_lon = _import_value("longitudinal_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
-        self.l_ref_lat = _import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
+        self.CG = import_value("CG", self._input_dict, self._unit_sys, [0,0,0])
+        self.W = import_value("weight", self._input_dict, self._unit_sys, None)
+        self.S_w = import_value("area", self._input_dict.get("reference", {}), self._unit_sys, -1)
+        self.l_ref_lon = import_value("longitudinal_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
+        self.l_ref_lat = import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
 
 
     def set_state(self, state, v_wind=np.array([0, 0, 0])):
@@ -88,15 +88,15 @@ class Airplane:
             coordinates. Defaults to [0.0, 0.0, 0.0].
         """
 
-        self.state_type = _import_value("type", state, self._unit_sys, None)
-        self.p_bar = _import_value("position", state, self._unit_sys, [0.0, 0.0, 0.0])
-        self.w = _import_value("angular_rates", state, self._unit_sys, [0.0, 0.0, 0.0])
+        self.state_type = import_value("type", state, self._unit_sys, None)
+        self.p_bar = import_value("position", state, self._unit_sys, [0.0, 0.0, 0.0])
+        self.w = import_value("angular_rates", state, self._unit_sys, [0.0, 0.0, 0.0])
 
         # Set up orientation quaternion
-        self.q = _import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
+        self.q = import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
 
         if self.q.shape[0] == 3: # Euler angles
-            self.q = _euler_to_quaternion(self.q)
+            self.q = euler_to_quaternion(self.q)
 
         elif self.q.shape[0] == 4: # Quaternion
             # Check magnitude
@@ -113,7 +113,7 @@ class Airplane:
                 raise IOError("Alpha and beta are not allowed as part of a rigid-body state specification.")
 
             # Set up velocity
-            self.v = _import_value("velocity", state, self._unit_sys, None)# The user has specified translational velocity in flat-earth coordinates, so wind doesn't matter
+            self.v = import_value("velocity", state, self._unit_sys, None)# The user has specified translational velocity in flat-earth coordinates, so wind doesn't matter
 
             # Check it is a vector
             if not isinstance(self.v, np.ndarray):
@@ -122,13 +122,13 @@ class Airplane:
         # Handle aerodynamic definition of velocity
         elif self.state_type == "aerodynamic":
 
-            v_value = _import_value("velocity", state, self._unit_sys, None)
+            v_value = import_value("velocity", state, self._unit_sys, None)
 
             # User has given a velocity magnitude, so alpha and beta are also needed
             if isinstance(v_value, float):
 
-                alpha = _import_value("alpha", state, self._unit_sys, 0.0)
-                beta = _import_value("beta", state, self._unit_sys, 0.0)
+                alpha = import_value("alpha", state, self._unit_sys, 0.0)
+                beta = import_value("beta", state, self._unit_sys, 0.0)
 
                 self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking
                 self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
@@ -141,7 +141,7 @@ class Airplane:
                     raise IOError("Alpha and beta are not allowed when the freestream velocity is a vector.")
 
                 # Transform to earth-fixed coordinates
-                self.v = v_wind+_quaternion_inverse_transform(self.q, v_value)
+                self.v = v_wind+quaternion_inverse_transform(self.q, v_value)
 
             else:
                 raise IOError("{0} is not an allowable velocity definition.".format(v_value))
@@ -172,7 +172,7 @@ class Airplane:
             Magnitude of the freestream velocity
         """
         # Determine velocity relative to the wind in the body-fixed frame
-        v = _quaternion_transform(self.q, self.v-v_wind)
+        v = quaternion_transform(self.q, self.v-v_wind)
 
         # Calculate values
         alpha = np.degrees(np.arctan2(v[2], v[0]))
@@ -227,7 +227,7 @@ class Airplane:
         u_inf_b = v_inf_b/np.linalg.norm(v_inf_b)
 
         # Transform to earth-fixed coordinates
-        self.v = v_wind+_quaternion_inverse_transform(self.q, v_inf_b)
+        self.v = v_wind+quaternion_inverse_transform(self.q, v_inf_b)
 
 
     def _initialize_controls(self, init_control_state):
@@ -369,7 +369,7 @@ class Airplane:
 
         # Load airfoil database from separate file
         if isinstance(airfoils, str):
-            _check_filepath(airfoils, ".json")
+            check_filepath(airfoils, ".json")
             with open(airfoils, 'r') as airfoil_db_handle:
                 airfoil_dict = json.load(airfoil_db_handle)
 
