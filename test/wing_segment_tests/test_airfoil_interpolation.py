@@ -70,7 +70,7 @@ def test_variable_airfoil_section_get_lift():
     for key in airplane_dict["wings"]:
         airplane_dict["wings"][key]["airfoil"] = [[0.0, "NACA_2410"],
                                                   [1.0, "NACA_0010"]]
-        airplane_dict["wings"][key]["grid"] = 5
+        airplane_dict["wings"][key]["grid"]["N"] = 5
 
     airplane_state = input_dict["scene"]["aircraft"].get("test_plane")
     state = airplane_state.get("state", {})
@@ -109,7 +109,7 @@ def test_variable_airfoil_section_get_drag():
     for key in airplane_dict["wings"]:
         airplane_dict["wings"][key]["airfoil"] = [[0.0, "NACA_2410"],
                                                   [1.0, "NACA_0010"]]
-        airplane_dict["wings"][key]["grid"] = 5
+        airplane_dict["wings"][key]["grid"]["N"] = 5
 
     airplane_state = input_dict["scene"]["aircraft"].get("test_plane")
     state = airplane_state.get("state", {})
@@ -149,7 +149,7 @@ def test_variable_airfoil_section_get_moment():
     for key in airplane_dict["wings"]:
         airplane_dict["wings"][key]["airfoil"] = [[0.0, "NACA_2410"],
                                                   [1.0, "NACA_0010"]]
-        airplane_dict["wings"][key]["grid"] = 5
+        airplane_dict["wings"][key]["grid"]["N"] = 5
 
     airplane_state = input_dict["scene"]["aircraft"].get("test_plane")
     state = airplane_state.get("state", {})

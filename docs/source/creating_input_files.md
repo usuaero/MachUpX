@@ -250,7 +250,7 @@ Describes an aircraft. Stored as a .json file
 >>**"<AIRFOIL_NAME>" : dict**
 >>
 >>>**"type" : string**
->>>>The type of information describing the airfoil. Can be "linear" or "nonlinear". If "nonlinear", then "path" must give the location of an airfoil data file as described in the next section of this document. If "linear", the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results.
+>>>>The type of information describing the airfoil. Can be "linear" and the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results.
 >>>
 >>>**"aL0" : float, optional**
 >>>>The zero-lift angle of attack in radians. Defaults to 0.0.
@@ -277,7 +277,7 @@ Describes an aircraft. Stored as a .json file
 >>>>Maximum lift coefficient. Defaults to infinity.
 >>>
 >>>**"path" : string, optional**
->>>>Path to file containing either a JSON object describing the airfoil using the above keys or tabulated data of airfoil coefficients as a function of angle of attack and Reynolds number (described as part of the following key).
+>>>>Path to file containing a JSON object describing the airfoil using the above keys.
 >
 >**"wing_segments" : dict**
 >>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the /examples directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface.
@@ -343,11 +343,20 @@ Describes an aircraft. Stored as a .json file
 >>>**"airfoil" : string or array, optional**
 >>>>Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined under "airfoils" in this object. If specified as an array, the array gives the airfoil as a function of span. The first column gives the span location, as with "twist", and the second column gives the name of the airfoil at that location. Can also be the path to a csv file containing the airfoil distribution formatted in columns, as with the array. Defaults to the name of the first airfoil listed under "airfoils". Cannot have units.
 >>>
->>>**"grid" : uint, optional**
->>>>Number of horseshoe vortices used to model the wing segment in the numerical lifting-line algorithm. This is the number of horseshoe vortices per semispan. Defaults to 40.
->>>
->>>**"use_clustering" : bool, optional**
->>>>If true, control points will be distributed using cosine clusering. Otherwise, points will be distributed evenly. Defaults to true.
+>>>**"grid" : dict, optional**
+>>>>Describes the distribution of control points along the wing.
+>>>>
+>>>>**"N" : int, optional**
+>>>>>Number of horseshoe vortices used to model the wing segment in the numerical lifting-line algorithm. This is the number of horseshoe vortices per semispan. Defaults to 40.
+>>>>
+>>>>**"use_clustering" : bool, optional**
+>>>>>If true, control points will be distributed using cosine clusering. Otherwise, points will be distributed evenly. Defaults to true.
+>>>>
+>>>>**"flap_edge_cluster" : bool, optional**
+>>>>>If true, control points will be clustered around the edges of control surfaces. Has no effect if "use_clustering" is false. Defaults to true.
+>>>>
+>>>>**"cluster_points" : list, optional**
+>>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Defaults to no extra clustering.
 >>>
 >>>**"control_surface" : dict, optional**
 >>>>Defines a control surface on the trailing edge of the wing segment. Uses Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
