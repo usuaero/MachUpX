@@ -1,7 +1,7 @@
 # Input Files
 This document is meant to be a complete reference for creating MachUp input files. The basic input file for MachUp contains a JSON object which describes the scene and which aircraft are in the scene, along with the state of those aircraft in the scene. A separate JSON object is used to specify the geometry and controls of each aircraft. These aircraft objects can reference other files that store information on airfoil properties, chord distributions, sweep, etc., as will be discussed. At a minimum, two JSON objects must be specified, a scene object and an aircraft object.
 
-## Input Format
+## JSON Format
 The basic structure of a JSON object is a set of key-value pairs, analogous to a Python dict. See the example input files for an example of the exact format. The following sections describe the structure of the JSON objects used to interface with MachUp. Only one JSON object is specified per .json file. When using the JSON objects, only the scene object is passed to MachUp. As long as the paths to all other JSON objects are properly specified in the scene object, MachUp will automatically load all other required objects.
 
 ## Units
@@ -140,7 +140,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>Threshold for convergence of the nonlinear solution. The nonlinear solver is considered complete once the square root of the sum of the squared residuals falls below this threshold. Defaults to 1e-10. Not necesary for linear solver.
 >>
 >>**"relaxation" : float, optional**
->>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 0.9. Not necesary for linear solver.
+>>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 1.0. Not necesary for linear solver.
 >>
 >>**"max_iterations" : int, optional**
 >>>Maximum number of iterations for the nonlinear solver. Defaults to 100. Not necesary for linear solver.

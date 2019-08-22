@@ -130,6 +130,7 @@ class WingSegment:
         else: # Linear distribution
             self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
 
+        # Aerodynamic center offset
         ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
@@ -177,7 +178,7 @@ class WingSegment:
 
 
     def _build_elliptic_chord_dist(self, root_chord):
-        # Creates a getter which will return the chord length as a function of span fraction.
+        # Creates a getter which will return the chord length as a function of span fraction according to an elliptic distribution
         self._root_chord = root_chord
 
         def getter(span_frac):
@@ -204,6 +205,7 @@ class WingSegment:
             if not airfoil in list(airfoil_dict.keys()):
                 raise IOError("'{0}' must be specified in 'airfoils'.".format(airfoil))
 
+            # Just put the same airfoil at the root and the tip
             self._airfoils.append(airfoil_dict[airfoil])
             self._airfoils.append(airfoil_dict[airfoil])
             self._airfoil_spans.append(0.0)
@@ -214,6 +216,7 @@ class WingSegment:
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
             self._airfoil_data = np.empty((airfoil.shape[0], airfoil.shape[1]+1), dtype=None)
 
+            # Store each airfoil and its span location
             for row in airfoil:
 
                 name = row[1].item()
@@ -234,6 +237,8 @@ class WingSegment:
 
     def _setup_control_surface(self, control_dict):
         # Sets up the control surface on this wing segment
+
+        # These values are needed whether or not a control surface exists
         self._delta_flap = 0.0 # Positive deflection is down
         self._has_control_surface = False
         self._Cm_delta_flap = 0.0
@@ -325,7 +330,7 @@ class WingSegment:
 
         """
 
-        # This can only be called by the origin segment
+        # This can only be called on the origin segment
         if self.ID != 0:
             raise RuntimeError("Please add segments only at the origin segment.")
 
@@ -365,7 +370,7 @@ class WingSegment:
 
 
     def _get_attached_wing_segment(self, wing_segment_name):
-        # Returns a reference to the specified wing segment. ONLY FOR TESTING!
+        # Returns a reference to the specified wing segment.
         try:
             # See if it is attached to this wing segment
             return self._attached_segments[wing_segment_name]
@@ -417,6 +422,7 @@ class WingSegment:
             converted = False
             span_array = np.asarray(span)
 
+        # Integrate sweep and dihedral along the span to get the location
         ds = np.zeros((span_array.shape[0],3))
         for i, span in enumerate(span_array):
             ds[i,0] = integ.quad(lambda s : -np.tan(self.get_sweep(s)), 0, span)[0]*self.b
@@ -441,11 +447,17 @@ class WingSegment:
             span_array = np.asarray(span)
 
         twist = self.get_twist(span_array)
+        dihedral = self.get_dihedral(span_array)
         
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
 
-        return np.asarray([-C_twist, np.zeros(span_array.shape[0]), S_twist]).T
+        if self._side == "left":
+            return np.asarray([-C_twist, -S_twist*S_dihedral, S_twist*C_dihedral]).T
+        else:
+            return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
 
 
     def _get_normal_vec(self, span):
@@ -464,9 +476,9 @@ class WingSegment:
         S_dihedral = np.sin(dihedral)
 
         if self._side == "left":
-            return np.asarray([-S_twist*C_dihedral, S_dihedral, -C_twist*C_dihedral]).T
+            return np.asarray([-S_twist, C_twist*S_dihedral, -C_twist*C_dihedral]).T
         else:
-            return np.asarray([-S_twist*C_dihedral, -S_dihedral, -C_twist*C_dihedral]).T
+            return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
 
 
     def _get_span_vec(self, span):
@@ -482,9 +494,9 @@ class WingSegment:
         S_dihedral = np.sin(dihedral)
 
         if self._side == "left":
-            return np.asarray([np.zeros(self._N), -C_dihedral, -S_dihedral]).T
+            return np.asarray([np.zeros(span_array.size), -C_dihedral, -S_dihedral]).T
         else:
-            return np.asarray([np.zeros(self._N), -C_dihedral, S_dihedral]).T
+            return np.asarray([np.zeros(span_array.size), -C_dihedral, S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):

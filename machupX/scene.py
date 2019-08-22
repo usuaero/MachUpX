@@ -58,7 +58,7 @@ class Scene:
         solver_params = self._input_dict.get("solver", {})
         self._nonlinear_solver = solver_params.get("type", "linear") == "nonlinear"
         self._solver_convergence = solver_params.get("convergence", 1e-10)
-        self._solver_relaxation = solver_params.get("relaxation", 0.9)
+        self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
 
         # Store unit system
@@ -304,7 +304,7 @@ class Scene:
 
         # Velocities at control points
         self._cp_v_inf = np.zeros((self._N,3))
-        cp_V_inf = np.zeros(self._N)
+        self._cp_V_inf = np.zeros(self._N)
         cp_u_inf = np.zeros((self._N,3))
 
         # Aircraft velocities
@@ -333,8 +333,8 @@ class Scene:
                 cp_v_rot = quaternion_inverse_transform(airplane_object.q, -np.cross(airplane_object.w, segment_object.control_points-airplane_object.CG))
 
                 self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind+cp_v_rot
-                cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
-                cp_u_inf[cur_slice,:] = self._cp_v_inf[cur_slice]/cp_V_inf[cur_slice,np.newaxis]
+                self._cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
+                cp_u_inf[cur_slice,:] = self._cp_v_inf[cur_slice]/self._cp_V_inf[cur_slice,np.newaxis]
 
                 # Atmospheric density, speed of sound, and viscosity
                 self._rho[cur_slice] = self._get_density(self._PC[cur_slice,:])
@@ -356,8 +356,8 @@ class Scene:
 
                 # Airfoil parameters
                 alpha_approx[cur_slice] = np.einsum('ij,ij->i', cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
-                self._Re[cur_slice] = cp_V_inf[cur_slice]*self._c_bar[cur_slice]/self._nu[cur_slice]
-                self._M[cur_slice] = cp_V_inf[cur_slice]/self._a[cur_slice]
+                self._Re[cur_slice] = self._cp_V_inf[cur_slice]*self._c_bar[cur_slice]/self._nu[cur_slice]
+                self._M[cur_slice] = self._cp_V_inf[cur_slice]/self._a[cur_slice]
 
                 airfoil_params = np.concatenate((alpha_approx[cur_slice,np.newaxis], self._Re[cur_slice,np.newaxis], self._M[cur_slice,np.newaxis]), axis=1)
 
@@ -395,7 +395,7 @@ class Scene:
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = cp_V_inf*CLa*self._dS*(alpha_approx-self._aL0+esp_f_delta_f)
+        b = self._cp_V_inf*CLa*self._dS*(alpha_approx-self._aL0+esp_f_delta_f)
 
         # Solve
         self._Gamma = np.linalg.solve(A, b)
@@ -412,6 +412,10 @@ class Scene:
             print("    Convergence: {0}".format(self._solver_convergence))
             print("{0:<20}{1:<20}".format("Iteration", "SRSSQ Error"))
         start_time = time.time()
+
+        # This parameter, if set to true, will revert the nonlinear solution to a dimensional version of Phillips' original Jacobian.
+        # The other way is my new (better) way.
+        phillips = False
 
         J = np.zeros((self._N, self._N))
 
@@ -441,6 +445,7 @@ class Scene:
             np.einsum('ij,ij->i', v_i, self._u_a, out=v_ai)
             V_i = np.sqrt(np.einsum('ij,ij->i', v_i, v_i))
 
+            # Calculate airfoil parameters
             self._alpha = np.arctan2(v_ni, v_ai)
             self._Re = V_i*self._c_bar/self._nu
             self._M = V_i/self._a
@@ -458,7 +463,7 @@ class Scene:
                     num_cps = segment_object._N
                     cur_slice = slice(index, index+num_cps)
 
-                    # Get lift coefficient
+                    # Get lift coefficient and lift slopes
                     C_L[cur_slice] = segment_object.get_cp_CL(airfoil_params[cur_slice,:])
                     C_La[cur_slice] = segment_object.get_cp_CLa(airfoil_params[cur_slice,:])
                     C_LRe[cur_slice] = segment_object.get_cp_CLRe(airfoil_params[cur_slice,:])
@@ -473,19 +478,27 @@ class Scene:
             v_iji = np.einsum('ijk,ijk->ij', v_i[:,np.newaxis,:], self._V_ji_trans)
 
             # Residual vector
-            R = 2*w_i_mag*self._Gamma-V_i**2*C_L*self._dS
+            if phillips:
+                R = 2*w_i_mag*self._Gamma-self._cp_V_inf**2*C_L*self._dS # Phillips' way
+            else:
+                R = 2*w_i_mag*self._Gamma-V_i**2*C_L*self._dS # My way
 
             error = np.sqrt(np.sum(R**2))
 
             # Caclulate Jacobian
             J[:,:] = (2*self._Gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
-            J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji
 
-            CL_gamma_alpha = C_La[:,np.newaxis]*(v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(v_ni**2+v_ai**2)
-            CL_gamma_Re = C_LRe*self._c_bar/(self._nu*V_i)[:,np.newaxis]*v_iji
-            CL_gamma_M = C_LM/(self._a*V_i)[:,np.newaxis]*v_iji
+            if not phillips:
+                J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
-            J[:,:] -= (V_i**2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M)
+            CL_gamma_alpha = C_La[:,np.newaxis]*(v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(v_ni**2+v_ai**2)[:,np.newaxis]
+            CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*V_i)[:,np.newaxis]*v_iji
+            CL_gamma_M = C_LM[:,np.newaxis]/(self._a*V_i)[:,np.newaxis]*v_iji
+
+            if phillips:
+                J[:,:] -= (self._cp_V_inf**2*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
+            else:
+                J[:,:] -= (V_i**2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
 
             diag_ind = np.diag_indices(self._N)
             J[diag_ind] += 2*w_i_mag
@@ -494,14 +507,17 @@ class Scene:
             dGamma = np.linalg.solve(J, -R)
 
             # Update gammas
-            self._Gamma += self._solver_relaxation*dGamma
+            self._Gamma = self._Gamma+self._solver_relaxation*dGamma
 
+            # Output progress
             if verbose: print("{0:<20}{1:<20}".format(iteration, error))
 
+            # Check this isn't taking too long
             if iteration >= self._max_solver_iterations:
-                print("Nonlinear solver failed to converge within the allowed number of iterations.")
+                raise RuntimeWarning("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
                 break
-        else:
+
+        else: # If the loop exits normally, then everything is good
             if verbose: print("Nonlinear solver successfully converged.")
 
         end_time = time.time()
@@ -916,9 +932,10 @@ class Scene:
         # This matters for setting up the plot axis limits
         first_segment = True
 
-        # If the user wants the vortices displayed, make sure the NLL equation has been solved first
+        # If the user wants the vortices displayed, make sure the linear NLL equation has been solved first
         if show_vortices and not self._solved:
-            self.solve_forces(non_dimensional=False, dimensional=False)
+            self._perform_geometry_calculations()
+            self._solve_linear()
 
         index = 0
 
