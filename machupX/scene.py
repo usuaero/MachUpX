@@ -1151,6 +1151,7 @@ class Scene:
         
             # Reset aerodynamic state
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0)
+            self._solved = False
 
         return derivs
 
@@ -1239,6 +1240,7 @@ class Scene:
 
             # Reset state
             self._airplanes[aircraft_name].w = omega_0
+            self._solved = False
 
             # Compute derivatives
             _, c, b = self.get_aircraft_reference_geometry(aircraft=aircraft_name)
@@ -1314,7 +1316,7 @@ class Scene:
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
             aircraft_object = self._airplanes[aircraft_name]
-            curr_control_state = aircraft_object.current_control_state
+            curr_control_state = copy.deepcopy(aircraft_object.current_control_state)
             pert_control_state = copy.deepcopy(curr_control_state)
 
             # Loop through available controls
@@ -1334,6 +1336,8 @@ class Scene:
 
                 # Reset state
                 pert_control_state[control_name] = curr_control_val
+                aircraft_object.set_control_state(control_state=pert_control_state)
+                self._solved = False
 
                 # Calculate derivatives
                 diff = 2*np.radians(dtheta)

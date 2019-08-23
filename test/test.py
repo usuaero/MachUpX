@@ -26,12 +26,19 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
 
     state["alpha"] = 2.0
+    state["beta"] = 0.0
     state["velocity"] = 200
     airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
+    airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
+    airplane_dict["wings"]["h_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["main_wing"]["dihedral"] = 5.
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 40
+    airplane_dict["wings"]["main_wing"]["grid"]["flap_edge_cluster"] = False
+    airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.4
+    airplane_dict["wings"]["main_wing"]["control_surface"]["tip_span"] = 0.9
+   
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
     scene.display_wireframe()
@@ -39,14 +46,19 @@ if __name__=="__main__":
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-    print(scene._airplanes["test_plane"].get_aerodynamic_state())
 
     trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
     print(json.dumps(trim_angles["test_plane"], indent=4))
 
-    print("Trim state")
-    FM = scene.solve_forces(non_dimensional=False)
+    #aero_center = scene.aircraft_aero_center(verbose=True)
+    #print(json.dumps(aero_center["test_plane"], indent=4))
+
+    print("---Trim State---")
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
 
+    print("---Derivatives---")
     derivs = scene.aircraft_derivatives()
     print(json.dumps(derivs["test_plane"]["stability"], indent=4))
+
+    dist = scene.distributions(make_plots=["section_CL", "section_parasitic_CD"])

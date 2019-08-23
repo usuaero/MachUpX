@@ -854,7 +854,7 @@ class WingSegment:
 
         # Determine flap deflection
         self._delta_flap = 0.0
-        for key in control_state:
+        for key in self._control_mixing:
             deflection = import_value(key, control_state, self._unit_sys, 0.0)
             if self._side == "right" or control_symmetry[key]:
                 self._delta_flap += deflection*self._control_mixing.get(key, 0.0)

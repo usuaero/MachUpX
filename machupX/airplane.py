@@ -408,6 +408,6 @@ class Airplane:
             Units may be specified as in the input file. Any deflections not given will 
             default to zero; the previous state is not preserved
         """
-        self.current_control_state = control_state
+        self.current_control_state = copy.deepcopy(control_state)
         for _,wing_segment in self.wing_segments.items():
             wing_segment.apply_control(control_state, self._control_symmetry)
