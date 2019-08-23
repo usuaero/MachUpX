@@ -349,14 +349,14 @@ Describes an aircraft. Stored as a .json file
 >>>>**"N" : int, optional**
 >>>>>Number of horseshoe vortices used to model the wing segment in the numerical lifting-line algorithm. This is the number of horseshoe vortices per semispan. Defaults to 40.
 >>>>
->>>>**"use_clustering" : bool, optional**
->>>>>If true, control points will be distributed using cosine clusering. Otherwise, points will be distributed evenly. Defaults to true.
+>>>>**"distribution" : str or list, optional**
+>>>>>Specifies how vortex nodes and control points are to be distributed along the wing segment. Can be "linear", "cosine_cluster", or a list of span locations. "linear" will distribute the control points and vortex nodes evenly along the span. "cosine_cluster" will implement traditional cosine clustering, where points are spaced evenly in theta causing them to cluster at the tips of each segment. If this is a list, it must be an ordered list of span locations of length 2*N+1 explicitly giving the span fraction location of each vortex node and control point. Should be arranged as ```[node_0_loc, cp_0_loc, node_1_loc, cp_1_loc,..., cp_N_loc, node_N+1_loc]```. Defaults to "cosine_cluster".
 >>>>
 >>>>**"flap_edge_cluster" : bool, optional**
->>>>>If true, control points will be clustered around the edges of control surfaces. Has no effect if "use_clustering" is false. Defaults to true.
+>>>>>If true, control points will be clustered around the edges of control surfaces. Can only be used if "distribution" is "cosine_cluster". Defaults to true.
 >>>>
 >>>>**"cluster_points" : list, optional**
->>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Defaults to no extra clustering.
+>>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used is "distribution" is "cosine_cluster". Defaults to no extra clustering.
 >>>
 >>>**"control_surface" : dict, optional**
 >>>>Defines a control surface on the trailing edge of the wing segment. Uses Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).

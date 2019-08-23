@@ -75,7 +75,7 @@ class WingSegment:
         # Grid parameters
         grid_dict = self._input_dict.get("grid", {})
         self._N = grid_dict.get("N", 40)
-        use_clustering = grid_dict.get("use_clustering", True)
+        distribution = grid_dict.get("distribution", "cosine_cluster")
         flap_edge_cluster = grid_dict.get("flap_edge_cluster", True)
         extra_discont = grid_dict.get("cluster_points", [])
 
@@ -93,84 +93,84 @@ class WingSegment:
             self._delta_origin[1] += connect_dict.get("y_offset", 0.0)
 
         # Create arrays of span locations used to generate nodes and control points
-        if use_clustering: # Cosine clustering
+        if distribution == "cosine_cluster": # Cosine clustering
 
-            if flap_edge_cluster: # Cluster points around flap edges
+            discont = []
 
-                # Add flap edges
-                discont = []
+            # Add flap edges
+            if flap_edge_cluster:
                 flap_dict = self._input_dict.get("control_surface", None)
                 if flap_dict is not None:
                     discont.append(flap_dict.get("root_span", 0.0))
                     discont.append(flap_dict.get("tip_span", 1.0))
 
-                # Add user-specified discontinuities
-                for discont_span_frac in extra_discont:
-                    discont.append(discont_span_frac)
+            # Add user-specified discontinuities
+            for discont_span_frac in extra_discont:
+                discont.append(discont_span_frac)
 
-                # Ignore discontinuities at wingtip
-                while True:
-                    try:
-                        discont.remove(1.0)
-                    except ValueError:
-                        break
+            # Ignore discontinuities at wingtip
+            while True:
+                try:
+                    discont.remove(1.0)
+                except ValueError:
+                    break
 
-                # Ignore discontinuities at wing root
-                while True:
-                    try:
-                        discont.remove(0.0)
-                    except ValueError:
-                        break
+            # Ignore discontinuities at wing root
+            while True:
+                try:
+                    discont.remove(0.0)
+                except ValueError:
+                    break
 
-                # Sort discontinuities
-                discont.sort()
-                discont.append(1.0) # I know this is kinda redundant, but it's the best thing I could think of
-                discont.insert(0, 0.0)
+            # Sort discontinuities
+            discont.sort()
+            discont.append(1.0) # I know this is kinda redundant, but it's the best thing I could think of
+            discont.insert(0, 0.0)
 
-                # Determine number of sections and number of control points in each section
-                num_sec = len(discont)-1
-                sec_N = []
-                for i in range(num_sec):
-                    N = round(self._N*(discont[i+1]-discont[i]))
-                    sec_N.append(N)
+            # Determine number of sections and number of control points in each section
+            num_sec = len(discont)-1
+            sec_N = []
+            for i in range(num_sec):
+                N = round(self._N*(discont[i+1]-discont[i]))
+                sec_N.append(N)
 
-                # Check all the points are accounted for
-                diff = sum(sec_N)-self._N
-                if diff != 0:
-                    sec_N[0] -= diff # Use the root segment to make up the difference
+            # Check all the points are accounted for
+            diff = sum(sec_N)-self._N
+            if diff != 0:
+                sec_N[0] -= diff # Use the root segment to make up the difference
 
-                # Create node and control point span locations
-                node_span_locs = [0.0]
-                cp_span_locs = []
+            # Create node and control point span locations
+            node_span_locs = [0.0]
+            cp_span_locs = []
 
-                for i in range(num_sec):
+            for i in range(num_sec):
 
-                    node_theta_space = list(np.linspace(0.0, np.pi, sec_N[i]+1))
-                    for theta in node_theta_space[1:]:
-                        s = (1-np.cos(theta))/2 # Span fraction
-                        node_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
+                node_theta_space = list(np.linspace(0.0, np.pi, sec_N[i]+1))
+                for theta in node_theta_space[1:]:
+                    s = (1-np.cos(theta))/2 # Span fraction
+                    node_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
-                    cp_theta_space = np.linspace(np.pi/sec_N[i], np.pi, sec_N[i])-np.pi/(2*sec_N[i])
-                    for theta in cp_theta_space:
-                        s = (1-np.cos(theta))/2 # Span fraction
-                        cp_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
+                cp_theta_space = np.linspace(np.pi/sec_N[i], np.pi, sec_N[i])-np.pi/(2*sec_N[i])
+                for theta in cp_theta_space:
+                    s = (1-np.cos(theta))/2 # Span fraction
+                    cp_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
-                self._node_span_locs = np.array(node_span_locs)
-                self._cp_span_locs = np.array(cp_span_locs)
+            self._node_span_locs = np.array(node_span_locs)
+            self._cp_span_locs = np.array(cp_span_locs)
 
-            else: # Ignore flap edges
-
-                #Nodes
-                node_theta_space = np.linspace(0.0, np.pi, self._N+1)
-                self._node_span_locs = (1-np.cos(node_theta_space))/2
-
-                # Control points
-                cp_theta_space = np.linspace(np.pi/self._N, np.pi, self._N)-np.pi/(2*self._N)
-                self._cp_span_locs = (1-np.cos(cp_theta_space))/2
-
-        else: # Linear spacing
+        elif distribution == "linear": # Linear spacing
             self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
             self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
+
+        elif isinstance(distribution, list): # User-specified distribution
+            if len(distribution) != self._N*2+1:
+                raise IOError("User specified distribution must have length of 2*N+1. Got length {0}, needed length {1}.".format(len(distribution), self._N*2+1))
+
+            self._node_span_locs = np.array(distribution[0::2])
+            self._cp_span_locs = np.array(distribution[1::2])
+
+        else:
+            raise IOError("Distribution type {0} not recognized for wing segment {1}.".format(distribution, self.name))
 
         # In order to follow the airfoil sign convention (i.e. positive vorticity creates positive lift) 
         # node and control point locations must always proceed from left to right.

@@ -31,11 +31,7 @@ if __name__=="__main__":
     airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["main_wing"]["dihedral"] = 5.
-    airplane_dict["wings"]["main_wing"]["grid"]["flap_edge_cluster"] = True
-    airplane_dict["wings"]["main_wing"]["grid"]["N"] = 50
-    airplane_dict["wings"]["main_wing"]["grid"]["cluster_points"] = [0.3]
-    airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.55
-    airplane_dict["wings"]["main_wing"]["control_surface"]["tip_span"] = 0.95
+    airplane_dict["wings"]["main_wing"]["grid"]["N"] = 40
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
     scene.display_wireframe()
