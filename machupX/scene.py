@@ -32,7 +32,8 @@ class Scene:
         self._segment_names = []
         self._N = 0
         self._num_aircraft = 0
-
+        self._solved = False # Track whether the current scene state has been solved
+        # Should be set to False any time any state variable is changed without immediately thereafter calling solve_forces()
 
         self._load_params(scene_input)
 
@@ -273,7 +274,6 @@ class Scene:
             diag_ind = np.diag_indices(self._N)
             self._V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
 
-        # Track whether the current scene state has been solved
         self._solved = False
 
 
@@ -904,6 +904,7 @@ class Scene:
 
         # Set state
         self._airplanes[aircraft_name].set_control_state(control_state)
+        self._solved = False
 
 
     def display_wireframe(self, show_vortices=True, show_legend=False, filename=None):
@@ -1557,6 +1558,7 @@ class Scene:
 
             # Reset aircraft state
             airplane_object.set_aerodynamic_state(alpha=a0, beta=B0, velocity=V0, v_wind=v_wind)
+            self._solved = False
 
             # First derivatives
             CA_a = (-FM2["Cx"]+FM0["Cx"])/(2.0*delta)

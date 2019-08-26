@@ -1,5 +1,5 @@
-Welcome to MachUpX
-==================
+MachUpX
+=======
 
 .. toctree::
    :maxdepth: 2
