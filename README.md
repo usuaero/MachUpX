@@ -3,8 +3,6 @@ A new implementation of Warren F. Phillips' numerical lifting-line algorithm, co
 
 Written by Cory Goates (graduate student, USU)
 
-NOTE: THIS CODE IS STILL IN DEVELOPMENT. ANY LEVEL OF FUNCTIONALITY IS NOT GUARANTEED AT THIS POINT.
-
 Discussion of the numerical lifting-line algorithm can be found in the following sources:
 
 W. F. Phillips and D. O. Snyder. "Modern Adaptation of Prandtl's
@@ -13,6 +11,10 @@ Classic Lifting-Line Theory", Journal of Aircraft, Vol. 37, No. 4
 
 W. F. Phillips, "Flow over Multiple Lifting Surfaces," Mechanics of
 Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
+
+## Documentation
+
+Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Specific help with API functions can also be found in the docstrings.
 
 ## Features
 
@@ -45,12 +47,6 @@ scene.display_wireframe()
 FM = scene.solve_forces()
 print(FM)
 ```
-
-## Documentation
-
-In-depth documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io).
-
-Specific help with API functions can be found in the docstrings.
 
 ## Installation
 
