@@ -8,7 +8,7 @@ MachUpX is run from the command line using the "-m" option. For example
 python -m machupX example_input.json
 ```
 
-will run the analyses listed under "run" example_input.json. The various results are saved as files to be accessed by the user. For creating the input file, see "Input Files".
+will run the analyses listed under "run" example_input.json. The various results are saved as files to be accessed by the user. For creating the input file, see [Input Files](creating_input_files).
 
 ## Python Interpreter
 MachUpX can also be imported through the Python interpreter and its functionality can then be accessed through the Scene class. For example
@@ -30,4 +30,4 @@ derivs = my_scene.aerodynamic_derivatives()
 print(json.dumps(derivs["traditional_plane"]))
 ```
 
-For more information on using the Scene class, see "Scene Class".
+For more information on using the Scene class, see [Scene Class](scene_object).
