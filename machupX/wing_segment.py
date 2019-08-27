@@ -330,6 +330,8 @@ class WingSegment:
             if isinstance(chord_data, float): # Constant chord fraction
                 self._cp_flap_chord_frac[self._cp_in_control_surface] = chord_data
             else: # Variable chord fraction
+                if chord_data[0,0] != root_span or chord_data[-1,0] != tip_span:
+                    raise IOError("Endpoints of flap chord distribution must match specified root and tip span locations.")
                 self._cp_flap_chord_frac[self._cp_in_control_surface] = np.interp(self._cp_span_locs[self._cp_in_control_surface], chord_data[:,0], chord_data[:,1])
 
             # Store mixing
@@ -829,6 +831,8 @@ class WingSegment:
 
         # Complete the circle
         points[-1,:] = points[0,:]
+
+        #TODO: Add control surface
 
         return points
 
