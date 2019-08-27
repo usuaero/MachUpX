@@ -31,6 +31,8 @@ Navigate to the root (MachUpX/) directory and execute
 
 `python3 setup.py install`
 
+Please note that any time you update the source code, the above command will need to be run.
+
 ## Testing the Installation
 
 Once the installation is complete, run

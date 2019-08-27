@@ -168,7 +168,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>Defaults to no wind.
 >>>
 >>**"aircraft" : dict**
->>>Lists the aircraft to be placed in the scene. At least one must be specified. If importing more than one aircraft, simply repeat the following keys:
+>>>Lists the aircraft to be placed in the scene. At least one must be specified. Please note that MachUpX is able to model interactions between multiple aircraft within the limitations of lifting-line theory. It is assumed the user understands these limitations and will use MachUpX appropriately. If importing more than one aircraft, simply repeat the following keys:
 >>>
 >>>**"<AIRPLANE_NAME>" : dict**
 >>>
