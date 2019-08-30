@@ -885,3 +885,96 @@ class WingSegment:
             return self._flap_eff*self._delta_flap
         else:
             return 0.0
+
+
+    def get_stl_vectors(self):
+        """Calculates and returns the outline vectors required for 
+        generating an .stl model of the wing segment.
+
+        Returns
+        -------
+        ndarray
+            Array of outline vectors. First index is the facet index, second is the point
+            index, third is the vector components.
+        """
+
+        # Collect airfoil outlines
+        airfoil_outlines = {}
+        for airfoil in self._airfoils:
+            airfoil_outlines[airfoil.name] = airfoil.get_outline_points()
+
+        # Discretize by node locations
+        num_airfoil_points = next(iter(airfoil_outlines.values())).shape[0]
+        num_facets = self._N*(num_airfoil_points-1)*2
+        vectors = np.zeros((num_facets,3,3))
+
+        # Generate vectors and normals
+        for i in range(self._N):
+
+            # Root-ward node
+            root_span = self._node_span_locs[i]
+
+            # Linearly interpolate outlines, ignoring twist, etc for now
+            index = 0
+            while True:
+                if root_span >= self._airfoil_spans[index] and root_span <= self._airfoil_spans[index+1]:
+                    total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+                    root_weight = abs(root_span-self._airfoil_spans[index])/total_span
+                    tip_weight = abs(root_span-self._airfoil_spans[index+1])/total_span
+                    root_points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
+                    break
+                index += 1
+
+            # Add twist, dihedral, and chord and transform to body-fixed coordinates
+            twist = self.get_twist(root_span)
+            dihedral = self.get_dihedral(root_span)
+            chord = self.get_chord(root_span)
+
+            if self._side == "left":
+                q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
+            else:
+                q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
+
+            untransformed_root_coords = chord*np.array([-root_points[:,0].flatten()+0.25, np.zeros(num_airfoil_points), -root_points[:,1]]).T
+            root_outline = self._get_quarter_chord_loc(root_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_root_coords)
+
+            # Tip-ward node
+            tip_span = self._node_span_locs[i+1]
+
+            # Linearly interpolate outlines, ignoring twist, etc for now
+            index = 0
+            while True:
+                if tip_span >= self._airfoil_spans[index] and tip_span <= self._airfoil_spans[index+1]:
+                    total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+                    root_weight = abs(root_span-self._airfoil_spans[index])/total_span
+                    tip_weight = abs(root_span-self._airfoil_spans[index+1])/total_span
+                    tip_points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
+                    break
+                index += 1
+
+            # Add twist, dihedral, and chord and transform to body-fixed coordinates
+            twist = self.get_twist(tip_span)
+            dihedral = self.get_dihedral(tip_span)
+            chord = self.get_chord(tip_span)
+
+            if self._side == "left":
+                q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
+            else:
+                q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
+
+            untransformed_tip_coords = chord*np.array([-tip_points[:,0].flatten()+0.25, np.zeros(num_airfoil_points), -tip_points[:,1]]).T
+            tip_outline = self._get_quarter_chord_loc(tip_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_tip_coords)
+
+            # Create facets between the outlines
+            for j in range(num_airfoil_points-1):
+                index = 2*i*(num_airfoil_points-1)+2*j
+
+                vectors[index, 0] = root_outline[j]
+                vectors[index, 1] = tip_outline[j+1]
+                vectors[index, 2] = tip_outline[j]
+
+                vectors[index+1, 0] = tip_outline[j+1]
+                vectors[index+1, 1] = root_outline[j]
+                vectors[index+1, 2] = root_outline[j+1]
+
+        return vectors
