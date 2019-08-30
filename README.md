@@ -52,7 +52,7 @@ print(FM)
 
 Navigate to the root directory and execute:
 
-`python setup.py install`.
+`python3 -m pip install .`.
 
 ### Prerequisites
 

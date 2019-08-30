@@ -34,6 +34,7 @@ class Airfoil:
         self._type = self._input_dict.get("type", "linear")
 
         self._initialize_data()
+        self._initialize_geometry()
 
     
     def _initialize_data(self):
@@ -80,6 +81,51 @@ class Airfoil:
         # Generates a database of airfoil parameters from the section geometry
         # TODO: Implement this
         raise IOError("Generateing an airfoil database is not yet allowed in this version of MachUpX.")
+
+
+    def _initialize_geometry(self):
+        # Creates an array of outline points to use in generating .stl and .iges files
+
+        n = 80
+
+        # Check for user-given points
+        geom_file = self._input_dict.get("geometry_file", None)
+        if geom_file is not None:
+            with open(geom_file, 'w') as input_handle:
+                self._outline_points = np.genfromtxt(input_handle)
+
+        # NACA definition
+        elif "NACA" in self.name:
+
+            # Get NACA designation
+            naca_des = self.name.replace("NACA_", "")
+
+            # Cosine distribution of chord locations
+            theta = np.linspace(-np.pi, np.pi, n)
+            x = 0.5*(1-np.cos(theta))
+
+            # 4-digit series
+            if len(naca_des) == 4:
+                m = float(naca_des[0])/100
+                p = float(naca_des[1])/10
+                t = float(naca_des[2:])/100
+
+                # Thickness distribution
+                y_t = 5*t*(0.2969*np.sqrt(x)-0.1260*x-0.3516*x**2+0.2843*x**3-0.1036*x**4) # Uses formulation to seal trailing edge
+
+                # Camber line equations
+                if abs(m)<1e-10 or abs(p)<1e-10: # Symmetric
+                    y_c = np.zeros_like(x)
+                    dy_c_dx = np.zeros_like(x)
+                else:
+                    y_c = np.where(x<p, m/p**2*(2*p*x-x**2), m/(1-p)**2*((1-2*p)+2*p*x-x**2))
+                    dy_c_dx = np.where(x<p, 2*m/p**2*(p-x), 2*m/(1-p**2)*(p-x))
+
+                # Outline points
+                X = x-y_t*np.sin(np.arctan(dy_c_dx))*np.sign(theta)
+                Y = y_c+y_t*np.cos(np.arctan(dy_c_dx))*np.sign(theta)
+
+                self._outline_points = np.concatenate([X[:,np.newaxis], Y[:,np.newaxis]], axis=1)
 
 
     def get_CL(self, inputs):
@@ -221,3 +267,14 @@ class Airfoil:
         """
         if self._type == "linear":
             return self._CLa
+
+
+    def get_outline_points(self):
+        """Returns an array of outline points showing the geometry of the airfoil.
+
+        Returns
+        -------
+        ndarray
+            Outline points in airfoil coordinates.
+        """
+        return np.copy(self._outline_points)

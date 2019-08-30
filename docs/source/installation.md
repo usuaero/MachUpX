@@ -7,6 +7,8 @@ The following Python packages are required:
 * numpy
 * scipy
 * pytest
+* pandas
+* matplotlib
 
 ## Getting the Source Code
 
@@ -29,7 +31,7 @@ You can either download the source as a ZIP file and extract the contents, or cl
 
 Navigate to the root (MachUpX/) directory and execute
 
-`python3 setup.py install`
+`python3 -m pip install .`
 
 Please note that any time you update the source code, the above command will need to be run.
 
