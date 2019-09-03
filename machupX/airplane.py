@@ -96,7 +96,7 @@ class Airplane:
         self.q = import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
 
         if self.q.shape[0] == 3: # Euler angles
-            self.q = euler_to_quaternion(self.q)
+            self.q = euler_to_quaternion(np.radians(self.q))
 
         elif self.q.shape[0] == 4: # Quaternion
             # Check magnitude
