@@ -4,6 +4,7 @@ from .airfoil import Airfoil
 
 import json
 import numpy as np
+from stl import mesh
 
 class Airplane:
     """A class defining an airplane.
@@ -96,7 +97,7 @@ class Airplane:
         self.q = import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
 
         if self.q.shape[0] == 3: # Euler angles
-            self.q = euler_to_quaternion(self.q)
+            self.q = euler_to_quaternion(np.radians(self.q))
 
         elif self.q.shape[0] == 4: # Quaternion
             # Check magnitude
@@ -411,3 +412,42 @@ class Airplane:
         self.current_control_state = copy.deepcopy(control_state)
         for _,wing_segment in self.wing_segments.items():
             wing_segment.apply_control(control_state, self._control_symmetry)
+
+
+    def export_stl(self, filename):
+        """Exports a .stl model of the aircraft.
+
+        Parameters
+        ----------
+        filename
+            File to export the model to. Must be .stl.
+        """
+
+        # Check for .stl file
+        if ".stl" not in filename:
+            raise IOError("{0} is not a .stl file.".format(filename))
+
+        # Multiple aircraft
+        num_facets = 0
+        vector_dict = {}
+
+        # Loop through segments
+        for segment_name, segment_object in self.wing_segments.items():
+            vectors = segment_object.get_stl_vectors()
+            vector_dict[segment_name] = vectors
+            num_facets += int(vectors.shape[0]/3)
+
+        # Allocate mesh
+        model_mesh = mesh.Mesh(np.zeros(num_facets, dtype=mesh.Mesh.dtype))
+
+        # Store vectors
+        index = 0
+        for segment_name, segment_object in self.wing_segments.items():
+            num_segment_facets = int(vector_dict[segment_name].shape[0]/3)
+            for i in range(index, index+num_segment_facets):
+                for j in range(3):
+                    model_mesh.vectors[i][j] = vector_dict[segment_name][3*(i-index)+j]
+            index += num_segment_facets
+
+        # Export
+        model_mesh.save(filename)

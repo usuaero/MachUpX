@@ -25,26 +25,22 @@ if __name__=="__main__":
     # Load scene
     scene = MX.Scene(input_dict)
 
-    airplane_dict["wings"]["main_wing"]["airfoil"] = "NACA_2410"
-    airplane_dict["wings"]["main_wing"]["dihedral"] = 20
+    airplane_dict["wings"]["main_wing"]["airfoil"] = [[0.0, "NACA_4410"],
+                                                      [0.5, "NACA_0010"],
+                                                      [1.0, "NACA_0010"]]
+    airplane_dict["wings"]["main_wing"]["dihedral"] = [[0.0, 0.0],
+                                                       [1.0, 180.0]]
+    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, 0.0],
+                                                    [0.5, 0.0],
+                                                    [0.5, 20.0],
+                                                    [1.0, 40.0]]
    
+    state["position"] = [0.0, 0.0, 0.0]
+    state["orientation"] = [0.0, 0.0, 0.0]
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
-
-    # Get outline vectors
-    vectors = scene._airplanes["test_plane"].wing_segments["main_wing_left"].get_stl_vectors()
+    state["position"] = [0.0, 5.0, 0.0]
+    state["orientation"] = [20.0, 20.0, 5.0]
+    scene.add_aircraft("test_plane_0", airplane_dict, state=state, control_state=control_state)
 
     # Create stl mesh
-    segment = mesh.Mesh(np.zeros(vectors.shape[0], dtype=mesh.Mesh.dtype))
-    for i, f in enumerate(vectors):
-        for j in range(3):
-            segment.vectors[i][j] = f[j]
-
-    # plot
-    fig = plt.figure()
-    ax = mplot3d.Axes3D(fig)
-    ax.add_collection3d(mplot3d.art3d.Poly3DCollection(segment.vectors))
-    scale = segment.points.flatten(-1)
-    ax.auto_scale_xyz(scale, scale, scale)
-    plt.show()
-
-    segment.save("wing.stl")
+    scene.export_stl("wing.stl")

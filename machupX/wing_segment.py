@@ -906,9 +906,9 @@ class WingSegment:
         # Discretize by node locations
         num_airfoil_points = next(iter(airfoil_outlines.values())).shape[0]
         num_facets = self._N*(num_airfoil_points-1)*2
-        vectors = np.zeros((num_facets,3,3))
+        vectors = np.zeros((num_facets*3,3))
 
-        # Generate vectors and normals
+        # Generate vectors
         for i in range(self._N):
 
             # Root-ward node
@@ -919,8 +919,8 @@ class WingSegment:
             while True:
                 if root_span >= self._airfoil_spans[index] and root_span <= self._airfoil_spans[index+1]:
                     total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
-                    root_weight = abs(root_span-self._airfoil_spans[index])/total_span
-                    tip_weight = abs(root_span-self._airfoil_spans[index+1])/total_span
+                    root_weight = 1-abs(root_span-self._airfoil_spans[index])/total_span
+                    tip_weight = 1-abs(root_span-self._airfoil_spans[index+1])/total_span
                     root_points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
                     break
                 index += 1
@@ -946,8 +946,8 @@ class WingSegment:
             while True:
                 if tip_span >= self._airfoil_spans[index] and tip_span <= self._airfoil_spans[index+1]:
                     total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
-                    root_weight = abs(root_span-self._airfoil_spans[index])/total_span
-                    tip_weight = abs(root_span-self._airfoil_spans[index+1])/total_span
+                    root_weight = 1-abs(tip_span-self._airfoil_spans[index])/total_span
+                    tip_weight = 1-abs(tip_span-self._airfoil_spans[index+1])/total_span
                     tip_points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
                     break
                 index += 1
@@ -967,14 +967,14 @@ class WingSegment:
 
             # Create facets between the outlines
             for j in range(num_airfoil_points-1):
-                index = 2*i*(num_airfoil_points-1)+2*j
+                index = (2*i*(num_airfoil_points-1)+2*j)*3
 
-                vectors[index, 0] = root_outline[j]
-                vectors[index, 1] = tip_outline[j+1]
-                vectors[index, 2] = tip_outline[j]
+                vectors[index] = root_outline[j]
+                vectors[index+1] = tip_outline[j+1]
+                vectors[index+2] = tip_outline[j]
 
-                vectors[index+1, 0] = tip_outline[j+1]
-                vectors[index+1, 1] = root_outline[j]
-                vectors[index+1, 2] = root_outline[j+1]
+                vectors[index+3] = tip_outline[j+1]
+                vectors[index+4] = root_outline[j]
+                vectors[index+5] = root_outline[j+1]
 
         return vectors

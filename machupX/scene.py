@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import time
 import copy
+from stl import mesh
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
@@ -1766,3 +1767,69 @@ class Scene:
 
         airplane_object = self._airplanes[aircraft]
         return airplane_object.S_w, airplane_object.l_ref_lon, airplane_object.l_ref_lat
+
+
+    def export_stl(self, filename, aircraft=None):
+        """Generates a 3D model of the aircraft. If only one aircraft is specified, the model is centered on that
+        aircraft's origin. If more than one aircraft is specified, the model is centered on the origin of the earth-
+        fixed coordinate system.
+
+        Parameters
+        ----------
+        filename: str
+            Name of the file to export the model to. Must be .stl.
+
+        aircraft : str or list
+            Name(s) of the aircraft to include in the model. Defaults to all aircraft in the scene.
+        """
+
+        # Specify the aircraft
+        if aircraft is None:
+            aircraft_names = list(self._airplanes.keys())
+        elif isinstance(aircraft, list):
+            aircraft_names = copy.copy(aircraft)
+        elif isinstance(aircraft, str):
+            aircraft_names = list(aircraft)
+        else:
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+
+        # Check for .stl file
+        if ".stl" not in filename:
+            raise IOError("{0} is not a .stl file.".format(filename))
+
+        # Model of single aircraft
+        if len(aircraft_names) == 1:
+            self._airplanes[aircraft_names[0]].export_stl(filename)
+
+        # Multiple aircraft
+        else:
+            num_facets = 0
+            vector_dict = {}
+
+            # Loop through aircraft
+            for aircraft_name in aircraft_names:
+                airplane_object = self._airplanes[aircraft_name]
+                vector_dict[aircraft_name] = {}
+
+                # Loop through segments
+                for segment_name, segment_object in airplane_object.wing_segments.items():
+                    vectors = segment_object.get_stl_vectors()
+                    vector_dict[aircraft_name][segment_name] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, vectors)
+                    num_facets += int(vectors.shape[0]/3)
+
+            # Allocate mesh
+            model_mesh = mesh.Mesh(np.zeros(num_facets, dtype=mesh.Mesh.dtype))
+
+            # Store vectors
+            index = 0
+            for aircraft_name in aircraft_names:
+                airplane_object = self._airplanes[aircraft_name]
+                for segment_name, segment_object in airplane_object.wing_segments.items():
+                    num_segment_facets = int(vector_dict[aircraft_name][segment_name].shape[0]/3)
+                    for i in range(index, index+num_segment_facets):
+                        for j in range(3):
+                            model_mesh.vectors[i][j] = vector_dict[aircraft_name][segment_name][3*(i-index)+j]
+                    index += num_segment_facets
+
+            # Export
+            model_mesh.save(filename)
