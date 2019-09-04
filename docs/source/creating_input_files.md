@@ -128,6 +128,15 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"verbose" : boolean, optional**
 >>>>Defaults to false
+>>>
+>>**"stl" : dict, optional"**
+>>>Exports a 3D model of the aircraft/scene using the stl format.
+>>>
+>>>**"filename" : str, optional**
+>>>>File to export the 3D model to. Defaults to the input filename with a ".stl" extension.
+>>>
+>>>**"aircraft" : str or list, optional**
+>>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.

@@ -18,7 +18,8 @@ def test_main():
         "aero_derivatives" : {},
         "distributions" : {},
         "pitch_trim" : {},
-        "aero_center" : {}
+        "aero_center" : {},
+        "stl" : {}
     }
 
     # Write new input to file
@@ -35,6 +36,7 @@ def test_main():
     assert os.path.exists(altered_input_name.replace(".json", "_distributions.txt"))
     assert os.path.exists(altered_input_name.replace(".json", "_pitch_trim.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_aero_center.json"))
+    assert os.path.exists(altered_input_name.replace(".json", ".stl"))
 
     # Cleanup
     sp.run(["rm", altered_input_name.replace(".json", "_forces.json")])
@@ -42,4 +44,5 @@ def test_main():
     sp.run(["rm", altered_input_name.replace(".json", "_distributions.txt")])
     sp.run(["rm", altered_input_name.replace(".json", "_pitch_trim.json")])
     sp.run(["rm", altered_input_name.replace(".json", "_aero_center.json")])
+    sp.run(["rm", altered_input_name.replace(".json", ".stl")])
     sp.run(["rm", altered_input_name])

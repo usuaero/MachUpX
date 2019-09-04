@@ -89,6 +89,14 @@ def _run_prescribed_analyses(input_filename):
             print("Calculating location of aerodynamic center...")
             scene.aircraft_aero_center(aircraft=aircraft, filename=filename, verbose=verbose)
 
+        # Export .stl
+        elif key == "stl":
+            aircraft = params.get("aircraft", None)
+            filename = params.get("filename", input_filename.replace(".json", ".stl"))
+
+            print("Exporting stl...")
+            scene.export_stl(filename, aircraft=aircraft)
+
         # Unrecognized command
         else:
             raise RuntimeWarning("{0} is not recognized as a valid run command.".format(key))
