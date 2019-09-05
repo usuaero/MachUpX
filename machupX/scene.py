@@ -1725,14 +1725,15 @@ class Scene:
 
         # Create plots specified by the user
         for param in make_plots:
-            for segment_name, segment_dist in dist["test_plane"].items():
-                plt.figure()
-                plt.plot(segment_dist["span_frac"], segment_dist[param])
-                plt.xlabel("Span Fraction")
-                plt.ylabel(param)
-                plt.title(segment_name)
-                plt.savefig("{0}_{1}_vs_span_fraction".format(segment_name, param))
-                plt.close()
+            for aircraft_name in self._airplane_names:
+                for segment_name, segment_dist in dist[aircraft_name].items():
+                    plt.figure()
+                    plt.plot(segment_dist["span_frac"], segment_dist[param])
+                    plt.xlabel("Span Fraction")
+                    plt.ylabel(param)
+                    plt.title(segment_name)
+                    plt.savefig("{0}_{1}_{2}_vs_span_fraction".format(aircraft_name, segment_name, param))
+                    plt.close()
 
         return dist
 
