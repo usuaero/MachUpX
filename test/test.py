@@ -55,4 +55,4 @@ if __name__=="__main__":
 
     # Create stl mesh
     scene.export_stl("wing.stl")
-    scene.distributions(make_plots=["section_CL"])
+    scene.display_wireframe()

@@ -220,6 +220,7 @@ def quat_times(quat0, quat1):
 
 def euler_to_quaternion(E):
     # Converts the Euler angles phi, theta, psi to an orientation quaternion
+    # Phillips Mech. of Flight 11.7.8
     q = np.zeros(4)
 
     # Trigonometric values
@@ -241,6 +242,7 @@ def euler_to_quaternion(E):
 
 def quaternion_to_euler(q):
     # Converts an orientation quaternion to Euler angles
+    # Phillips Mech. of Flight 11.7.11
     E = np.zeros(3)
 
     quantity = q[0]*q[2]-q[1]*q[3]
@@ -254,8 +256,8 @@ def quaternion_to_euler(q):
         E[1] = -np.pi/2
         E[2] = 0.0
     else:
-        E[0] = np.arctan2(2*(q[0]*q[1]+q[2]*q[3]), q[0]**2+q[1]**2-q[2]**2-q[3]**2)
+        E[0] = np.arctan2(2*(q[0]*q[1]+q[2]*q[3]), q[0]**2+q[3]**2-q[1]**2-q[2]**2)
         E[1] = np.arcsin(2*(q[0]*q[2]-q[1]*q[3]))
-        E[2] = np.arctan2(2*(q[0]*q[l]+q[1]*q[2]), q[0]**2+q[1]**2-q[2]**2-q[3]**2)
+        E[2] = np.arctan2(2*(q[0]*q[3]+q[1]*q[2]), q[0]**2+q[1]**2-q[2]**2-q[3]**2)
 
     return E

@@ -147,12 +147,12 @@ class WingSegment:
 
                 node_theta_space = list(np.linspace(0.0, np.pi, sec_N[i]+1))
                 for theta in node_theta_space[1:]:
-                    s = (1-np.cos(theta))/2 # Span fraction
+                    s = 0.5*(1-np.cos(theta)) # Span fraction
                     node_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
                 cp_theta_space = np.linspace(np.pi/sec_N[i], np.pi, sec_N[i])-np.pi/(2*sec_N[i])
                 for theta in cp_theta_space:
-                    s = (1-np.cos(theta))/2 # Span fraction
+                    s = 0.5*(1-np.cos(theta)) # Span fraction
                     cp_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
             self._node_span_locs = np.array(node_span_locs)
