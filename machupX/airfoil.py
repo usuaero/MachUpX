@@ -39,11 +39,8 @@ class Airfoil:
     
     def _initialize_data(self):
         # Initializes the necessary data structures for the airfoil
-        if self._input_dict.get("generate_database", False):
-            self._generate_database()
-
         # Linear airfoils are entirely defined by coefficients and coefficient derivatives
-        elif self._type == "linear":
+        if self._type == "linear":
 
             # Load from file
             try:
@@ -69,36 +66,34 @@ class Airfoil:
             self._CLM = import_value("CLM", params, "SI", 0.0)
             self._CLRe = import_value("CLRe", params, "SI", 0.0)
 
-        elif self._type == "nonlinear":
-            # TODO: Implement this
-            raise IOError("Nonlinear airfoils are not currently supported in MachUpX.")
-
         else:
             raise IOError("'{0}' is not an allowable airfoil type.".format(self._type))
-
-
-    def _generate_database(self):
-        # Generates a database of airfoil parameters from the section geometry
-        # TODO: Implement this
-        raise IOError("Generateing an airfoil database is not yet allowed in this version of MachUpX.")
 
 
     def _initialize_geometry(self):
         # Creates an array of outline points to use in generating .stl and .iges files
 
-        n = 80
+        geom_params = self._input_dict.get("geometry", {})
+        n = geom_params.get("N", 80)
+
+        # Check that there's only one geometry definition
+        points = geom_params.get("outline_points", None)
+        naca_des = geom_params.get("NACA", None)
+        if points is not None and naca_des is not None:
+            raise IOError("Outline points and a NACA designation may not be both specified for airfoil {0}.".format(self.name))
 
         # Check for user-given points
-        geom_file = self._input_dict.get("geometry_file", None)
-        if geom_file is not None:
-            with open(geom_file, 'w') as input_handle:
-                self._outline_points = np.genfromtxt(input_handle)
+        if points is not None:
+
+            if isinstance(points, str): # Filepath
+                with open(points, 'r') as input_handle:
+                    self._outline_points = np.genfromtxt(input_handle, delimiter=',')
+
+            elif isinstance(points, list) and isinstance(points[0], list): # Array
+                self._outline_points = np.array(points)
 
         # NACA definition
-        elif "NACA" in self.name:
-
-            # Get NACA designation
-            naca_des = self.name.replace("NACA_", "")
+        elif naca_des is not None:
 
             # Cosine distribution of chord locations
             theta = np.linspace(-np.pi, np.pi, n)
@@ -277,4 +272,7 @@ class Airfoil:
         ndarray
             Outline points in airfoil coordinates.
         """
-        return np.copy(self._outline_points)
+        if hasattr(self, "_outline_points"):
+            return np.copy(self._outline_points)
+        else:
+            raise RuntimeError("The geometry has not been defined for airfoil {0}.".format(self.name))
