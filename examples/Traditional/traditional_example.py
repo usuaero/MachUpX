@@ -35,7 +35,7 @@ if __name__=="__main__":
     # dimensional forces and moments acting on the airplane. Note we need to know 
     # the name of the airplane to be able to access its data.
     FM_results = my_scene.solve_forces(dimensional=True, non_dimensional=False, verbose=True)
-    print(json.dumps(FM_results["traditional_airplane"]["total"], indent=4))
+    print(json.dumps(FM_results["traditional_airplane"], indent=4))
 
     # Now let's get the airplane to its trim state in pitch. MachUpX will default to 
     # Using the 'elevator' control to trim out the airplane. We can use set_trim_state 

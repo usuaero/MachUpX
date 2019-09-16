@@ -568,11 +568,11 @@ class Scene:
                 "total" : {}
             }
             if non_dimensional:
-                self._FM[airplane_name]["inviscid"].update(empty_coef_dict)
-                self._FM[airplane_name]["viscous"].update(empty_coef_dict)
+                self._FM[airplane_name]["inviscid"].update(copy.deepcopy(empty_coef_dict))
+                self._FM[airplane_name]["viscous"].update(copy.deepcopy(empty_coef_dict))
             if dimensional:
-                self._FM[airplane_name]["inviscid"].update(empty_FM_dict)
-                self._FM[airplane_name]["viscous"].update(empty_FM_dict)
+                self._FM[airplane_name]["inviscid"].update(copy.deepcopy(empty_FM_dict))
+                self._FM[airplane_name]["viscous"].update(copy.deepcopy(empty_FM_dict))
 
             # Determine freestream vector in body-fixed frame
             v_inf = self._v_trans[i,:] + self._get_wind(airplane_object.p_bar)
