@@ -978,3 +978,112 @@ class WingSegment:
                 vectors[index+5] = root_outline[j+1]
 
         return vectors
+
+
+    def get_stp_string(self, solid_index):
+        """Returns the portion of a STEP file necessary to render this wing 
+        segment as a MANIFOLD_SOLID_BREP.
+
+        Parameters
+        ----------
+        solid_index : int
+            The entity number this wing segment should begin at. In the output 
+            string, this wing segment will be referenced by this number, i.e.:
+
+            #<solid_index> = MANIFOLD_SOLID_BREP(...);
+
+        Returns
+        -------
+        str
+            STEP information for the wing segment.
+
+        int
+            Ending entity number
+        """
+
+        # Use get_stl_vectors() to generate the points
+        stl_vecs = self.get_stl_vectors()
+        m = self._N # number of points along the span
+        n = int(stl_vecs.shape[0]/(6*m)) # number of points around the section
+
+        # Start file
+        s = []
+        curr_entity_no = copy.copy(solid_index)
+        curr_entity_no += 2 # Skip two to add in the shell and manifold solid later
+
+        # Root-ward section face
+        root_face_entity_no = copy.copy(curr_entity_no)
+        s.append("#{0} = ADVANCED_FACE('', (#{1}), #{2}, .T.);".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
+        curr_entity_no += 1
+        s.append("#{0} = FACE_OUTER_BOUND('', #{1}, .T.);".format(curr_entity_no, curr_entity_no+6))
+        curr_entity_no += 1
+        s.append("#{0} = PLANE('', #{1});".format(curr_entity_no, curr_entity_no+1))
+        curr_entity_no += 1
+        s.append("#{0} = AXIS2_PLACEMENT_3D('', #{1}, #{2}, #{3});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
+        curr_entity_no += 1
+
+        origin = self.get_root_loc()
+        s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, origin[0], origin[1], origin[2]))
+        curr_entity_no += 1
+        
+        if self._side == "left":
+            vec = self._get_span_vec(0.0).flatten()
+        else:
+            vec = -self._get_span_vec(0.0).flatten()
+
+        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
+        curr_entity_no += 1
+
+        vec = self._get_normal_vec(0.0).flatten()
+        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
+        curr_entity_no += 1
+
+        s.append("#{0} = EDGE_LOOP('', ({1}));".format(curr_entity_no, ", ".join(["#{0}".format(curr_entity_no+1+6*i) for i in range(n)])))
+        curr_entity_no += 1
+
+        for i in range(n):
+            s.append("#{0} = ORIENTED_EDGE('', *, *, {1}, .T.);".format(curr_entity_no, curr_entity_no+1))
+            curr_entity_no += 1
+
+            s.append("#{0} = EDGE('', #{1}, #{2});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
+            curr_entity_no += 1
+
+            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
+            curr_entity_no += 1
+
+            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
+            curr_entity_no += 1
+
+            start = stl_vecs[6*i]
+            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, start[0], start[1], start[2]))
+            curr_entity_no += 1
+
+            end = stl_vecs[6*i+5]
+            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, end[0], end[1], end[2]))
+            curr_entity_no += 1
+
+        # Tip-ward section face
+        tip_face_entity_no = copy.copy(curr_entity_no)
+
+            #for j in range(num_airfoil_points-1):
+            #    index = (2*i*(num_airfoil_points-1)+2*j)*3
+
+            #    vectors[index] = root_outline[j]
+            #    vectors[index+1] = tip_outline[j+1]
+            #    vectors[index+2] = tip_outline[j]
+
+            #    vectors[index+3] = tip_outline[j+1]
+            #    vectors[index+4] = root_outline[j]
+            #    vectors[index+5] = root_outline[j+1]
+
+        
+        # Surface
+        surface_entity_no = copy.copy(curr_entity_no)
+
+
+        # Assemble shell
+        s.append("#{0} = CLOSED_SHELL('', (#{1}, #{2}, #{3}));".format(solid_index+1, root_face_entity_no, tip_face_entity_no, surface_entity_no))
+        s.append("#{0} = MANIFOLD_SOLID_BREP('{1}', #{2});".format(solid_index, self.name, solid_index+1))
+
+        # Format into single string
+        return "\n".join(s), curr_entity_no

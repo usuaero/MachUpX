@@ -46,13 +46,4 @@ if __name__=="__main__":
    
     state["position"] = [0.0, 0.0, 0.0]
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
-    state["position"] = [0.0, 0.0, -15.0]
-    scene.add_aircraft("test_plane_1", airplane_dict, state=state, control_state=control_state)
-    state["position"] = [0.0, -15.0, -15.0]
-    scene.add_aircraft("test_plane_2", airplane_dict, state=state, control_state=control_state)
-    state["position"] = [0.0, -15.0, 0.0]
-    scene.add_aircraft("test_plane_3", airplane_dict, state=state, control_state=control_state)
-
-    # Create stl mesh
-    scene.export_stl("wing.stl")
-    scene.display_wireframe()
+    print(scene._airplanes["test_plane"].wing_segments["main_wing_left"].get_stp_string(1)[0])
