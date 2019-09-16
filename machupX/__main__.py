@@ -93,6 +93,8 @@ def _run_prescribed_analyses(input_filename):
         else:
             raise RuntimeWarning("{0} is not recognized as a valid run command.".format(key))
 
+    print("\nCompleted prescribed analyses. Exiting...")
+
 
 if __name__=="__main__":
     
