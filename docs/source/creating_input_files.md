@@ -317,7 +317,11 @@ Describes an aircraft. Stored as a .json file
 >>>>Length of the wing segment, discounting sweep. If "side" is specified as "both", the total span of the segment is twice this value.
 >>>
 >>>**"twist" : float, array, or string, optional**
->>>>Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the mounting angle of the wing segment and the segment will have no further twist. If specified as an array, the array gives the twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
+>>>>Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the mounting angle of the wing segment and the segment will have no further twist. If specified as an array, the array gives the twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value:
+>>>>
+>>>>>**"twist" : [[0.0, 0.0], [0.5, 0.0], [0.5, 2.0], [1.0, 2.0]]**
+>>>>
+>>>>In the above example, the twist will be 0 degrees for the inner half of the wing and 2 degrees for the outer half of the wing. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
 >>>
 >>>**"dihedral" : float, array, or string, optional**
 >>>>Gives the dihedral of the wing segment. This is a solid-body rotation of the wing about the body x-axis. Defined the same as "twist". Defaults to 0.
