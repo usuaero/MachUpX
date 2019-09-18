@@ -400,6 +400,11 @@ class Scene:
         # Solve
         self._Gamma = np.linalg.solve(A, b)
 
+        # Save alpha for distributions()
+        v_i = np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
+        v_i += self._cp_v_inf
+        self._alpha = -np.arctan2(v_i[:,2], v_i[:,0])
+
         end_time = time.time()
         return end_time-start_time
 
