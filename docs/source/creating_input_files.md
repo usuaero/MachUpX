@@ -278,7 +278,7 @@ Describes an aircraft. Stored as a .json file
 >>>**"path" : string, optional**
 >>>>Path to file containing a JSON object describing the airfoil using the above keys.
 >
->**"wing_segments" : dict**
+>**"wings" : dict**
 >>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the examples/ directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface.
 >
 >>**"<WING_SEGMENT_NAME>" : dict**

@@ -400,11 +400,6 @@ class Scene:
         # Solve
         self._Gamma = np.linalg.solve(A, b)
 
-        # Save alpha for distributions()
-        v_i = np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
-        v_i += self._cp_v_inf
-        self._alpha = -np.arctan2(v_i[:,2], v_i[:,0])
-
         end_time = time.time()
         return end_time-start_time
 
@@ -1618,8 +1613,16 @@ class Scene:
             "dihedral", "sweep", "area", "alpha", "Re", "M", "section_CL", "section_Cm", "section_parasitic_CD", 
             and "section_aL0".
         """
+
+        # Make sure the LL equations have been solved in this state
         if not self._solved:
             self.solve_forces()
+
+            # Make sure alpha has been calculated, since this is only calculated as part of the nonlinear solution
+            if not self._nonlinear_solver:
+                v_i = np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
+                v_i += self._cp_v_inf
+                self._alpha = -np.arctan2(v_i[:,2], v_i[:,0])
 
         dist = {}
 
