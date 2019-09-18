@@ -1018,7 +1018,7 @@ class Scene:
         if filename is not None:
             plt.savefig(filename)
         else:
-            plt.show()
+            plt.show(block=True)
         plt.close()
 
 
