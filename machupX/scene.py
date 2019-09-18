@@ -1017,9 +1017,9 @@ class Scene:
         # Output figure
         if filename is not None:
             plt.savefig(filename)
+            plt.close()
         else:
-            plt.show(block=True)
-        plt.close()
+            plt.show()
 
 
     def aircraft_derivatives(self, aircraft=None, filename=None):
