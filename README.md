@@ -58,8 +58,8 @@ Navigate to the root directory and execute:
 
 The following Python packages are required:
 
-numpy
-scipy
+* numpy
+* scipy
 
 ### Getting the Source Code
 
