@@ -1770,7 +1770,7 @@ class Scene:
         return airplane_object.S_w, airplane_object.l_ref_lon, airplane_object.l_ref_lat
 
 
-    def export_stl(self, filename, aircraft=None):
+    def export_stl(self, filename, section_resolution=200, aircraft=None):
         """Generates a 3D model of the aircraft. If only one aircraft is specified, the model is centered on that
         aircraft's origin. If more than one aircraft is specified, the model is centered on the origin of the earth-
         fixed coordinate system.
@@ -1779,6 +1779,9 @@ class Scene:
         ----------
         filename: str
             Name of the file to export the model to. Must be .stl.
+
+        section_resolution : int
+            Number of points to use in dicretizing the airfoil section outlines. Defaults to 200.
 
         aircraft : str or list
             Name(s) of the aircraft to include in the model. Defaults to all aircraft in the scene.
@@ -1800,7 +1803,7 @@ class Scene:
 
         # Model of single aircraft
         if len(aircraft_names) == 1:
-            self._airplanes[aircraft_names[0]].export_stl(filename)
+            self._airplanes[aircraft_names[0]].export_stl(filename, section_resolution=section_resolution)
 
         # Multiple aircraft
         else:
@@ -1814,7 +1817,7 @@ class Scene:
 
                 # Loop through segments
                 for segment_name, segment_object in airplane_object.wing_segments.items():
-                    vectors = segment_object.get_stl_vectors()
+                    vectors = segment_object.get_stl_vectors(section_res=section_resolution)
                     vector_dict[aircraft_name][segment_name] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, vectors)
                     num_facets += int(vectors.shape[0]/3)
 
@@ -1834,3 +1837,22 @@ class Scene:
 
             # Export
             model_mesh.save(filename)
+
+
+    def export_aircraft_stp(self, aircraft, filename):
+        """Creates a .stp file representing the specified aircraft.
+
+        Parameters
+        ----------
+        aircraft : str
+            The aircraft to export a .stp file of. MAY ONLY SPECIFY ONE.
+
+        filename : str
+            The filename to export to. Must be .stp or .step.
+        """
+
+        # Check for one aircraft
+        if isinstance(aircraft, str):
+            self._airplanes[aircraft].export_stp(filename)
+        else:
+            raise IOError("{0} is not a proper aircraft specifier.".format(aircraft))

@@ -23,27 +23,7 @@ if __name__=="__main__":
     control_state = airplane_state.get("control_state", {})
 
     # Load scene
-    scene = MX.Scene(input_dict)
+    scene = MX.Scene(input_file)
+    scene.export_stl("new.stl", section_resolution=100)
 
-    airplane_dict["wings"]["main_wing"]["airfoil"] = [[0.0, "NACA_4410"],
-                                                      [0.5, "NACA_2410"],
-                                                      [1.0, "NACA_0010"]]
-    airplane_dict["wings"]["main_wing"]["dihedral"] = [[0.0, 0.0],
-                                                       [0.5, 0.0],
-                                                       [1.0, 20.0]]
-    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, 0.0],
-                                                    [0.5, 0.0],
-                                                    [1.0, 20.0]]
-    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],
-                                                    [0.5, 1.0],
-                                                    [1.0, 0.6]]
-    airplane_dict["wings"]["v_stab"]["sweep"] = 30
-    airplane_dict["wings"]["v_stab"]["chord"] = [[0.0, 1.0],
-                                                 [1.0, 0.5]]
-    airplane_dict["wings"]["h_stab"]["sweep"] = 30
-    airplane_dict["wings"]["h_stab"]["chord"] = [[0.0, 1.0],
-                                                 [1.0, 0.5]]
-   
-    state["position"] = [0.0, 0.0, 0.0]
-    scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
-    print(scene._airplanes["test_plane"].wing_segments["main_wing_left"].get_stp_string(1)[0])
+    scene.export_aircraft_stp("test_plane", "test_plane.stp")

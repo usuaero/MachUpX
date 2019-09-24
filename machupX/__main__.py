@@ -92,10 +92,11 @@ def _run_prescribed_analyses(input_filename):
         # Export .stl
         elif key == "stl":
             aircraft = params.get("aircraft", None)
+            res = params.get("section_resolution", 200)
             filename = params.get("filename", input_filename.replace(".json", ".stl"))
 
             print("Exporting stl...")
-            scene.export_stl(filename, aircraft=aircraft)
+            scene.export_stl(filename, section_resolution=res, aircraft=aircraft)
 
         # Unrecognized command
         else:

@@ -887,9 +887,14 @@ class WingSegment:
             return 0.0
 
 
-    def get_stl_vectors(self):
+    def get_stl_vectors(self, section_res=200):
         """Calculates and returns the outline vectors required for 
         generating an .stl model of the wing segment.
+
+        Parameters
+        ----------
+        section_res : int, optional
+            Number of points to use in distcretizing the airfoil sections. Defaults to 200.
 
         Returns
         -------
@@ -901,11 +906,10 @@ class WingSegment:
         # Collect airfoil outlines
         airfoil_outlines = {}
         for airfoil in self._airfoils:
-            airfoil_outlines[airfoil.name] = airfoil.get_outline_points()
+            airfoil_outlines[airfoil.name] = airfoil.get_outline_points(section_res)
 
         # Discretize by node locations
-        num_airfoil_points = next(iter(airfoil_outlines.values())).shape[0]
-        num_facets = self._N*(num_airfoil_points-1)*2
+        num_facets = self._N*(section_res-1)*2
         vectors = np.zeros((num_facets*3,3))
 
         # Generate vectors
@@ -935,7 +939,7 @@ class WingSegment:
             else:
                 q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
 
-            untransformed_root_coords = chord*np.array([-root_points[:,0].flatten()+0.25, np.zeros(num_airfoil_points), -root_points[:,1]]).T
+            untransformed_root_coords = chord*np.array([-root_points[:,0].flatten()+0.25, np.zeros(section_res), -root_points[:,1]]).T
             root_outline = self._get_quarter_chord_loc(root_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_root_coords)
 
             # Tip-ward node
@@ -962,12 +966,12 @@ class WingSegment:
             else:
                 q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
 
-            untransformed_tip_coords = chord*np.array([-tip_points[:,0].flatten()+0.25, np.zeros(num_airfoil_points), -tip_points[:,1]]).T
+            untransformed_tip_coords = chord*np.array([-tip_points[:,0].flatten()+0.25, np.zeros(section_res), -tip_points[:,1]]).T
             tip_outline = self._get_quarter_chord_loc(tip_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_tip_coords)
 
             # Create facets between the outlines
-            for j in range(num_airfoil_points-1):
-                index = (2*i*(num_airfoil_points-1)+2*j)*3
+            for j in range(section_res-1):
+                index = (2*i*(section_res-1)+2*j)*3
 
                 vectors[index] = root_outline[j]
                 vectors[index+1] = tip_outline[j+1]
@@ -978,6 +982,40 @@ class WingSegment:
                 vectors[index+5] = root_outline[j+1]
 
         return vectors
+
+
+    def _get_airfoil_outline_coords_at_span(self, span, N):
+        # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction
+
+        # Collect airfoil outlines
+        airfoil_outlines = {}
+        for airfoil in self._airfoils:
+            airfoil_outlines[airfoil.name] = airfoil.get_outline_points(N)
+
+        # Linearly interpolate outlines, ignoring twist, etc for now
+        index = 0
+        while True:
+            if span >= self._airfoil_spans[index] and span <= self._airfoil_spans[index+1]:
+                total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+                root_weight = 1-abs(span-self._airfoil_spans[index])/total_span
+                tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
+                points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
+                break
+            index += 1
+
+        # Add twist, dihedral, and chord and transform to body-fixed coordinates
+        twist = self.get_twist(span)
+        dihedral = self.get_dihedral(span)
+        chord = self.get_chord(span)
+
+        if self._side == "left":
+            q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
+        else:
+            q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
+
+        untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(section_res), -points[:,1]]).T
+        root_outline = self._get_quarter_chord_loc(root_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_root_coords)
+
 
 
     def get_stp_string(self, solid_index):
@@ -998,11 +1036,9 @@ class WingSegment:
             STEP information for the wing segment.
 
         int
-            Ending entity number
+            The next available entity number
         """
 
-        # Use get_stl_vectors() to generate the points
-        stl_vecs = self.get_stl_vectors()
         m = self._N # number of points along the span
         n = int(stl_vecs.shape[0]/(6*m)) # number of points around the section
 
@@ -1064,22 +1100,76 @@ class WingSegment:
 
         # Tip-ward section face
         tip_face_entity_no = copy.copy(curr_entity_no)
+        s.append("#{0} = ADVANCED_FACE('', (#{1}), #{2}, .T.);".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
+        curr_entity_no += 1
+        s.append("#{0} = FACE_OUTER_BOUND('', #{1}, .T.);".format(curr_entity_no, curr_entity_no+6))
+        curr_entity_no += 1
+        s.append("#{0} = PLANE('', #{1});".format(curr_entity_no, curr_entity_no+1))
+        curr_entity_no += 1
+        s.append("#{0} = AXIS2_PLACEMENT_3D('', #{1}, #{2}, #{3});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
+        curr_entity_no += 1
 
-            #for j in range(num_airfoil_points-1):
-            #    index = (2*i*(num_airfoil_points-1)+2*j)*3
+        reference_point = self.get_tip_loc()
+        s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, reference_point[0], reference_point[1], reference_point[2]))
+        curr_entity_no += 1
+        
+        if self._side == "left":
+            vec = -self._get_span_vec(0.0).flatten()
+        else:
+            vec = self._get_span_vec(0.0).flatten()
 
-            #    vectors[index] = root_outline[j]
-            #    vectors[index+1] = tip_outline[j+1]
-            #    vectors[index+2] = tip_outline[j]
+        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
+        curr_entity_no += 1
 
-            #    vectors[index+3] = tip_outline[j+1]
-            #    vectors[index+4] = root_outline[j]
-            #    vectors[index+5] = root_outline[j+1]
+        vec = self._get_normal_vec(0.0).flatten()
+        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
+        curr_entity_no += 1
 
+        s.append("#{0} = EDGE_LOOP('', ({1}));".format(curr_entity_no, ", ".join(["#{0}".format(curr_entity_no+1+6*i) for i in range(n)])))
+        curr_entity_no += 1
+
+        for i in range(n):
+            s.append("#{0} = ORIENTED_EDGE('', *, *, {1}, .T.);".format(curr_entity_no, curr_entity_no+1))
+            curr_entity_no += 1
+
+            s.append("#{0} = EDGE('', #{1}, #{2});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
+            curr_entity_no += 1
+
+            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
+            curr_entity_no += 1
+
+            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
+            curr_entity_no += 1
+
+            start = stl_vecs[m*n+6*i+2]
+            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, start[0], start[1], start[2]))
+            curr_entity_no += 1
+
+            end = stl_vecs[m*n+6*i+1]
+            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, end[0], end[1], end[2]))
+            curr_entity_no += 1
         
         # Surface
         surface_entity_no = copy.copy(curr_entity_no)
+        curr_entity_no += 1
+        surface_point_list = []
+        u_knots_theta = np.linspace(-np.pi, np.pi, n)
+        u_knots = 0.5*(1-np.cos(u_knots_theta))
+        u_knot_list = ", ".join([str(x) for x in u_knots])
+        for i in range(n): # Around the surface
+            inner_list = []
+            for j in range(m): # Along the span. Start at the tip and go to the root
+                curr_point = stl_vecs[int((2*i*m+2*j)*3)]
+                s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, curr_point[0], curr_point[1], curr_point[2]))
+                inner_list.append("#{0}".format(curr_entity_no))
+                curr_entity_no += 1
 
+            surface_point_list.append("({0})".format(", ".join(inner_list)))
+
+        # Collect control points
+        knot_strings = [str(x) for x in self._node_span_locs]
+        v_knot_list = ", ".join(knot_strings)
+        s.append("#{0} = B_SPLINE_SURFACE_WITH_KNOTS('', 3, 3, ({1}), .UNSPECIFIED., .F., .F., .F., ({2}), ({3}), .UNSPECIFIED.);".format(surface_entity_no, ",\n".join(surface_point_list), u_knot_list, v_knot_list))
 
         # Assemble shell
         s.append("#{0} = CLOSED_SHELL('', (#{1}, #{2}, #{3}));".format(solid_index+1, root_face_entity_no, tip_face_entity_no, surface_entity_no))
