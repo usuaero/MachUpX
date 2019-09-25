@@ -917,57 +917,11 @@ class WingSegment:
 
             # Root-ward node
             root_span = self._node_span_locs[i]
-
-            # Linearly interpolate outlines, ignoring twist, etc for now
-            index = 0
-            while True:
-                if root_span >= self._airfoil_spans[index] and root_span <= self._airfoil_spans[index+1]:
-                    total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
-                    root_weight = 1-abs(root_span-self._airfoil_spans[index])/total_span
-                    tip_weight = 1-abs(root_span-self._airfoil_spans[index+1])/total_span
-                    root_points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
-                    break
-                index += 1
-
-            # Add twist, dihedral, and chord and transform to body-fixed coordinates
-            twist = self.get_twist(root_span)
-            dihedral = self.get_dihedral(root_span)
-            chord = self.get_chord(root_span)
-
-            if self._side == "left":
-                q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
-            else:
-                q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
-
-            untransformed_root_coords = chord*np.array([-root_points[:,0].flatten()+0.25, np.zeros(section_res), -root_points[:,1]]).T
-            root_outline = self._get_quarter_chord_loc(root_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_root_coords)
+            root_outline = self._get_airfoil_outline_coords_at_span(root_span, section_res)
 
             # Tip-ward node
             tip_span = self._node_span_locs[i+1]
-
-            # Linearly interpolate outlines, ignoring twist, etc for now
-            index = 0
-            while True:
-                if tip_span >= self._airfoil_spans[index] and tip_span <= self._airfoil_spans[index+1]:
-                    total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
-                    root_weight = 1-abs(tip_span-self._airfoil_spans[index])/total_span
-                    tip_weight = 1-abs(tip_span-self._airfoil_spans[index+1])/total_span
-                    tip_points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
-                    break
-                index += 1
-
-            # Add twist, dihedral, and chord and transform to body-fixed coordinates
-            twist = self.get_twist(tip_span)
-            dihedral = self.get_dihedral(tip_span)
-            chord = self.get_chord(tip_span)
-
-            if self._side == "left":
-                q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
-            else:
-                q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
-
-            untransformed_tip_coords = chord*np.array([-tip_points[:,0].flatten()+0.25, np.zeros(section_res), -tip_points[:,1]]).T
-            tip_outline = self._get_quarter_chord_loc(tip_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_tip_coords)
+            tip_outline = self._get_airfoil_outline_coords_at_span(tip_span, section_res)
 
             # Create facets between the outlines
             for j in range(section_res-1):
@@ -985,7 +939,7 @@ class WingSegment:
 
 
     def _get_airfoil_outline_coords_at_span(self, span, N):
-        # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction
+        # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction with the specified number of points
 
         # Collect airfoil outlines
         airfoil_outlines = {}
@@ -1013,12 +967,11 @@ class WingSegment:
         else:
             q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
 
-        untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(section_res), -points[:,1]]).T
-        root_outline = self._get_quarter_chord_loc(root_span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_root_coords)
+        untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
+        return self._get_quarter_chord_loc(span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_coords)
 
 
-
-    def get_stp_string(self, solid_index):
+    def get_stp_string(self, solid_index, section_resolution=200):
         """Returns the portion of a STEP file necessary to render this wing 
         segment as a MANIFOLD_SOLID_BREP.
 
@@ -1030,6 +983,9 @@ class WingSegment:
 
             #<solid_index> = MANIFOLD_SOLID_BREP(...);
 
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+
         Returns
         -------
         str
@@ -1039,8 +995,10 @@ class WingSegment:
             The next available entity number
         """
 
-        m = self._N # number of points along the span
-        n = int(stl_vecs.shape[0]/(6*m)) # number of points around the section
+        # The surface of the wing segment will consist of a B_SPLINE_SURFACE_WITH_KNOTS in the STEP file.
+        # This is defined by an array of m+1 by n+1 control points, including edges.
+        m = self._N # Number of points along the span
+        n = section_resolution-1 # Number of points around the section
 
         # Start file
         s = []
@@ -1058,6 +1016,7 @@ class WingSegment:
         s.append("#{0} = AXIS2_PLACEMENT_3D('', #{1}, #{2}, #{3});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
         curr_entity_no += 1
 
+        # Origin and axis defining plane
         origin = self.get_root_loc()
         s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, origin[0], origin[1], origin[2]))
         curr_entity_no += 1
@@ -1074,9 +1033,11 @@ class WingSegment:
         s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
         curr_entity_no += 1
 
+        # Boundary of face
         s.append("#{0} = EDGE_LOOP('', ({1}));".format(curr_entity_no, ", ".join(["#{0}".format(curr_entity_no+1+6*i) for i in range(n)])))
         curr_entity_no += 1
 
+        root_outline = self._get_airfoil_outline_coords_at_span(0.0, section_resolution)
         for i in range(n):
             s.append("#{0} = ORIENTED_EDGE('', *, *, {1}, .T.);".format(curr_entity_no, curr_entity_no+1))
             curr_entity_no += 1
@@ -1090,11 +1051,11 @@ class WingSegment:
             s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
             curr_entity_no += 1
 
-            start = stl_vecs[6*i]
+            start = root_outline[i]
             s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, start[0], start[1], start[2]))
             curr_entity_no += 1
 
-            end = stl_vecs[6*i+5]
+            end = root_outline[i+1]
             s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, end[0], end[1], end[2]))
             curr_entity_no += 1
 
@@ -1109,6 +1070,7 @@ class WingSegment:
         s.append("#{0} = AXIS2_PLACEMENT_3D('', #{1}, #{2}, #{3});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
         curr_entity_no += 1
 
+        # Origin and axes defining plane
         reference_point = self.get_tip_loc()
         s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, reference_point[0], reference_point[1], reference_point[2]))
         curr_entity_no += 1
@@ -1125,9 +1087,11 @@ class WingSegment:
         s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
         curr_entity_no += 1
 
+        # Boundary of face
         s.append("#{0} = EDGE_LOOP('', ({1}));".format(curr_entity_no, ", ".join(["#{0}".format(curr_entity_no+1+6*i) for i in range(n)])))
         curr_entity_no += 1
 
+        tip_outline = self._get_airfoil_outline_coords_at_span(1.0, section_resolution)
         for i in range(n):
             s.append("#{0} = ORIENTED_EDGE('', *, *, {1}, .T.);".format(curr_entity_no, curr_entity_no+1))
             curr_entity_no += 1
@@ -1141,35 +1105,41 @@ class WingSegment:
             s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
             curr_entity_no += 1
 
-            start = stl_vecs[m*n+6*i+2]
+            start = tip_outline[i]
             s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, start[0], start[1], start[2]))
             curr_entity_no += 1
 
-            end = stl_vecs[m*n+6*i+1]
+            end = tip_outline[i+1]
             s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, end[0], end[1], end[2]))
             curr_entity_no += 1
         
-        # Surface
+        # Surface spline
         surface_entity_no = copy.copy(curr_entity_no)
         curr_entity_no += 1
+
+        # Loop along the span
         surface_point_list = []
-        u_knots_theta = np.linspace(-np.pi, np.pi, n)
-        u_knots = 0.5*(1-np.cos(u_knots_theta))
-        u_knot_list = ", ".join([str(x) for x in u_knots])
-        for i in range(n): # Around the surface
+        for i in range(m+1):
             inner_list = []
-            for j in range(m): # Along the span. Start at the tip and go to the root
-                curr_point = stl_vecs[int((2*i*m+2*j)*3)]
+            outline = self._get_airfoil_outline_coords_at_span(self._node_span_locs[i], section_resolution)
+
+            # Loop around each section
+            for j in range(n+1):
+                curr_point = outline[i]
                 s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, curr_point[0], curr_point[1], curr_point[2]))
                 inner_list.append("#{0}".format(curr_entity_no))
                 curr_entity_no += 1
 
             surface_point_list.append("({0})".format(", ".join(inner_list)))
 
-        # Collect control points
-        knot_strings = [str(x) for x in self._node_span_locs]
-        v_knot_list = ", ".join(knot_strings)
-        s.append("#{0} = B_SPLINE_SURFACE_WITH_KNOTS('', 3, 3, ({1}), .UNSPECIFIED., .F., .F., .F., ({2}), ({3}), .UNSPECIFIED.);".format(surface_entity_no, ",\n".join(surface_point_list), u_knot_list, v_knot_list))
+        # Create knot locations
+        u_knot_strings = [str(x) for x in self._node_span_locs]
+        u_knot_list = ", ".join(u_knot_strings)
+        v_knots = np.linspace(0.0, 1.0, section_resolution)
+        v_knot_list = ", ".join([str(x) for x in v_knots])
+
+        # Collect surface information
+        s.append("#{0} = B_SPLINE_SURFACE_WITH_KNOTS('', 3, 3, ({1}), .UNSPECIFIED., .F., .F., .F., .UNSPECIFIED., .UNSPECIFIED., ({2}), ({3}), .UNSPECIFIED.);".format(surface_entity_no, ",\n".join(surface_point_list), u_knot_list, v_knot_list))
 
         # Assemble shell
         s.append("#{0} = CLOSED_SHELL('', (#{1}, #{2}, #{3}));".format(solid_index+1, root_face_entity_no, tip_face_entity_no, surface_entity_no))

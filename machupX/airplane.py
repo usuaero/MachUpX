@@ -454,13 +454,16 @@ class Airplane:
         model_mesh.save(filename)
 
 
-    def export_stp(self, filename):
+    def export_stp(self, filename, section_resolution=200):
         """Exports a .STEP file representing the aircraft.
 
         Parameters
         ----------
         filename
             File to export the model to. Must be .stp or .step.
+
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         """
 
         # Check extension
@@ -493,7 +496,7 @@ ENDSEC;\n""".format(filename))
             solid_indices = []
             for _, segment in self.wing_segments.items():
                 solid_indices.append(solid_index)
-                solid_string, solid_index = segment.get_stp_string(solid_index)
+                solid_string, solid_index = segment.get_stp_string(solid_index, section_resolution=section_resolution)
                 step_handle.write(solid_string)
 
             # Create shape representation

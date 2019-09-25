@@ -1839,7 +1839,7 @@ class Scene:
             model_mesh.save(filename)
 
 
-    def export_aircraft_stp(self, aircraft, filename):
+    def export_aircraft_stp(self, aircraft, filename, section_resolution=200):
         """Creates a .stp file representing the specified aircraft.
 
         Parameters
@@ -1849,10 +1849,13 @@ class Scene:
 
         filename : str
             The filename to export to. Must be .stp or .step.
+
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         """
 
         # Check for one aircraft
         if isinstance(aircraft, str):
-            self._airplanes[aircraft].export_stp(filename)
+            self._airplanes[aircraft].export_stp(filename, section_resolution=section_resolution)
         else:
             raise IOError("{0} is not a proper aircraft specifier.".format(aircraft))

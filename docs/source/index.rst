@@ -11,3 +11,4 @@ MachUpX
    creating_input_files
    scene_object
    support
+   developer_notes
