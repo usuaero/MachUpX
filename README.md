@@ -16,6 +16,8 @@ Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
 Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Specific help with API functions can also be found in the docstrings.
 
+There is an active MachUp discussion forum on [Google Groups](https://groups.google.com/forum/#!categories/machup_forum). Help on using MachUpX can be found there.
+
 ## Features
 
 MachUpX can be run from the command line or imported as a module in a python script.
