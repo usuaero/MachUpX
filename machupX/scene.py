@@ -425,9 +425,6 @@ class Scene:
         C_LRe = np.zeros(self._N)
         C_LM = np.zeros(self._N)
 
-        # Airfoil params
-        self._alpha = np.zeros(self._N)
-
         # Velocities
         v_i = np.zeros((self._N,3))
         v_ni = np.zeros(self._N)
@@ -1099,7 +1096,7 @@ class Scene:
         elif isinstance(aircraft, str):
             aircraft_names = [aircraft]
         else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1187,7 +1184,7 @@ class Scene:
         elif isinstance(aircraft, str):
             aircraft_names = [aircraft]
         else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1312,7 +1309,7 @@ class Scene:
         elif isinstance(aircraft, str):
             aircraft_names = [aircraft]
         else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1420,7 +1417,7 @@ class Scene:
         try:
             delta_flap0 = copy.copy(controls_original[pitch_control])
         except KeyError:
-            raise IOError("{0} has no {1}. Cannot be trimmed in pitch.".format(aircraft_name, control))
+            raise IOError("{0} has no {1}. Cannot be trimmed in pitch.".format(aircraft_name, pitch_control))
         J = np.zeros((2,2))
 
         if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
@@ -1530,7 +1527,7 @@ class Scene:
         elif isinstance(aircraft, str):
             aircraft_names = list(aircraft)
         else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         ac_loc = {}
 
@@ -1618,11 +1615,12 @@ class Scene:
         if not self._solved:
             self.solve_forces()
 
-            # Make sure alpha has been calculated, since this is only calculated as part of the nonlinear solution
-            if not self._nonlinear_solver:
-                v_i = np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
-                v_i += self._cp_v_inf
-                self._alpha = -np.arctan2(v_i[:,2], v_i[:,0])
+        # Make sure alpha has been calculated.
+        v_i = np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
+        v_i += self._cp_v_inf
+        v_ni = np.einsum('ij,ij->i', v_i, self._u_n)
+        v_ai = np.einsum('ij,ij->i', v_i, self._u_a)
+        self._alpha = np.arctan2(v_ni, v_ai)
 
         dist = {}
 
@@ -1684,7 +1682,7 @@ class Scene:
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
-                dist[airplane_name][segment_name]["alpha"] = list(self._alpha[cur_slice])
+                dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
                 dist[airplane_name][segment_name]["Re"] = list(self._Re[cur_slice])
                 dist[airplane_name][segment_name]["M"] = list(self._M[cur_slice])
 
