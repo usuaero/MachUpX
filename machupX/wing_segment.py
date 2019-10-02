@@ -995,11 +995,6 @@ class WingSegment:
             The next available entity number
         """
 
-        # The surface of the wing segment will consist of a B_SPLINE_SURFACE_WITH_KNOTS in the STEP file.
-        # This is defined by an array of m+1 by n+1 control points, including edges.
-        m = self._N # Number of points along the span
-        n = section_resolution-1 # Number of points around the section
-
         # Start file
         s = []
         curr_entity_no = copy.copy(solid_index)
@@ -1007,117 +1002,39 @@ class WingSegment:
 
         # Root-ward section face
         root_face_entity_no = copy.copy(curr_entity_no)
-        s.append("#{0} = ADVANCED_FACE('', (#{1}), #{2}, .T.);".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
-        curr_entity_no += 1
-        s.append("#{0} = FACE_OUTER_BOUND('', #{1}, .T.);".format(curr_entity_no, curr_entity_no+6))
-        curr_entity_no += 1
-        s.append("#{0} = PLANE('', #{1});".format(curr_entity_no, curr_entity_no+1))
-        curr_entity_no += 1
-        s.append("#{0} = AXIS2_PLACEMENT_3D('', #{1}, #{2}, #{3});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
-        curr_entity_no += 1
 
-        # Origin and axis defining plane
-        origin = self.get_root_loc()
-        s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, origin[0], origin[1], origin[2]))
-        curr_entity_no += 1
-        
-        if self._side == "left":
-            vec = self._get_span_vec(0.0).flatten()
-        else:
-            vec = -self._get_span_vec(0.0).flatten()
-
-        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
-        curr_entity_no += 1
-
-        vec = self._get_normal_vec(0.0).flatten()
-        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
-        curr_entity_no += 1
-
-        # Boundary of face
-        s.append("#{0} = EDGE_LOOP('', ({1}));".format(curr_entity_no, ", ".join(["#{0}".format(curr_entity_no+1+6*i) for i in range(n)])))
-        curr_entity_no += 1
-
+        # Outline and plane origin
         root_outline = self._get_airfoil_outline_coords_at_span(0.0, section_resolution)
-        for i in range(n):
-            s.append("#{0} = ORIENTED_EDGE('', *, *, {1}, .T.);".format(curr_entity_no, curr_entity_no+1))
-            curr_entity_no += 1
+        plane_origin = self.get_root_loc()
 
-            s.append("#{0} = EDGE('', #{1}, #{2});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
-            curr_entity_no += 1
+        # Plane direction vectors
+        axial_vec = self._get_axial_vec(0.0).flatten()
+        norm_vec = self._get_normal_vec(0.0).flatten()
 
-            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
-            curr_entity_no += 1
-
-            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
-            curr_entity_no += 1
-
-            start = root_outline[i]
-            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, start[0], start[1], start[2]))
-            curr_entity_no += 1
-
-            end = root_outline[i+1]
-            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, end[0], end[1], end[2]))
-            curr_entity_no += 1
+        # Create face
+        curr_entity_no = self._append_step_advanced_face(s, root_face_entity_no, root_outline, plane_origin, axial_vec, norm_vec)
 
         # Tip-ward section face
         tip_face_entity_no = copy.copy(curr_entity_no)
-        s.append("#{0} = ADVANCED_FACE('', (#{1}), #{2}, .T.);".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
-        curr_entity_no += 1
-        s.append("#{0} = FACE_OUTER_BOUND('', #{1}, .T.);".format(curr_entity_no, curr_entity_no+6))
-        curr_entity_no += 1
-        s.append("#{0} = PLANE('', #{1});".format(curr_entity_no, curr_entity_no+1))
-        curr_entity_no += 1
-        s.append("#{0} = AXIS2_PLACEMENT_3D('', #{1}, #{2}, #{3});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
-        curr_entity_no += 1
 
-        # Origin and axes defining plane
-        reference_point = self.get_tip_loc()
-        s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, reference_point[0], reference_point[1], reference_point[2]))
-        curr_entity_no += 1
-        
-        if self._side == "left":
-            vec = -self._get_span_vec(0.0).flatten()
-        else:
-            vec = self._get_span_vec(0.0).flatten()
+        # Outline and plane origin
+        tip_outline = self._get_airfoil_outline_coords_at_span(1.0, section_resolution)[::-1]
+        plane_origin = self.get_tip_loc()
 
-        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
-        curr_entity_no += 1
+        # Plane direction vectors
+        axial_vec = self._get_axial_vec(1.0).flatten()
+        norm_vec = self._get_normal_vec(1.0).flatten()
 
-        vec = self._get_normal_vec(0.0).flatten()
-        s.append("#{0} = DIRECTION('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, vec[0], vec[1], vec[2]))
-        curr_entity_no += 1
-
-        # Boundary of face
-        s.append("#{0} = EDGE_LOOP('', ({1}));".format(curr_entity_no, ", ".join(["#{0}".format(curr_entity_no+1+6*i) for i in range(n)])))
-        curr_entity_no += 1
-
-        tip_outline = self._get_airfoil_outline_coords_at_span(1.0, section_resolution)
-        for i in range(n):
-            s.append("#{0} = ORIENTED_EDGE('', *, *, {1}, .T.);".format(curr_entity_no, curr_entity_no+1))
-            curr_entity_no += 1
-
-            s.append("#{0} = EDGE('', #{1}, #{2});".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
-            curr_entity_no += 1
-
-            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
-            curr_entity_no += 1
-
-            s.append("#{0} = VERTEX('', #{1});".format(curr_entity_no, curr_entity_no+2))
-            curr_entity_no += 1
-
-            start = tip_outline[i]
-            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, start[0], start[1], start[2]))
-            curr_entity_no += 1
-
-            end = tip_outline[i+1]
-            s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, end[0], end[1], end[2]))
-            curr_entity_no += 1
+        # Create face
+        curr_entity_no = self._append_step_advanced_face(s, tip_face_entity_no, tip_outline[::-1], plane_origin, axial_vec, norm_vec)
         
         # Surface spline
         surface_entity_no = copy.copy(curr_entity_no)
         curr_entity_no += 1
 
         # Loop along the span
+        m = self._N # Number of points along the span
+        n = section_resolution-1 # Number of points around the section
         surface_point_list = []
         for i in range(m+1):
             inner_list = []
@@ -1125,12 +1042,11 @@ class WingSegment:
 
             # Loop around each section
             for j in range(n+1):
-                curr_point = outline[i]
-                s.append("#{0} = CARTESIAN_POINT('', ({1:f}, {2:f}, {3:f}));".format(curr_entity_no, curr_point[0], curr_point[1], curr_point[2]))
+                curr_point = outline[j]
                 inner_list.append("#{0}".format(curr_entity_no))
-                curr_entity_no += 1
+                curr_entity_no = self._append_step_cartesian_point(s, curr_entity_no, curr_point)
 
-            surface_point_list.append("({0})".format(", ".join(inner_list)))
+            surface_point_list.append("( {0} )".format(" , ".join(inner_list)))
 
         # Create knot locations
         u_knot_strings = [str(x) for x in self._node_span_locs]
@@ -1139,11 +1055,98 @@ class WingSegment:
         v_knot_list = ", ".join([str(x) for x in v_knots])
 
         # Collect surface information
-        s.append("#{0} = B_SPLINE_SURFACE_WITH_KNOTS('', 3, 3, ({1}), .UNSPECIFIED., .F., .F., .F., .UNSPECIFIED., .UNSPECIFIED., ({2}), ({3}), .UNSPECIFIED.);".format(surface_entity_no, ",\n".join(surface_point_list), u_knot_list, v_knot_list))
+        b_spline_surface_string = "#{0} = B_SPLINE_SURFACE_WITH_KNOTS ( 'NONE' , 3 , 3 , ( {1} ) , .UNSPECIFIED. , .F. , .F. , .F. , .UNSPECIFIED. , .UNSPECIFIED. , ( {2} ) , ( {3} ) , .UNSPECIFIED.) ;"
+        s.append(b_spline_surface_string.format(surface_entity_no, ", ".join(surface_point_list), u_knot_list, v_knot_list))
 
         # Assemble shell
-        s.append("#{0} = CLOSED_SHELL('', (#{1}, #{2}, #{3}));".format(solid_index+1, root_face_entity_no, tip_face_entity_no, surface_entity_no))
-        s.append("#{0} = MANIFOLD_SOLID_BREP('{1}', #{2});".format(solid_index, self.name, solid_index+1))
+        s.insert(0, "#{0} = CLOSED_SHELL ( 'NONE' , ( #{1} , #{2} , #{3} ) ) ;".format(solid_index+1, root_face_entity_no, tip_face_entity_no, surface_entity_no))
+        s.insert(0, "#{0} = MANIFOLD_SOLID_BREP ( '{1}' , #{2} ) ;".format(solid_index, self.name, solid_index+1))
 
         # Format into single string
         return "\n".join(s), curr_entity_no
+
+
+    def _append_step_advanced_face(self, entity_list, face_index, outline_points, plane_origin, axis_dir0, axis_dir1):
+        # Creates an advanced face at the given entity number
+        curr_entity_no = copy.copy(face_index)
+        entity_list.append("#{0} = ADVANCED_FACE ( 'NONE' , ( #{1}) , #{2} , .T. ) ;".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
+        curr_entity_no += 1
+        entity_list.append("#{0} = FACE_OUTER_BOUND ( 'NONE' , #{1} , .T. ) ;".format(curr_entity_no, curr_entity_no+6))
+        curr_entity_no += 1
+        entity_list.append("#{0} = PLANE ( 'NONE' , #{1} ) ;".format(curr_entity_no, curr_entity_no+1))
+        curr_entity_no += 1
+        entity_list.append("#{0} = AXIS2_PLACEMENT_3D ( 'NONE' , #{1} , #{2} , #{3} ) ;".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2, curr_entity_no+3))
+        curr_entity_no += 1
+
+        # Origin and axis defining plane
+        curr_entity_no = self._append_step_cartesian_point(entity_list, curr_entity_no, plane_origin)
+        
+        curr_entity_no = self._append_step_direction(entity_list, curr_entity_no, axis_dir0)
+        
+        curr_entity_no = self._append_step_direction(entity_list, curr_entity_no, axis_dir1)
+
+        # Boundary of face
+        n = outline_points.shape[0]
+        edge_loop_no = copy.copy(curr_entity_no)
+        curr_entity_no += 1
+
+        oriented_edge_entities = []
+
+        # Loop through outline points to generate boundary segments
+        for i in range(n):
+            entity_list.append("#{0} = ORIENTED_EDGE ( 'NONE' , * , * , {1} , .T. ) ; ".format(curr_entity_no, curr_entity_no+1))
+            oriented_edge_entities.append("#{0}".format(curr_entity_no))
+            curr_entity_no += 1
+
+            entity_list.append("#{0} = EDGE_CURVE ( 'NONE' , #{1} , #{2} , #{3} , .T. ) ;".format(curr_entity_no, curr_entity_no+1, curr_entity_no+3, curr_entity_no+5))
+            curr_entity_no += 1
+
+            # Starting vertex
+            start = outline_points[i]
+            curr_entity_no = self._append_step_vertex(entity_list, curr_entity_no, start)
+
+            # Ending vertex
+            if i < n-1:
+                end = outline_points[i+1]
+            else: # Wrap around the trailing edge
+                end = outline_points[0]
+            curr_entity_no = self._append_step_vertex(entity_list, curr_entity_no, end)
+
+            # Line defining curve
+            entity_list.append("#{0} = LINE ( 'NONE' , #{1} , #{2} ) ;".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
+            curr_entity_no += 1
+
+            # Point defining line
+            curr_entity_no = self._append_step_cartesian_point(entity_list, curr_entity_no, start)
+
+            # Vector defining line
+            x_diff = end[0]-start[0]
+            y_diff = end[1]-start[1]
+            z_diff = end[2]-start[2]
+            length = np.sqrt(x_diff*x_diff+y_diff*y_diff+z_diff*z_diff)
+            entity_list.append("#{0} = VECTOR ( 'NONE' , #{1} , {2} ) ;".format(curr_entity_no, curr_entity_no+1, length))
+            curr_entity_no += 1
+
+            curr_entity_no = self._append_step_direction(entity_list, curr_entity_no, np.array([x_diff, y_diff, z_diff]/length))
+
+        entity_list.append("#{0} = EDGE_LOOP ( 'NONE' , ( {1} ) ) ;".format(edge_loop_no, " , ".join(oriented_edge_entities)))
+
+        return curr_entity_no
+
+
+    def _append_step_vertex(self, entity_list, entity_no, coords):
+        # Creates a vertex at the given entity number. Creates 2 entities
+        entity_list.append("#{0} = VERTEX ( 'NONE' , #{1} ) ;".format(entity_no, entity_no+1))
+        return self._append_step_cartesian_point(entity_list, entity_no+1, coords)
+
+
+    def _append_step_cartesian_point(self, entity_list, entity_no, coords):
+        # Creates a cartesian point at the given entity number
+        entity_list.append("#{0} = CARTESIAN_POINT ( 'NONE' , ( {1:f} , {2:f} , {3:f} ) ) ;".format(entity_no, coords[0], coords[1], coords[2]))
+        return entity_no+1
+
+
+    def _append_step_direction(self, entity_list, entity_no, unit_vec):
+        # Creates a direction at the given entity number
+        entity_list.append("#{0} = DIRECTION ( 'NONE' , ( {1} , {2} , {3} ) ) ;".format(entity_no, unit_vec[0], unit_vec[1], unit_vec[2]))
+        return entity_no+1
