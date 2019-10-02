@@ -253,7 +253,7 @@ class WingSegment:
         self._root_chord = root_chord
 
         def getter(span_frac):
-            return self._root_chord*np.sqrt(1-span_frac**2)
+            return self._root_chord*np.sqrt(1-span_frac*span_frac)
 
         return getter
 

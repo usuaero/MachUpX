@@ -465,7 +465,6 @@ class Scene:
                     C_La[cur_slice] = segment_object.get_cp_CLa(airfoil_params[cur_slice,:])
                     C_LRe[cur_slice] = segment_object.get_cp_CLRe(airfoil_params[cur_slice,:])
                     C_LM[cur_slice] = segment_object.get_cp_CLM(airfoil_params[cur_slice,:])
-                    self._aL0[cur_slice] = segment_object.get_cp_aL0(airfoil_params[cur_slice,:])
 
                     index += num_cps
 
@@ -476,11 +475,11 @@ class Scene:
 
             # Residual vector
             if phillips:
-                R = 2*w_i_mag*self._Gamma-self._cp_V_inf**2*C_L*self._dS # Phillips' way
+                R = 2*w_i_mag*self._Gamma-self._cp_V_inf*self._cp_V_inf*C_L*self._dS # Phillips' way
             else:
-                R = 2*w_i_mag*self._Gamma-V_i**2*C_L*self._dS # My way
+                R = 2*w_i_mag*self._Gamma-V_i*V_i*C_L*self._dS # My way
 
-            error = np.sqrt(np.sum(R**2))
+            error = np.sqrt(np.sum(R*R))
 
             # Caclulate Jacobian
             J[:,:] = (2*self._Gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
@@ -488,14 +487,14 @@ class Scene:
             if not phillips:
                 J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
-            CL_gamma_alpha = C_La[:,np.newaxis]*(v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(v_ni**2+v_ai**2)[:,np.newaxis]
+            CL_gamma_alpha = C_La[:,np.newaxis]*(v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(v_ni*v_ni+v_ai*v_ai)[:,np.newaxis]
             CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*V_i)[:,np.newaxis]*v_iji
             CL_gamma_M = C_LM[:,np.newaxis]/(self._a*V_i)[:,np.newaxis]*v_iji
 
             if phillips:
-                J[:,:] -= (self._cp_V_inf**2*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
+                J[:,:] -= (self._cp_V_inf*self._cp_V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
             else:
-                J[:,:] -= (V_i**2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
+                J[:,:] -= (V_i*V_i*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
 
             diag_ind = np.diag_indices(self._N)
             J[diag_ind] += 2*w_i_mag
@@ -511,7 +510,7 @@ class Scene:
 
             # Check this isn't taking too long
             if iteration >= self._max_solver_iterations:
-                raise RuntimeWarning("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
+                if verbose: print("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
                 break
 
         else: # If the loop exits normally, then everything is good
@@ -536,7 +535,7 @@ class Scene:
         u = v/V[:,np.newaxis]
         alpha = np.arctan2(np.einsum('ij,ij->i', v, self._u_n), np.einsum('ij,ij->i', v, self._u_a))
         airfoil_params = np.concatenate((alpha[:,np.newaxis], self._Re[:,np.newaxis], self._M[:,np.newaxis]), axis=1)
-        self._q_inf = 0.5*self._rho*V**2
+        self._q_inf = 0.5*self._rho*V*V
 
         # Store lift, drag, and moment coefficient distributions
         self._CD = np.zeros(self._N)
@@ -582,7 +581,7 @@ class Scene:
                 l_ref_lon = airplane_object.l_ref_lon
                 l_ref_lat = airplane_object.l_ref_lat
                 rho_ref = self._get_density(airplane_object.p_bar)
-                q_ref = 0.5*rho_ref*V_inf**2
+                q_ref = 0.5*rho_ref*V_inf*V_inf
 
             # Loop through segments
             for segment_name in self._segment_names[i]:
@@ -1544,6 +1543,7 @@ class Scene:
 
             a0, B0, V0 = airplane_object.get_aerodynamic_state(v_wind=v_wind)
             delta = 0.5
+            delta2 = delta*delta
 
             # Perturb forward
             airplane_object.set_aerodynamic_state(alpha=a0-delta, beta=B0, velocity=V0, v_wind=v_wind)
@@ -1563,9 +1563,9 @@ class Scene:
             Cm_a = (FM2["Cm"]-FM0["Cm"])/(2.0*delta)
 
             # Second derivatives
-            CA_a2 = (-FM2["Cx"]+2.0*FM1["Cx"]-FM0["Cx"])/delta**2
-            CN_a2 = (-FM2["Cz"]+2.0*FM1["Cz"]-FM0["Cz"])/delta**2
-            Cm_a2 = (FM2["Cm"]-2.0*FM1["Cm"]+FM0["Cm"])/delta**2
+            CA_a2 = (-FM2["Cx"]+2.0*FM1["Cx"]-FM0["Cx"])/delta2
+            CN_a2 = (-FM2["Cz"]+2.0*FM1["Cz"]-FM0["Cz"])/delta2
+            Cm_a2 = (FM2["Cm"]-2.0*FM1["Cm"]+FM0["Cm"])/delta2
 
             # Calculate locations (Mech of Flight Eqs. 4.8.29-31)
             if verbose: print("Calculating AC location...")
@@ -1720,7 +1720,7 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20},{:<20}".format(
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
                 "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Area", "Alpha",
                 "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
             format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"

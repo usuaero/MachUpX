@@ -147,7 +147,7 @@ class Airplane:
                 raise IOError("{0} is not an allowable velocity definition.".format(v_value))
 
         else:
-            raise IOError("{0} is not an acceptable state type.".format(state_type))
+            raise IOError("{0} is not an acceptable state type.".format(self.state_type))
 
 
     def get_aerodynamic_state(self, v_wind=np.array([0, 0, 0])):
@@ -220,7 +220,7 @@ class Airplane:
 
         # Determine freestream velocity components in body-fixed frame (Mech of Flight Eqs. 7.1.10-12)
         v_inf_b = np.zeros(3)
-        denom = np.sqrt(1-S_a**2*S_B**2)
+        denom = np.sqrt(1-S_a*S_a*S_B*S_B)
         v_inf_b[0] = velocity*C_a*C_B/denom
         v_inf_b[1] = velocity*C_a*S_B/denom
         v_inf_b[2] = velocity*S_a*C_B/denom
