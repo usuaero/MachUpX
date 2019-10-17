@@ -310,7 +310,7 @@ class WingSegment:
         # Sets up the control surface on this wing segment
 
         # These values are needed whether or not a control surface exists
-        self._delta_flap = 0.0 # Positive deflection is down
+        self._delta_flap = np.zeros(self._N) # Positive deflection is down
         self._has_control_surface = False
         self._Cm_delta_flap = 0.0
 
@@ -874,7 +874,7 @@ class WingSegment:
         self._flap_eff = self._eta_h_esp_f*self._eta_defl
 
         # Convert to radians
-        self._delta_flap = np.radians(self._delta_flap)
+        self._delta_flap = np.radians(self._delta_flap)*self._cp_in_control_surface
 
 
     def get_cp_flap(self):

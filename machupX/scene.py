@@ -1654,7 +1654,6 @@ class Scene:
         for i, airplane_name in enumerate(self._airplane_names):
             airplane_object = self._airplanes[airplane_name]
             airplane_cps = airplane_object.get_num_cps()
-            airplane_slice = slice(index, index+airplane_cps)
             dist[airplane_name] = {}
 
             # Loop through segments
