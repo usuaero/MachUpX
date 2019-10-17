@@ -4,6 +4,7 @@ from .airfoil import Airfoil
 
 import json
 import numpy as np
+import math as m
 
 class Airplane:
     """A class defining an airplane.
@@ -38,7 +39,7 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, airplane_input, unit_system, init_state={}, init_control_state={}, v_wind=[0,0,0]):
+    def __init__(self, name, airplane_input, unit_system, init_state={}, init_control_state={}, v_wind=[0.0, 0.0, 0.0]):
 
         self.name = name
         self._unit_sys = unit_system
@@ -75,7 +76,7 @@ class Airplane:
         self.l_ref_lat = import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
 
 
-    def set_state(self, state, v_wind=np.array([0, 0, 0])):
+    def set_state(self, state, v_wind=[0.0, 0.0, 0.0]):
         """Sets the state of the aircraft from the provided dictionary.
         Parameters
         ----------
@@ -150,7 +151,7 @@ class Airplane:
             raise IOError("{0} is not an acceptable state type.".format(self.state_type))
 
 
-    def get_aerodynamic_state(self, v_wind=np.array([0, 0, 0])):
+    def get_aerodynamic_state(self, v_wind=[0.0, 0.0, 0.0]):
         """Returns the aircraft's angle of attack, sideslip angle, and freestream velocity magnitude.
         Assumes a bank angle of zero.
 
@@ -175,8 +176,8 @@ class Airplane:
         v = quaternion_transform(self.q, self.v-v_wind)
 
         # Calculate values
-        alpha = np.degrees(np.arctan2(v[2], v[0]))
-        beta = np.degrees(np.arctan2(v[1], v[0]))
+        alpha = m.degrees(m.atan2(v[2], v[0]))
+        beta = m.degrees(m.atan2(v[1], v[0]))
         velocity = np.linalg.norm(v)
         return alpha, beta, velocity
 
@@ -204,7 +205,7 @@ class Airplane:
         """
 
         # Determine the current state
-        v_wind = kwargs.get("v_wind", np.array([0.0, 0.0, 0.0]))
+        v_wind = kwargs.get("v_wind", [0.0, 0.0, 0.0])
         current_aero_state = self.get_aerodynamic_state(v_wind=v_wind)
 
         # Determine the desired state
@@ -213,18 +214,17 @@ class Airplane:
         velocity = kwargs.get("velocity", current_aero_state[2])
 
         # Calculate trigonometric values
-        C_a = np.cos(np.radians(alpha))
-        S_a = np.sin(np.radians(alpha))
-        C_B = np.cos(np.radians(beta))
-        S_B = np.sin(np.radians(beta))
+        C_a = m.cos(m.radians(alpha))
+        S_a = m.sin(m.radians(alpha))
+        C_B = m.cos(m.radians(beta))
+        S_B = m.sin(m.radians(beta))
 
         # Determine freestream velocity components in body-fixed frame (Mech of Flight Eqs. 7.1.10-12)
         v_inf_b = np.zeros(3)
-        denom = np.sqrt(1-S_a*S_a*S_B*S_B)
-        v_inf_b[0] = velocity*C_a*C_B/denom
-        v_inf_b[1] = velocity*C_a*S_B/denom
-        v_inf_b[2] = velocity*S_a*C_B/denom
-        u_inf_b = v_inf_b/np.linalg.norm(v_inf_b)
+        denom = 1/m.sqrt(1-S_a*S_a*S_B*S_B)
+        v_inf_b[0] = velocity*C_a*C_B*denom
+        v_inf_b[1] = velocity*C_a*S_B*denom
+        v_inf_b[2] = velocity*S_a*C_B*denom
 
         # Transform to earth-fixed coordinates
         self.v = v_wind+quaternion_inverse_transform(self.q, v_inf_b)
