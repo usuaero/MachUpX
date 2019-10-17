@@ -775,9 +775,9 @@ class Scene:
         # Takes the force vector and coverts it to lift, drag, and sideforce
 
         # Determine direction vectors
-        u_lift = np.cross(u_inf,[0.,1.,0.])
+        u_lift = np.cross(u_inf, [0.,1.,0.])
         u_lift = u_lift/np.linalg.norm(u_lift)
-        u_side = np.cross(u_lift,u_inf)
+        u_side = np.cross(u_lift, u_inf)
         u_side = u_side/np.linalg.norm(u_side)
 
         # Drag force

@@ -256,12 +256,12 @@ Describes an aircraft. Stored as a .json file
 >>>>Specifies whether this control causes symmetric or asymmetric control surface deflections (e.g. for a typical aircraft, the elevator control causes symmetric deflections whereas the aileron causes asymmetric deflections).
 >
 >**"airfoils" : dict**
->>Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of airfoils can be defined for the aircraft. MachUp pulls from these airfoil definitions as needed, depending on which airfoils are specified for the wings. A dictionary defining an airfoil has the following structure:
+>>Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of airfoils can be defined for the aircraft. MachUp pulls from these airfoil definitions as needed, depending on which airfoils are specified for the wings. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results. A dictionary defining an airfoil has the following structure:
 >
 >>**"<AIRFOIL_NAME>" : dict**
 >>
 >>>**"type" : string**
->>>>The type of information describing the airfoil. Can be "linear" and the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results.
+>>>>The type of information describing the airfoil. Can be "linear" and the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE.
 >>>
 >>>**"aL0" : float, optional**
 >>>>The zero-lift angle of attack in radians. Defaults to 0.0.
