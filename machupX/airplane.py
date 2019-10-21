@@ -411,3 +411,20 @@ class Airplane:
         self.current_control_state = copy.deepcopy(control_state)
         for _,wing_segment in self.wing_segments.items():
             wing_segment.apply_control(control_state, self._control_symmetry)
+
+
+    def get_MAC(self):
+        """Returns the mean aerodynamic chord (MAC).
+
+        Returns
+        -------
+        MAC : dict
+            MAC data. Structured as
+
+                {
+                    "MAC" : mean aerodynamic chord length,
+                    "MAC_LE" : location of the leading edge for the MAC
+                }
+        """
+        MAC = {}
+        return MAC

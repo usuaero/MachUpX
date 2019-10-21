@@ -1776,3 +1776,45 @@ class Scene:
 
         airplane_object = self._airplanes[aircraft]
         return airplane_object.S_w, airplane_object.l_ref_lon, airplane_object.l_ref_lat
+
+
+    def get_aircraft_mean_aerodynamic_chord(self, aircraft=None):
+        """Returns the mean aerodynamic chord (MAC) for the specified aircraft.
+
+        Parameters
+        ----------
+        aircraft_name : str
+            The name of the aircraft to get the reference params for. Does
+            not need to be specified if there is only one aircraft in the 
+            scene.
+
+        Returns
+        -------
+        MAC : dict
+            MAC data for each aircraft. Structured as 
+
+                {
+                    "<AIRCRAFT_NAME>" : {
+                        "MAC" : mean aerodynamic chord length,
+                        "MAC_LE" : location of the leading edge for the MAC
+                    }
+                }
+        """
+
+        # Specify the aircraft
+        if aircraft is None:
+            aircraft_names = self._airplanes.keys()
+        elif isinstance(aircraft, list):
+            aircraft_names = copy.copy(aircraft)
+        elif isinstance(aircraft, str):
+            aircraft_names = list(aircraft)
+        else:
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+
+        MAC = {}
+
+        # Loop through aircraft
+        for aircraft_name in aircraft_names:
+            MAC[aircraft_name] = self._airplanes[aircraft_name].get_MAC()
+
+        return MAC
