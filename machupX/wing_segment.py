@@ -1055,7 +1055,7 @@ class WingSegment:
         v_knot_list = ", ".join([str(x) for x in v_knots])
 
         # Collect surface information
-        b_spline_surface_string = "#{0} = B_SPLINE_SURFACE_WITH_KNOTS ( 'NONE' , 3 , 3 , ( {1} ) , .UNSPECIFIED. , .F. , .F. , .F. , .UNSPECIFIED. , .UNSPECIFIED. , ( {2} ) , ( {3} ) , .UNSPECIFIED.) ;"
+        b_spline_surface_string = "#{0} = B_SPLINE_SURFACE_WITH_KNOTS ( 'NONE' , 1 , 1 , ( {1} ) , .UNSPECIFIED. , .F. , .F. , .F. , .UNSPECIFIED. , .UNSPECIFIED. , ( {2} ) , ( {3} ) , .UNSPECIFIED.) ;"
         s.append(b_spline_surface_string.format(surface_entity_no, ", ".join(surface_point_list), u_knot_list, v_knot_list))
 
         # Assemble shell
@@ -1071,7 +1071,8 @@ class WingSegment:
         curr_entity_no = copy.copy(face_index)
         entity_list.append("#{0} = ADVANCED_FACE ( 'NONE' , ( #{1}) , #{2} , .T. ) ;".format(curr_entity_no, curr_entity_no+1, curr_entity_no+2))
         curr_entity_no += 1
-        entity_list.append("#{0} = FACE_OUTER_BOUND ( 'NONE' , #{1} , .T. ) ;".format(curr_entity_no, curr_entity_no+6))
+        loop_entity_no = curr_entity_no+6
+        entity_list.append("#{0} = FACE_OUTER_BOUND ( 'NONE' , #{1} , .T. ) ;".format(curr_entity_no, loop_entity_no))
         curr_entity_no += 1
         entity_list.append("#{0} = PLANE ( 'NONE' , #{1} ) ;".format(curr_entity_no, curr_entity_no+1))
         curr_entity_no += 1
@@ -1086,9 +1087,15 @@ class WingSegment:
         curr_entity_no = self._append_step_direction(entity_list, curr_entity_no, axis_dir1)
 
         # Boundary of face
-        n = outline_points.shape[0]
-        edge_loop_no = copy.copy(curr_entity_no)
-        curr_entity_no += 1
+        curr_entity_no = self._append_step_edge_loop(entity_list, loop_entity_no, outline_points)
+
+        return curr_entity_no
+
+
+    def _append_step_edge_loop(self, entity_list, entity_no, coords):
+        # Creates an edge loop at the given entity number.
+        n = coords.shape[0]
+        curr_entity_no= entity_no+1
 
         oriented_edge_entities = []
 
@@ -1102,14 +1109,14 @@ class WingSegment:
             curr_entity_no += 1
 
             # Starting vertex
-            start = outline_points[i]
+            start = coords[i]
             curr_entity_no = self._append_step_vertex(entity_list, curr_entity_no, start)
 
             # Ending vertex
             if i < n-1:
-                end = outline_points[i+1]
+                end = coords[i+1]
             else: # Wrap around the trailing edge
-                end = outline_points[0]
+                end = coords[0]
             curr_entity_no = self._append_step_vertex(entity_list, curr_entity_no, end)
 
             # Line defining curve
@@ -1124,12 +1131,12 @@ class WingSegment:
             y_diff = end[1]-start[1]
             z_diff = end[2]-start[2]
             length = np.sqrt(x_diff*x_diff+y_diff*y_diff+z_diff*z_diff)
-            entity_list.append("#{0} = VECTOR ( 'NONE' , #{1} , {2} ) ;".format(curr_entity_no, curr_entity_no+1, length))
+            entity_list.append("#{0} = VECTOR ( 'NONE' , #{1} , {2:f} ) ;".format(curr_entity_no, curr_entity_no+1, length))
             curr_entity_no += 1
 
             curr_entity_no = self._append_step_direction(entity_list, curr_entity_no, np.array([x_diff, y_diff, z_diff]/length))
 
-        entity_list.append("#{0} = EDGE_LOOP ( 'NONE' , ( {1} ) ) ;".format(edge_loop_no, " , ".join(oriented_edge_entities)))
+        entity_list.append("#{0} = EDGE_LOOP ( 'NONE' , ( {1} ) ) ;".format(entity_no, " , ".join(oriented_edge_entities)))
 
         return curr_entity_no
 
@@ -1148,5 +1155,5 @@ class WingSegment:
 
     def _append_step_direction(self, entity_list, entity_no, unit_vec):
         # Creates a direction at the given entity number
-        entity_list.append("#{0} = DIRECTION ( 'NONE' , ( {1} , {2} , {3} ) ) ;".format(entity_no, unit_vec[0], unit_vec[1], unit_vec[2]))
+        entity_list.append("#{0} = DIRECTION ( 'NONE' , ( {1:f} , {2:f} , {3:f} ) ) ;".format(entity_no, unit_vec[0], unit_vec[1], unit_vec[2]))
         return entity_no+1
