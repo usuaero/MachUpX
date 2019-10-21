@@ -29,12 +29,13 @@ if __name__=="__main__":
     state["beta"] = 0.0
     state["velocity"] = 200
     airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],
-                                                    [1.0, 0.5]]
+                                                    [1.0, 1.0]]
     airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["h_stab"]["sweep"] = 0.0
-    airplane_dict["wings"]["main_wing"]["dihedral"] = 5.
+    airplane_dict["wings"]["main_wing"]["dihedral"] = 0.
+    airplane_dict["wings"]["main_wing"]["sweep"] = 45.
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 100
     airplane_dict["wings"]["main_wing"]["grid"]["flap_edge_cluster"] = True
     airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.4

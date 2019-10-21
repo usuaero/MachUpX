@@ -423,28 +423,30 @@ class Airplane:
             MAC data. Structured as
 
                 {
-                    "MAC" : mean aerodynamic chord length,
-                    "MAC_LE" : location of the leading edge for the MAC
+                    "length" : mean aerodynamic chord length,
+                    "leading_edge_loc" : location of the leading edge for the MAC,
+                    "quarter_chord_loc" : location of the quarter chord of the MAC
                 }
         """
 
-        # Loop through main wing segments to calculate MAC
+        # Loop through main wing segments to calculate MAC length and location
         MAC = 0.0
+        MAC_loc = 0.0
         S = 0.0
         for (_, wing_segment) in self.wing_segments.items():
             if wing_segment.is_main:
                 MAC += np.sum(wing_segment.dS*wing_segment.c_bar_cp)
                 #MAC += integ.quad(lambda s: wing_segment.get_chord(s)**2, 0.0, 1.0)[0] # More exact but gives approximately the same as ^
+                MAC_loc -= np.sum(wing_segment.dS*wing_segment.control_points[:,0])
                 S += np.sum(wing_segment.dS)
                 #S += integ.quad(lambda s: wing_segment.get_chord(s), 0.0, 1.0)[0]
         MAC /= S
-
-        # Figure out where the MAC is on the wing using secant method
-        MAC_le = 0.0
+        MAC_loc /= S
 
         # Package results
         results = {
-            "MAC" : MAC,
-            "MAC_LE" : MAC_le
+            "length" : MAC,
+            "leading_edge_loc" : MAC_loc-0.25*MAC,
+            "quarter_chord_loc" : MAC_loc
         }
         return results
