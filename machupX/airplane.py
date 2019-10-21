@@ -185,7 +185,7 @@ class Airplane:
     def set_aerodynamic_state(self, **kwargs):
         """Sets the velocity of the aircraft so that its angle of attack and 
         sideslip angle are what is desired. Scales the freestream velocity according 
-        to what is desired.
+        to what is desired. DOES NOT CHANGE AIRCRAFT ORIENTATION.
 
         Parameters
         ----------
