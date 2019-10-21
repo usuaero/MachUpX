@@ -5,6 +5,7 @@ from .airfoil import Airfoil
 import json
 import numpy as np
 import math as m
+import scipy.integrate as integ
 
 class Airplane:
     """A class defining an airplane.
@@ -426,5 +427,24 @@ class Airplane:
                     "MAC_LE" : location of the leading edge for the MAC
                 }
         """
-        MAC = {}
-        return MAC
+
+        # Loop through main wing segments to calculate MAC
+        MAC = 0.0
+        S = 0.0
+        for (_, wing_segment) in self.wing_segments.items():
+            if wing_segment.is_main:
+                MAC += np.sum(wing_segment.dS*wing_segment.c_bar_cp)
+                #MAC += integ.quad(lambda s: wing_segment.get_chord(s)**2, 0.0, 1.0)[0] # More exact but gives approximately the same as ^
+                S += np.sum(wing_segment.dS)
+                #S += integ.quad(lambda s: wing_segment.get_chord(s), 0.0, 1.0)[0]
+        MAC /= S
+
+        # Figure out where the MAC is on the wing using secant method
+        MAC_le = 0.0
+
+        # Package results
+        results = {
+            "MAC" : MAC,
+            "MAC_LE" : MAC_le
+        }
+        return results

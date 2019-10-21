@@ -28,7 +28,8 @@ if __name__=="__main__":
     state["alpha"] = 2.0
     state["beta"] = 0.0
     state["velocity"] = 200
-    airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
+    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],
+                                                    [1.0, 0.5]]
     airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
@@ -63,4 +64,5 @@ if __name__=="__main__":
     #derivs = scene.aircraft_derivatives()
     #print(json.dumps(derivs["test_plane"]["stability"], indent=4))
 
-    dist = scene.distributions(make_plots=["alpha", "section_CL"])
+    MAC = scene.get_aircraft_mean_aerodynamic_chord()
+    print(json.dumps(MAC, indent=4))
