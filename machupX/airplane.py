@@ -424,8 +424,8 @@ class Airplane:
 
                 {
                     "length" : mean aerodynamic chord length,
-                    "leading_edge_loc" : location of the leading edge for the MAC,
-                    "quarter_chord_loc" : location of the quarter chord of the MAC
+                    "leading_edge_loc" : location of the leading edge for the MAC in body-fixed coordinates,
+                    "quarter_chord_loc" : location of the quarter chord of the MAC in body-fixed coordinates
                 }
         """
 
@@ -435,18 +435,43 @@ class Airplane:
         S = 0.0
         for (_, wing_segment) in self.wing_segments.items():
             if wing_segment.is_main:
-                MAC += np.sum(wing_segment.dS*wing_segment.c_bar_cp)
-                #MAC += integ.quad(lambda s: wing_segment.get_chord(s)**2, 0.0, 1.0)[0] # More exact but gives approximately the same as ^
-                MAC_loc -= np.sum(wing_segment.dS*wing_segment.control_points[:,0])
-                S += np.sum(wing_segment.dS)
-                #S += integ.quad(lambda s: wing_segment.get_chord(s), 0.0, 1.0)[0]
+
+                if False: # Toggle for exact integral vs approximation
+                    # Note for the integral methods, everything is divided by the semispan
+                    MAC += integ.quad(lambda s: wing_segment.get_chord(s)**2, 0.0, 1.0)[0] # More exact but gives approximately the same as ^
+                    MAC_loc -= integ.quad(lambda s: wing_segment.get_chord(s)*wing_segment._get_section_ac_loc(s)[0], 0.0, 1.0)[0]
+                    S += integ.quad(lambda s: wing_segment.get_chord(s), 0.0, 1.0)[0]
+
+                else:
+                    MAC += np.sum(wing_segment.dS*wing_segment.c_bar_cp)
+                    MAC_loc += np.sum(wing_segment.dS*wing_segment.control_points[:,0])
+                    S += np.sum(wing_segment.dS)
+
+        # Divide by planform area
         MAC /= S
         MAC_loc /= S
+
+        # Search for MAC location using secant method
+        if True:
+            for (_, wing_segment) in self.wing_segments.items():
+                if wing_segment.is_main:
+                    s0 = 0.5
+                    c0 = wing_segment.get_chord(s0)-MAC
+                    s1 = 0.6
+                    c1 = wing_segment.get_chord(s1)-MAC
+                    while abs(s0-s1)>1e-10:
+                        s2 = s1-c1*(s0-s1)/(c0-c1)
+                        c2 = wing_segment.get_chord(s2)-MAC
+                        s0 = s1
+                        s1 = s2
+                        c0 = c1
+                        c1 = c2
+                    print(wing_segment._get_section_ac_loc(s2)[0])
 
         # Package results
         results = {
             "length" : MAC,
-            "leading_edge_loc" : MAC_loc-0.25*MAC,
+            "leading_edge_loc" : MAC_loc+0.25*MAC,
             "quarter_chord_loc" : MAC_loc
         }
         return results

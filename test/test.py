@@ -28,8 +28,8 @@ if __name__=="__main__":
     state["alpha"] = 2.0
     state["beta"] = 0.0
     state["velocity"] = 200
-    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],
-                                                    [1.0, 1.0]]
+    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 0.0]]
+    #airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
@@ -45,7 +45,7 @@ if __name__=="__main__":
    
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe()
+    #scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

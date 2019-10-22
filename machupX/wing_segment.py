@@ -224,8 +224,10 @@ class WingSegment:
                 data = np.full(span.shape, self._getter_data[name])
                 if converted:
                     span = span.item()
+                    return data.item()
+                else:
+                    return data
 
-                return data
         
         else: # Array
             self._getter_data[name] = data
@@ -242,8 +244,9 @@ class WingSegment:
                     data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
                 if converted:
                     span = span.item()
-
-                return data
+                    return data.item()
+                else:
+                    return data
 
         return getter
 
@@ -574,8 +577,17 @@ class WingSegment:
 
     def _get_section_ac_loc(self, span):
         #Returns the location of the section aerodynamic center at the given span fraction.
+        if isinstance(span, float):
+            single = True
+            span = np.asarray(span)[np.newaxis]
+        else:
+            single = False
+            span = np.asarray(span)
+
         loc = self._get_quarter_chord_loc(span)
         loc += (self._get_ac_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_axial_vec(span)
+        if single:
+            loc = loc.flatten()
         return loc
 
 
