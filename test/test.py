@@ -45,7 +45,7 @@ if __name__=="__main__":
    
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe()
+    scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
@@ -54,8 +54,8 @@ if __name__=="__main__":
     #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
     #print(json.dumps(trim_angles["test_plane"], indent=4))
 
-    #aero_center = scene.aircraft_aero_center(verbose=True)
-    #print(json.dumps(aero_center["test_plane"], indent=4))
+    aero_center = scene.aircraft_aero_center(verbose=True)
+    print(json.dumps(aero_center["test_plane"], indent=4))
 
     #print("---Trim State---")
     #FM = scene.solve_forces(non_dimensional=False, verbose=True)
@@ -66,4 +66,4 @@ if __name__=="__main__":
     #print(json.dumps(derivs["test_plane"]["stability"], indent=4))
 
     MAC = scene.get_aircraft_mean_aerodynamic_chord()
-    print(json.dumps(MAC, indent=4))
+    print(json.dumps(MAC["test_plane"], indent=4))
