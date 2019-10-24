@@ -28,14 +28,14 @@ if __name__=="__main__":
     state["alpha"] = 2.0
     state["beta"] = 0.0
     state["velocity"] = 200
-    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 0.0]]
-    #airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
+    #airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 0.0]]
+    airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
     airplane_dict["wings"]["h_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["main_wing"]["dihedral"] = 0.
-    airplane_dict["wings"]["main_wing"]["sweep"] = 45.
+    airplane_dict["wings"]["main_wing"]["sweep"] = 0.
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 100
     airplane_dict["wings"]["main_wing"]["grid"]["flap_edge_cluster"] = True
     airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.4
@@ -45,7 +45,7 @@ if __name__=="__main__":
    
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe()
+    scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
@@ -53,9 +53,6 @@ if __name__=="__main__":
 
     #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
     #print(json.dumps(trim_angles["test_plane"], indent=4))
-
-    aero_center = scene.aircraft_aero_center(verbose=True)
-    print(json.dumps(aero_center["test_plane"], indent=4))
 
     #print("---Trim State---")
     #FM = scene.solve_forces(non_dimensional=False, verbose=True)
@@ -65,5 +62,10 @@ if __name__=="__main__":
     #derivs = scene.aircraft_derivatives()
     #print(json.dumps(derivs["test_plane"]["stability"], indent=4))
 
+    print("---MAC---")
     MAC = scene.get_aircraft_mean_aerodynamic_chord()
     print(json.dumps(MAC["test_plane"], indent=4))
+
+    print("---Aerodynamic Center---")
+    AC = scene.aircraft_aero_center()
+    print(json.dumps(AC["test_plane"], indent=4))
