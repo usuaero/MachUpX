@@ -1778,7 +1778,7 @@ class Scene:
         return airplane_object.S_w, airplane_object.l_ref_lon, airplane_object.l_ref_lat
 
 
-    def get_aircraft_mean_aerodynamic_chord(self, aircraft=None):
+    def aircraft_mean_aerodynamic_chord(self, aircraft=None, filename=None, verbose=False):
         """Returns the mean aerodynamic chord (MAC) for the specified aircraft.
 
         Parameters
@@ -1787,6 +1787,9 @@ class Scene:
             The name of the aircraft to get the reference params for. Does
             not need to be specified if there is only one aircraft in the 
             scene.
+
+        filename : str
+            JSON file to export the MAC data to. Defaults to None.
 
         Returns
         -------
@@ -1816,5 +1819,10 @@ class Scene:
         # Loop through aircraft
         for aircraft_name in aircraft_names:
             MAC[aircraft_name] = self._airplanes[aircraft_name].get_MAC()
+
+        # Export
+        if filename is not None:
+            with open(filename, 'w') as dump_handle:
+                json.dump(MAC, dump_handle)
 
         return MAC

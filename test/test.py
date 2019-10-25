@@ -28,14 +28,17 @@ if __name__=="__main__":
     state["alpha"] = 2.0
     state["beta"] = 0.0
     state["velocity"] = 200
-    #airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 0.0]]
-    airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
-    airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
-    airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
-    airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
-    airplane_dict["wings"]["h_stab"]["sweep"] = 0.0
+    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[0.9, 1.0],[1.0, 0.5]]
+    #airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
+    airplane_dict["wings"]["main_wing"]["semispan"] = 4.0
+    airplane_dict["wings"].pop("v_stab")
+    airplane_dict["wings"].pop("h_stab")
+    #airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
+    #airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
+    #airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
+    #airplane_dict["wings"]["h_stab"]["sweep"] = 0.0
     airplane_dict["wings"]["main_wing"]["dihedral"] = 0.
-    airplane_dict["wings"]["main_wing"]["sweep"] = 0.
+    airplane_dict["wings"]["main_wing"]["sweep"] = 45.
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 100
     airplane_dict["wings"]["main_wing"]["grid"]["flap_edge_cluster"] = True
     airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.4
@@ -63,7 +66,7 @@ if __name__=="__main__":
     #print(json.dumps(derivs["test_plane"]["stability"], indent=4))
 
     print("---MAC---")
-    MAC = scene.get_aircraft_mean_aerodynamic_chord()
+    MAC = scene.aircraft_mean_aerodynamic_chord()
     print(json.dumps(MAC["test_plane"], indent=4))
 
     print("---Aerodynamic Center---")

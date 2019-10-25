@@ -89,6 +89,15 @@ def _run_prescribed_analyses(input_filename):
             print("Calculating location of aerodynamic center...")
             scene.aircraft_aero_center(aircraft=aircraft, filename=filename, verbose=verbose)
 
+        # MAC
+        elif key == "MAC":
+            aircraft = params.get("aircraft", None)
+            filename = params.get("filename", input_filename.replace(".json", "_MAC.json"))
+            verbose = params.get("verbose", False)
+
+            print("Calculating mean aerodynamic chord...")
+            scene.aircraft_mean_aerodynamic_chord(aircraft=aircraft, filename=filename, verbose=verbose)
+
         # Unrecognized command
         else:
             raise RuntimeWarning("{0} is not recognized as a valid run command.".format(key))

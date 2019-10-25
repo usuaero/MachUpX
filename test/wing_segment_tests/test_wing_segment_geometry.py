@@ -209,7 +209,7 @@ def test_twist_as_f_of_span():
     wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         for span, correct_twist in zip(spans, twists):
-            twist = wing_dict[key].get_twist(span).item()
+            twist = wing_dict[key].get_twist(span)
             print(twist)
             assert np.allclose(twist, correct_twist, rtol=0.0, atol=1e-10)
 

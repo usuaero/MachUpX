@@ -128,6 +128,18 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"verbose" : boolean, optional**
 >>>>Defaults to false
+>>
+>>**"MAC" : dict, optional**
+>>>Calculates the mean aerodynamic chord of the aircraft.
+>>>
+>>>**"aircraft" : list, optional**
+>>>>The aircraft to calculate the MAC of. Defaults to all aircraft in the scene.
+>>>
+>>>**"filename" : string, optional**
+>>>>File to store the results in. Defaults to the input filename + "_MAC".
+>>>
+>>>**"verbose" : boolean, optional**
+>>>>Defaults to false
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.
