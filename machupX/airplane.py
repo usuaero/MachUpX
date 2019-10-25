@@ -441,7 +441,7 @@ class Airplane:
         for (_, wing_segment) in self.wing_segments.items():
             if wing_segment.is_main:
 
-                if True: # Toggle for exact integral vs approximation
+                if False: # Toggle for exact integral vs approximation
                     # Note for the integral methods, everything is divided by the semispan
                     MAC += integ.quad(lambda s: wing_segment.get_chord(s)**2, 0.0, 1.0)[0] # More exact but gives approximately the same as ^
                     MAC_loc += integ.quad(lambda s: wing_segment.get_chord(s)*wing_segment._get_section_ac_loc(s)[0], 0.0, 1.0)[0]
