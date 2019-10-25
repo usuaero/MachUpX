@@ -239,13 +239,13 @@ Describes an aircraft. Stored as a .json file
 >>Specifies the reference lengths and areas used for nondimensional analysis. Any or none of these may be specified. If not specified, MachUp will select appropriate values based on the geometry of the main wing.
 >
 >>**"area" : float, optional**
->>>The reference area.
+>>>The reference area. Defaults to the main wing planform area.
 >>
 >>**"longitudinal_length" : float, optional**
->>>Longitudinal reference length.
+>>>Longitudinal reference length. Defaults to the main wing average geometric chord.
 >>
 >>**"lateral_length" : float, optional**
->>>Lateral reference length.
+>>>Lateral reference length. Defaults to the main wing semispan.
 >
 >**"controls" : dict, optional**
 >>Defines the controls of the aircraft. The number and names of controls are arbitrary and may be specified by the user. A simple aircraft, such as a chuck glider may have no controls, whereas a more complex aircraft may have controls for aileron, elevator, rudder, and multiple flaps. Defining the controls here can be thought of as deciding which control knobs/switches/sticks you want to make available to the pilot.
