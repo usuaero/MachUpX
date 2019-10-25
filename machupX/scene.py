@@ -1518,8 +1518,15 @@ class Scene:
 
         Returns
         -------
-        dict
-            The location of the aerodynamic center in body-fixed coordinates for each aircraft.
+        AC_data : dict
+            The location of the aerodynamic center in body-fixed coordinates for each aircraft and the moment coefficient about the AC. Structured as:
+
+            {
+                "<AIRCRAFT_NAME>" : {
+                    "aero_center" : [x_ac, y_ac, z_ac],
+                    "Cm_ac" : Cm_ac
+                }
+            }
         """
 
         # Specify the aircraft
@@ -1582,7 +1589,10 @@ class Scene:
 
             # Redimensionalize
             l_ref = airplane_object.l_ref_lon
-            ac_loc[aircraft_name] = [-x_ac*l_ref+airplane_object.CG[0], 0.0, -z_ac*l_ref+airplane_object.CG[2]]
+            ac_loc[aircraft_name] = {
+                "aero_center" : [-x_ac*l_ref+airplane_object.CG[0], 0.0, -z_ac*l_ref+airplane_object.CG[2]],
+                "Cm_ac" : Cm_ac
+            }
 
         if filename is not None:
             with open(filename, 'w') as output_handle:
