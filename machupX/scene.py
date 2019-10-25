@@ -1574,8 +1574,8 @@ class Scene:
             # Calculate locations (Mech of Flight Eqs. 4.8.29-31)
             if verbose: print("Calculating AC location...")
             denom = CN_a*CA_a2-CA_a*CN_a2
-            x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom
-            z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom
+            x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom+airplane_object.CG[0]
+            z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom+airplane_object.CG[2]
 
             # Moment at aerodynamic center
             Cm_ac = FM1["Cm"]-x_ac*FM1["Cz"]+z_ac*FM1["Cx"]
@@ -1798,10 +1798,16 @@ class Scene:
 
                 {
                     "<AIRCRAFT_NAME>" : {
-                        "MAC" : mean aerodynamic chord length,
-                        "MAC_LE" : location of the leading edge for the MAC
+                        "length" : mean aerodynamic chord length,
+                        "C_point" : location of the quarter chord of the MAC determined by Eq. 2.6.2 from Nickel and Wohlfahrt "Tailless Aircraft",
+                        "25%_MAC_loc" : location of the quarter chord of the local section chord which matches the MAC; returns None for rectangular wings
                     }
                 }
+            
+            The two location definitions for the MAC will only match for certain situations (i.e. unswept wings, simple tapered wings, and circular wings).
+            It is assumed the user understands the assumptions made in determining each position and will treat the information accordingly. The C-point is 
+            typically regarded as a more accurate estimate of the wing aerodynamic center (it is the aerodynamic center assuming a constant section lift 
+            coefficient distribution).
         """
 
         # Specify the aircraft
