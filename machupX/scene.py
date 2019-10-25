@@ -1574,15 +1574,15 @@ class Scene:
             # Calculate locations (Mech of Flight Eqs. 4.8.29-31)
             if verbose: print("Calculating AC location...")
             denom = CN_a*CA_a2-CA_a*CN_a2
-            x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom+airplane_object.CG[0]
-            z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom+airplane_object.CG[2]
+            x_ac = (CA_a*Cm_a2-Cm_a*CA_a2)/denom
+            z_ac = (CN_a*Cm_a2-Cm_a*CN_a2)/denom
 
             # Moment at aerodynamic center
             Cm_ac = FM1["Cm"]-x_ac*FM1["Cz"]+z_ac*FM1["Cx"]
 
             # Redimensionalize
             l_ref = airplane_object.l_ref_lon
-            ac_loc[aircraft_name] = [-x_ac*l_ref, 0.0, -z_ac*l_ref]
+            ac_loc[aircraft_name] = [-x_ac*l_ref+airplane_object.CG[0], 0.0, -z_ac*l_ref+airplane_object.CG[2]]
 
         if filename is not None:
             with open(filename, 'w') as output_handle:

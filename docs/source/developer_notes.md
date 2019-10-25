@@ -1,5 +1,5 @@
-# MachUpX Developer Notes
-The purpose of this document is to explain the inner workings of MachUpX for those who are developing it.
+# Developer Notes
+The purpose of this document is to explain the inner workings of MachUpX for those who are developing it. Please update this as often as you can.
 
 ## Numerical Lifting-Line Implementation
 MachUpX solves the formulation of the numerical lifting-line equation presented in Cory Goates' Master's thesis. This formulation differs somewhat from the original formulation by Phillips and Snyder. Most significantly, the formulation is generalized to allow multiple aircraft to be analyzed at once. MachUpX sets up and solves the lifting-line equation in Earth-fixed coordinates. Once the distribution of vortex strengths is obtained, the forces and moments are integrated then transformed to the body-fixed frame for each aircraft.
@@ -18,10 +18,10 @@ In implementing the WingSegment class, the set of wing segments constituting an 
 ## Mean Aerodynamic Chord (MAC) Calculation
 MAC seems to be a poor man's estimate for the aerodynamic center, but not quite. It is based entirely off of geometry, no aerodynamics involved. I took information from the following to code this up:
 
-*Raymer "Simplified Aircraft Design for Homebuilders"
-*McCormick "Aerodynamics, Aeronautics, and Flight Mechanics"
-*Nickel & Wohlfahrt "Tailless Aircraft in Theory and Practice"
-*Phillips "Mechanics of Flight"
+* Raymer "Simplified Aircraft Design for Homebuilders"
+* McCormick "Aerodynamics, Aeronautics, and Flight Mechanics"
+* Nickel & Wohlfahrt "Tailless Aircraft in Theory and Practice"
+* Phillips "Mechanics of Flight"
 
 There is agreement between all sources on only one thing, the definition of the MAC as a reference length. This is given by Phillips Eq. 1.8.86 (excuse my ASCII math):
 
