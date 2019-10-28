@@ -1157,3 +1157,11 @@ class WingSegment:
         # Creates a direction at the given entity number
         entity_list.append("#{0} = DIRECTION ( 'NONE' , ( {1:f} , {2:f} , {3:f} ) ) ;".format(entity_no, unit_vec[0], unit_vec[1], unit_vec[2]))
         return entity_no+1
+
+
+    def create_freecad_stp(self):
+        from FreeCAD import Base
+        import Part
+
+        v = Base.Vector(1,0,0)
+        return Part.makeBox(1,1,1,v)
