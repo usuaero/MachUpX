@@ -424,14 +424,8 @@ class Airplane:
 
                 {
                     "length" : mean aerodynamic chord length,
-                    "C_point" : location of the quarter chord of the MAC determined by Eq. 2.6.2 from Nickel and Wohlfahrt "Tailless Aircraft",
-                    "25%_MAC_loc" : location of the quarter chord of the local section chord which matches the MAC; returns None for rectangular wings
+                    "C_point" : center of constant lift, determined by Eq. 2.6.2 from Nickel and Wohlfahrt "Tailless Aircraft"
                 }
-            
-            The two location definitions for the MAC will only match for certain situations (i.e. unswept wings, simple tapered wings, and circular wings).
-            It is assumed the user understands the assumptions made in determining each position and will treat the information accordingly. The C-point is 
-            typically regarded as a more accurate estimate of the wing aerodynamic center (it is the aerodynamic center assuming a constant section lift 
-            coefficient distribution).
         """
 
         # Loop through main wing segments to calculate MAC length and location
@@ -456,58 +450,9 @@ class Airplane:
         MAC /= S
         MAC_loc /= S
 
-        # Search for MAC location using secant method
-        loc_chord_find = None
-        for (_, wing_segment) in self.wing_segments.items():
-            if wing_segment.is_main: # Only consider main wing segments
-
-                # To handle segmented wing segments with sections of constant chord, we'll need to loop through possible starting points until we actually find the MAC.
-                # For nonsegmented wings, this should converge on the first iteration. We'll start at the tip.
-                for i in range(9, -1, -1):
-                    s0 = i/10.0
-                    c0 = wing_segment.get_chord(s0)-MAC
-                    s1 = s0+0.05
-                    c1 = wing_segment.get_chord(s1)-MAC
-
-                    # Check for constant chord section
-                    if abs(c1-c0) < 1e-10:
-                        const_chord = True
-                        continue
-                    else:
-                        const_chord = False
-
-                    # If not, iterate
-                    while abs(s0-s1)>1e-10:
-                        s2 = s1-c1*(s0-s1)/(c0-c1)
-                        c2 = wing_segment.get_chord(s2)-MAC
-                        s0 = s1
-                        s1 = s2
-                        c0 = c1
-                        c1 = c2
-
-                    # Check if we've actually matched the MAC
-                    if abs(c2) < 1e-10:
-                        break
-
-                # The MAC wasn't actually matched...
-                else:
-                    continue
-
-                # If it only finds constant chord sections, then this method tells us nothing
-                if const_chord:
-                    continue
-
-                # If it finds a point off the wing segment or the chord doesn't match, then we haven't actually found the MAC
-                if s1 > 1.0 or s1 < 0.0:
-                    continue
-
-                # Store
-                loc_chord_find = wing_segment._get_section_ac_loc(s1)[0]
-
         # Package results
         results = {
             "length" : MAC,
-            "C_point" : MAC_loc,
-            "25%_MAC_loc" : loc_chord_find
+            "C_point" : MAC_loc
         }
         return results
