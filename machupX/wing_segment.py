@@ -957,18 +957,26 @@ class WingSegment:
                 break
             index += 1
 
-        # Add twist, dihedral, and chord and transform to body-fixed coordinates
+        # Add twist, dihedral, and chord
         twist = self.get_twist(span)
         dihedral = self.get_dihedral(span)
         chord = self.get_chord(span)
 
+        # Transform to body-fixed coordinates
         if self._side == "left":
             q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
         else:
             q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
 
         untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
-        return self._get_quarter_chord_loc(span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_coords)
+        coords = self._get_quarter_chord_loc(span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_coords)
+
+        # Seal trailing edge
+        te = (coords[0]+coords[-1])*0.5
+        coords[0] = te
+        coords[-1] = te
+
+        return coords
 
 
     def get_stp_string(self, solid_index, section_resolution=200):
@@ -1159,9 +1167,45 @@ class WingSegment:
         return entity_no+1
 
 
-    def create_freecad_stp(self):
-        from FreeCAD import Base
+    def create_freecad_stp(self, section_res=200):
+        """Creates a FreeCAD part representing a loft of the wing segment.
+
+        Parameters
+        ----------
+        section_res : int
+            Number of outline points to use for the sections. Defaults to 200.
+
+        Returns
+        -------
+        wing : Part
+            A FreeCAD part representing the wing segment.
+        """
+
+        # Import necessary modules
+        import FreeCAD
         import Part
 
-        v = Base.Vector(1,0,0)
-        return Part.makeBox(1,1,1,v)
+        # Create sections
+        sections = []
+        for s_i in self._node_span_locs:
+            points = []
+
+            # Get outline points
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)
+
+            # Check for wing going to a point
+            if np.all(np.all(outline == outline[0,:])):
+                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_res)
+
+            #TODO: Make loft actually go to a point
+
+            # Create outline points
+            for point in outline:
+                points.append(FreeCAD.Base.Vector(*point))
+
+            # Add to section list
+            sections.append(Part.makePolygon(points))
+
+        # Loft
+        wing = Part.makeLoft(sections, True, False, False)
+        return wing

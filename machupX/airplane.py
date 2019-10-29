@@ -470,19 +470,19 @@ class Airplane:
         abs_file = str(os.path.abspath(filename))
         
         # Import FreeCAD modules
-        sys.path.append('/usr/lib/freecad-python3/lib')
+        sys.path.append('/usr/lib/freecad/lib')
         import FreeCAD
         import Part
 
-        # Declare assembly list
+        # Create document
         parts = []
 
         # Get wing segments
         for _,segment in self.wing_segments.items():
-            parts.append(segment.create_freecad_stp())
+            parts.append(segment.create_freecad_stp(section_res=section_resolution))
 
         # Put together and export
-        assembly = Part.Shape(parts)
+        assembly = Part.makeCompound(parts)
         assembly.exportStep(abs_file)
 
         # old stuff

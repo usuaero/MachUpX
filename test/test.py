@@ -22,13 +22,11 @@ if __name__=="__main__":
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
 
-    airplane_dict["wings"].pop("main_wing")
-    airplane_dict["wings"].pop("h_stab")
-    airplane_dict["wings"]["v_stab"]["grid"]["N"] = 1
-    airplane_dict["wings"]["v_stab"]["connect_to"]["ID"] = 0
+    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, 20],[1.0, 40]]
+    airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
 
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.export_aircraft_stp("test_plane", "test_plane.stp", section_resolution=10)
+    scene.export_aircraft_stp("test_plane", "test_plane.stp", section_resolution=100)
