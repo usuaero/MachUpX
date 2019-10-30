@@ -1007,9 +1007,9 @@ class WingSegment:
 
             # Check for wing going to a point
             if np.all(np.all(outline == outline[0,:])):
-                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_res)
-
-            #TODO: Make loft actually go to a point
+                tip = FreeCAD.Base.Vector(*outline[0])
+                points.append(tip)
+                continue
 
             # Create outline points
             for point in outline:
@@ -1019,5 +1019,7 @@ class WingSegment:
             sections.append(Part.makePolygon(points))
 
         # Loft
-        wing = Part.Solid(Part.Shell(Part.makeLoft(sections, True, False, False).Faces))
-        return wing
+        wing_loft = Part.makeLoft(sections, True, False, False).Faces
+        wing_shell = Part.Shell(wing_loft)
+        wing_solid = Part.Solid(wing_shell)
+        return wing_solid

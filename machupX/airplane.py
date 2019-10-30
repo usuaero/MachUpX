@@ -471,6 +471,12 @@ class Airplane:
         
         # Import FreeCAD modules
         sys.path.append('/usr/lib/freecad/lib')
+        sys.path.append('/usr/lib/freecad/bin')
+        sys.path.append('/usr/lib/freecad/bin/lib')
+        sys.path.append('/usr/lib/freecad/Mod')
+        sys.path.append('/usr/lib/freecad/Ext')
+        sys.path.append('/usr/lib/freecad/Gui')
+
         import FreeCAD
         import Part
 
