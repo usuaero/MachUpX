@@ -278,13 +278,16 @@ class Airfoil:
             return self._CLa
 
 
-    def get_outline_points(self, N=200):
+    def get_outline_points(self, N=200, cluster=True):
         """Returns an array of outline points showing the geometry of the airfoil.
 
         Parameters
         ----------
-        N : int
+        N : int, optional
             The number of outline points to return. Defaults to 200.
+
+        cluster : bool, optional
+            Whether to use cosing clustering at the leading and trailing edges. Defaults to true.
 
         Returns
         -------
@@ -292,8 +295,24 @@ class Airfoil:
             Outline points in airfoil coordinates.
         """
         if hasattr(self, "_x_outline"):
-            # TODO: Implement cosine clustering
-            s = np.linspace(0.0, 1.0, N)
+
+            # Determine spacing of points
+            if cluster:
+                # Divide points between top and bottom
+                self._s_le = 0.5
+                N_t = int(N*self._s_le)
+                N_b = N-N_t
+                
+                # Create distributions using cosine clustering
+                theta_t = np.linspace(0.0, np.pi, N_t)
+                s_t = 0.5*(1-np.cos(theta_t))*self._s_le
+                theta_b = np.linspace(0.0, np.pi, N_b)
+                s_b = 0.5*(1-np.cos(theta_b))*(1-self._s_le)+self._s_le
+                s = np.concatenate([s_t, s_b])
+            else:
+                s = np.linspace(0.0, 1.0, N)
+
+            # Get outline
             X = self._x_outline(s)
             Y = self._y_outline(s)
             return np.concatenate([X[:,np.newaxis], Y[:,np.newaxis]], axis=1)

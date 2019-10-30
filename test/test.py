@@ -29,4 +29,4 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.export_aircraft_stp("test_plane", "test_plane.stp", section_resolution=100)
+    scene.export_aircraft_stp("test_plane", "airplane.stp", section_resolution=200)
