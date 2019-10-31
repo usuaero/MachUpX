@@ -467,15 +467,14 @@ class Airplane:
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         """
-        abs_file = str(os.path.abspath(filename))
         
         # Import FreeCAD modules
-        sys.path.append('/usr/lib/freecad/lib')
-        sys.path.append('/usr/lib/freecad/bin')
-        sys.path.append('/usr/lib/freecad/bin/lib')
-        sys.path.append('/usr/lib/freecad/Mod')
-        sys.path.append('/usr/lib/freecad/Ext')
-        sys.path.append('/usr/lib/freecad/Gui')
+        #sys.path.append('/usr/lib/freecad/lib')
+        #sys.path.append('/usr/lib/freecad/bin')
+        #sys.path.append('/usr/lib/freecad/bin/lib')
+        #sys.path.append('/usr/lib/freecad/Mod')
+        #sys.path.append('/usr/lib/freecad/Ext')
+        #sys.path.append('/usr/lib/freecad/Gui')
 
         import FreeCAD
         import Part
@@ -489,4 +488,5 @@ class Airplane:
 
         # Put together and export
         assembly = Part.makeCompound(parts)
+        abs_file = str(os.path.abspath(filename))
         assembly.exportStep(abs_file)
