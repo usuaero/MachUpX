@@ -442,8 +442,8 @@ class Airplane:
                     S += integ.quad(lambda s: wing_segment.get_chord(s), 0.0, 1.0)[0]
 
                 else:
-                    MAC += np.sum(wing_segment.dS*wing_segment.c_bar_cp)
-                    MAC_loc += np.sum(wing_segment.dS*wing_segment.control_points[:,0])
+                    MAC += np.sum(wing_segment.dS*np.cos(wing_segment.dihedral_cp)*wing_segment.c_bar_cp)
+                    MAC_loc += np.sum(wing_segment.dS*np.cos(wing_segment.dihedral_cp)*wing_segment.control_points[:,0])
                     S += np.sum(wing_segment.dS)
 
         # Divide by planform area

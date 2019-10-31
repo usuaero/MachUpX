@@ -363,10 +363,10 @@ class WingSegment:
         self.u_s_cp = self._get_span_vec(self._cp_span_locs)
         self.control_points = self._get_section_ac_loc(self._cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
-        self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
         self.twist_cp = self.get_twist(self._cp_span_locs)
         self.dihedral_cp = self.get_dihedral(self._cp_span_locs)
         self.sweep_cp = self.get_sweep(self._cp_span_locs)
+        self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
     def _setup_node_data(self):
