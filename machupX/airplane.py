@@ -468,14 +468,6 @@ class Airplane:
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         """
         
-        # Import FreeCAD modules
-        #sys.path.append('/usr/lib/freecad/lib')
-        #sys.path.append('/usr/lib/freecad/bin')
-        #sys.path.append('/usr/lib/freecad/bin/lib')
-        #sys.path.append('/usr/lib/freecad/Mod')
-        #sys.path.append('/usr/lib/freecad/Ext')
-        #sys.path.append('/usr/lib/freecad/Gui')
-
         import FreeCAD
         import Part
 

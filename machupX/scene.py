@@ -1841,6 +1841,7 @@ class Scene:
 
     def export_aircraft_stp(self, aircraft, filename, section_resolution=200):
         """Creates a .stp file representing the specified aircraft.
+        NOTE: FreeCAD must be installed and configured to use this function.
 
         Parameters
         ----------
