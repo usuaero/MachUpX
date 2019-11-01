@@ -4,6 +4,7 @@ import json
 import numpy as np
 import scipy.integrate as integ
 import scipy.interpolate as interp
+import os
 
 
 class WingSegment:
@@ -979,11 +980,17 @@ class WingSegment:
         return coords
 
 
-    def create_freecad_stp(self, section_res=200):
+    def export_stp(self, airplane_name, file_tag="", section_res=200):
         """Creates a FreeCAD part representing a loft of the wing segment.
 
         Parameters
         ----------
+        airplane_name: str
+            Name of the airplane this segment belongs to.
+
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+
         section_res : int
             Number of outline points to use for the sections. Defaults to 200.
 
@@ -1017,11 +1024,16 @@ class WingSegment:
                 points.append(FreeCAD.Base.Vector(*point))
 
             # Add to section list
-            section_spline = Part.BSplineCurve(points)
-            sections.append(section_spline.toShape())
+            section_polygon = Part.makePolygon(points)
+            sections.append(section_polygon)
+            #section_spline = Part.BSplineCurve(points)
+            #sections.append(section_spline.toShape())
 
         # Loft
-        wing_loft = Part.makeLoft(sections, True, True, False).Faces
+        wing_loft = Part.makeLoft(sections, True, False, False).Faces
         wing_shell = Part.Shell(wing_loft)
         wing_solid = Part.Solid(wing_shell)
-        return wing_solid
+
+        # Export
+        abs_path = os.path.abspath("{0}{1}_{2}.stp".format(file_tag, airplane_name, self.name))
+        wing_solid.exportStep(abs_path)

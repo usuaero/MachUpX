@@ -22,12 +22,15 @@ if __name__=="__main__":
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
 
-    airplane_dict["wings"]["main_wing"]["sweep"] = 0.0
-    #airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
-    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 1.0]]
+    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, -10.0],[0.3, 0.0],[1.0, 30.0]]
+    airplane_dict["wings"]["main_wing"]["dihedral"] = [[0.0, -20.0],[0.2, 0.0],[0.9, 0.0],[1.0, 80.0]]
+    airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
+    #airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 1.0]]
+    airplane_dict["wings"].pop("v_stab")
+    airplane_dict["wings"].pop("h_stab")
 
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.export_aircraft_stp("test_plane", "airplane.stp", section_resolution=50)
+    scene.export_aircraft_stp("test_plane", section_resolution=50)

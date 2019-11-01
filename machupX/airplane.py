@@ -456,29 +456,18 @@ class Airplane:
         model_mesh.save(filename)
 
 
-    def export_stp(self, filename, section_resolution=200):
+    def export_stp(self, file_tag="", section_resolution=200):
         """Exports a .STEP file representing the aircraft.
 
         Parameters
         ----------
-        filename
-            File to export the model to. Must be .stp or .step.
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         """
-        
-        import FreeCAD
-        import Part
 
-        # Create document
-        parts = []
-
-        # Get wing segments
+        # Export wing segment parts
         for _,segment in self.wing_segments.items():
-            parts.append(segment.create_freecad_stp(section_res=section_resolution))
-
-        # Put together and export
-        assembly = Part.makeCompound(parts)
-        abs_file = str(os.path.abspath(filename))
-        assembly.exportStep(abs_file)
+            segment.export_stp(self.name, file_tag=file_tag, section_res=section_resolution)

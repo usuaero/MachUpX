@@ -1839,8 +1839,8 @@ class Scene:
             model_mesh.save(filename)
 
 
-    def export_aircraft_stp(self, aircraft, filename, section_resolution=200):
-        """Creates a .stp file representing the specified aircraft.
+    def export_aircraft_stp(self, aircraft, file_tag="", section_resolution=200):
+        """Creates a .stp file representing each lifting surface of the specified aircraft.
         NOTE: FreeCAD must be installed and configured to use this function.
 
         Parameters
@@ -1848,8 +1848,8 @@ class Scene:
         aircraft : str
             The aircraft to export a .stp file of. MAY ONLY SPECIFY ONE.
 
-        filename : str
-            The filename to export to. Must be .stp or .step.
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
@@ -1857,6 +1857,6 @@ class Scene:
 
         # Check for one aircraft
         if isinstance(aircraft, str):
-            self._airplanes[aircraft].export_stp(filename, section_resolution=section_resolution)
+            self._airplanes[aircraft].export_stp(file_tag=file_tag, section_resolution=section_resolution)
         else:
             raise IOError("{0} is not a proper aircraft specifier.".format(aircraft))
