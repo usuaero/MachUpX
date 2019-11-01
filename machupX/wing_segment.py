@@ -1024,10 +1024,13 @@ class WingSegment:
                 points.append(FreeCAD.Base.Vector(*point))
 
             # Add to section list
-            section_polygon = Part.makePolygon(points)
-            sections.append(section_polygon)
-            #section_spline = Part.BSplineCurve(points)
-            #sections.append(section_spline.toShape())
+            polygon = True
+            if polygon: # Use polygon
+                section_polygon = Part.makePolygon(points)
+                sections.append(section_polygon)
+            else: # Use spline
+                section_spline = Part.BSplineCurve(points)
+                sections.append(section_spline.toShape())
 
         # Loft
         wing_loft = Part.makeLoft(sections, True, False, False).Faces
