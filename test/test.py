@@ -22,8 +22,13 @@ if __name__=="__main__":
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
 
-    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, -10.0],[0.3, 0.0],[1.0, 30.0]]
-    airplane_dict["wings"]["main_wing"]["dihedral"] = [[0.0, -20.0],[0.2, 0.0],[0.9, 0.0],[1.0, 80.0]]
+    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, 0.0],
+                                                    [0.2, 15.0],
+                                                    [1.0, 40.0]]
+    airplane_dict["wings"]["main_wing"]["dihedral"] = [[0.0, 0.0],
+                                                       [0.8, 10.0],
+                                                       [0.9, 65.0],
+                                                       [1.0, 70.0]]
     airplane_dict["wings"]["main_wing"]["chord"] = [[0,    0.775],
                                                     [0.01, 0.773800639863482],
                                                     [0.02, 0.77021023126586],
@@ -48,7 +53,6 @@ if __name__=="__main__":
                                                     [0.9,  0.188],
                                                     [1,    0.06275]]
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 40
-    #airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 1.0]]
     airplane_dict["wings"].pop("v_stab")
     airplane_dict["wings"].pop("h_stab")
 

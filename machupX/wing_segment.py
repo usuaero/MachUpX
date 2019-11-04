@@ -286,7 +286,6 @@ class WingSegment:
 
 
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
-            self._airfoil_data = np.empty((airfoil.shape[0], airfoil.shape[1]+1), dtype=None)
 
             # Store each airfoil and its span location
             for row in airfoil:
