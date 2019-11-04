@@ -52,7 +52,7 @@ if __name__=="__main__":
                                                     [0.2,  0.389050179137017],
                                                     [0.9,  0.188],
                                                     [1,    0.06275]]
-    airplane_dict["wings"]["main_wing"]["grid"]["N"] = 40
+    airplane_dict["wings"]["main_wing"]["grid"]["N"] = 50
     airplane_dict["wings"].pop("v_stab")
     airplane_dict["wings"].pop("h_stab")
 

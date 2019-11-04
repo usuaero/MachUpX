@@ -229,6 +229,13 @@ class WingSegment:
                 return data
         
         else: # Array
+            if isinstance(data[0], np.void): # This will happen if the user inputs the array params as ints
+                new_data = np.zeros((data.shape[0],2))
+                for i in range(data.shape[0]):
+                    new_data[i,0] = data[i][0]
+                    new_data[i,1] = data[i][1]
+                data = new_data
+
             self._getter_data[name] = data
 
             def getter(span):
