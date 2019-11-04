@@ -1033,7 +1033,7 @@ class WingSegment:
                 sections.append(section_spline.toShape())
 
         # Loft
-        wing_loft = Part.makeLoft(sections, True, False, False).Faces
+        wing_loft = Part.makeLoft(sections, True, True, False).Faces
         wing_shell = Part.Shell(wing_loft)
         wing_solid = Part.Solid(wing_shell)
 
