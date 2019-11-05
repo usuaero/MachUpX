@@ -98,9 +98,20 @@ def _run_prescribed_analyses(input_filename):
             print("Exporting stl...")
             scene.export_stl(filename, section_resolution=res, aircraft=aircraft)
 
+        # Export .stp
+        elif key == "stp":
+            aircraft = params.get("aircraft", None)
+            tag = params.get("file_tag", "")
+            res = params.get("section_resolution", 200)
+            spline = params.get("spline", False)
+            sections = params.get("maintain_sections", True)
+
+            print("Exporting stl...")
+            scene.export_aircraft_stp(aircraft, file_tag=tag, section_resolution=res, spline=spline, maintain_sections=sections)
+
         # Unrecognized command
         else:
-            raise RuntimeWarning("{0} is not recognized as a valid run command.".format(key))
+            print("{0} is not recognized as a valid run command.".format(key))
 
 
 if __name__=="__main__":

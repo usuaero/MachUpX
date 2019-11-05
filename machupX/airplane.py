@@ -456,7 +456,7 @@ class Airplane:
         model_mesh.save(filename)
 
 
-    def export_stp(self, file_tag="", section_resolution=200):
+    def export_stp(self, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
         """Exports a .STEP file representing the aircraft.
 
         Parameters
@@ -466,8 +466,15 @@ class Airplane:
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+        
+        spline : bool, optional
+            Whether the wing segment sections should be represented using splines. This can cause issues with some geometries/CAD 
+            packages. Defaults to False.
+
+        maintain_sections : bool, optional
+            Whether the wing segment sections should be preserved in the loft. Defaults to True.
         """
 
         # Export wing segment parts
         for _,segment in self.wing_segments.items():
-            segment.export_stp(self.name, file_tag=file_tag, section_res=section_resolution)
+            segment.export_stp(self.name, file_tag=file_tag, section_res=section_resolution, spline=spline, maintain_sections=maintain_sections)

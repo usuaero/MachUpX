@@ -986,7 +986,7 @@ class WingSegment:
         return coords
 
 
-    def export_stp(self, airplane_name, file_tag="", section_res=200):
+    def export_stp(self, airplane_name, file_tag="", section_res=200, spline=False, maintain_sections=True):
         """Creates a FreeCAD part representing a loft of the wing segment.
 
         Parameters
@@ -999,11 +999,13 @@ class WingSegment:
 
         section_res : int
             Number of outline points to use for the sections. Defaults to 200.
+        
+        spline : bool, optional
+            Whether the wing segment sections should be represented using splines. This can cause issues with some geometries/CAD 
+            packages. Defaults to False.
 
-        Returns
-        -------
-        wing : Part
-            A FreeCAD part representing the wing segment.
+        maintain_sections : bool, optional
+            Whether the wing segment sections should be preserved in the loft. Defaults to True.
         """
 
         # Import necessary modules
@@ -1030,8 +1032,7 @@ class WingSegment:
                 points.append(FreeCAD.Base.Vector(*point))
 
             # Add to section list
-            polygon = True
-            if polygon: # Use polygon
+            if not spline: # Use polygon
                 section_polygon = Part.makePolygon(points)
                 sections.append(section_polygon)
             else: # Use spline
@@ -1039,7 +1040,7 @@ class WingSegment:
                 sections.append(section_spline.toShape())
 
         # Loft
-        wing_loft = Part.makeLoft(sections, True, True, False).Faces
+        wing_loft = Part.makeLoft(sections, True, maintain_sections, False).Faces
         wing_shell = Part.Shell(wing_loft)
         wing_solid = Part.Solid(wing_shell)
 

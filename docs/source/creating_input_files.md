@@ -140,6 +140,24 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
+>>>
+>>**"stp" : dict, optional"**
+>>>Exports a STEP file describing each wing segment for the specified aircraft
+>>>
+>>>**"file_tag" : str, optional**
+>>>>Tag to prepend to each .stp file. The filename will be output as "<TAG><AIRCRAFT_NAME>_<SEGMENT_NAME>.stp". Defaults to no tag.
+>>>
+>>>**"section_resolution" : int, optional**
+>>>>Number of points to use in discretizing the airfoil section outlines. Defaults to 200.
+>>>
+>>>**"aircraft" : str or list, optional**
+>>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
+>>>
+>>>**"spline" : bool, optional**
+>>>>Whether each section outline should be rendered as a spline. Defaults to False, in which case the sections will be rendered as polygons. Setting this parameter can help with importing the resulting STEP file into other CAD packages.
+>>>
+>>>**"maintain_sections" : bool, optional**
+>>>>Whether the section outlines should be maintained in the loft of each wing segment. Defaults to True. This again can help with importing the resulting STEP file into other CAD packages.
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.
