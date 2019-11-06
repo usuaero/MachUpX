@@ -4,14 +4,11 @@ from .airfoil import Airfoil
 
 import json
 import numpy as np
-<<<<<<< HEAD
 import math as m
 import scipy.integrate as integ
-=======
 from stl import mesh
 import sys
 import os
->>>>>>> v1.0.1-dev
 
 class Airplane:
     """A class defining an airplane.
