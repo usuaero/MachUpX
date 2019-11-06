@@ -1025,6 +1025,7 @@ class WingSegment:
                 #tip = FreeCAD.Base.Vector(*outline[0])
                 #points.append(tip)
                 #continue
+                #TODO loft to an actual point
                 outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_res)
 
             # Create outline points
