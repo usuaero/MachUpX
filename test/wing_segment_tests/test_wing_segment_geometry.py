@@ -142,8 +142,7 @@ def test_compute_variable_swept_dihedral_wing_tip_location():
         airplane_dict = json.load(airplane_file_handle)
 
     for key in airplane_dict["wings"]:
-        airplane_dict["wings"][key]["sweep"] = [[0.0, 0.0],
-                                                [1.0, 40.0]]
+        airplane_dict["wings"][key]["sweep"] = "test/wing_segment_tests/sweep_dist.csv"
         if "v_stab" not in key:
             airplane_dict["wings"][key]["dihedral"] = [[0.0, 0.0],
                                                        [1.0, 10.0]]

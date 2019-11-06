@@ -174,3 +174,41 @@ def test_variable_airfoil_section_get_moment():
                 assert np.allclose(Cm, Cms[i], rtol=0.0, atol=1e-8)
             else:
                 assert np.allclose(Cm, Cms[i,::-1], rtol=0.0, atol=1e-8)
+
+def test_variable_airfoil_section_from_file_get_lift():
+    # Tests the lift coefficient is properly given for a variable airfoil section defined by a file
+
+    # Alter input
+    with open(input_file, 'r') as input_handle:
+        input_dict = json.load(input_handle)
+
+    with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
+        airplane_dict = json.load(airplane_file_handle)
+
+    for key in airplane_dict["wings"]:
+        airplane_dict["wings"][key]["airfoil"] = "test/wing_segment_tests/airfoil_dist.csv"
+        airplane_dict["wings"][key]["grid"]["N"] = 5
+
+    airplane_state = input_dict["scene"]["aircraft"].get("test_plane")
+    state = airplane_state.get("state", {})
+    control_state = airplane_state.get("control_state", {})
+
+    # Load scene
+    scene = MX.Scene(input_dict)
+    scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
+
+    alphas = np.radians([0,1,2])
+    CLs = np.asarray([[0.00558131, 0.04700726, 0.11403584, 0.18106442, 0.22249037],
+                      [0.11776802, 0.15844581, 0.22426385, 0.2900819 , 0.33075969],
+                      [0.22995472, 0.26988436, 0.33449187, 0.39909938, 0.43902902]])
+
+    wing_segments = scene._airplanes["test_plane"].wing_segments
+    for i, alpha in enumerate(alphas):
+        for key in wing_segments:
+            N = wing_segments[key]._N
+            params = np.concatenate((np.repeat(alpha, N)[:,np.newaxis], np.zeros((N,1)), np.zeros((N,1))), axis=1)
+            CL = wing_segments[key].get_cp_CL(params)
+            if wing_segments[key]._side == "left":
+                assert np.allclose(CL, CLs[i], rtol=0.0, atol=1e-8)
+            else:
+                assert np.allclose(CL, CLs[i,::-1], rtol=0.0, atol=1e-8)

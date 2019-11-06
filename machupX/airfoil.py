@@ -3,6 +3,8 @@ from .helpers import *
 import numpy as np
 import json
 import copy
+import scipy.interpolate as interp
+import matplotlib.pyplot as plt
 
 class Airfoil:
     """A class defining an airfoil.
@@ -34,15 +36,13 @@ class Airfoil:
         self._type = self._input_dict.get("type", "linear")
 
         self._initialize_data()
+        self._initialize_geometry()
 
     
     def _initialize_data(self):
         # Initializes the necessary data structures for the airfoil
-        if self._input_dict.get("generate_database", False):
-            self._generate_database()
-
         # Linear airfoils are entirely defined by coefficients and coefficient derivatives
-        elif self._type == "linear":
+        if self._type == "linear":
 
             # Load from file
             try:
@@ -68,18 +68,73 @@ class Airfoil:
             self._CLM = import_value("CLM", params, "SI", 0.0)
             self._CLRe = import_value("CLRe", params, "SI", 0.0)
 
-        elif self._type == "nonlinear":
-            # TODO: Implement this
-            raise IOError("Nonlinear airfoils are not currently supported in MachUpX.")
-
         else:
             raise IOError("'{0}' is not an allowable airfoil type.".format(self._type))
 
 
-    def _generate_database(self):
-        # Generates a database of airfoil parameters from the section geometry
-        # TODO: Implement this
-        raise IOError("Generateing an airfoil database is not yet allowed in this version of MachUpX.")
+    def _initialize_geometry(self):
+        # Creates outline splines to use in generating .stl and .stp files
+
+        geom_params = self._input_dict.get("geometry", {})
+
+        # Check that there's only one geometry definition
+        points = geom_params.get("outline_points", None)
+        naca_des = geom_params.get("NACA", None)
+        if points is not None and naca_des is not None:
+            raise IOError("Outline points and a NACA designation may not be both specified for airfoil {0}.".format(self.name))
+
+        # Check for user-given points
+        if points is not None:
+
+            if isinstance(points, str): # Filepath
+                with open(points, 'r') as input_handle:
+                    outline_points = np.genfromtxt(input_handle, delimiter=',')
+
+            elif isinstance(points, list) and isinstance(points[0], list): # Array
+                outline_points = np.array(points)
+
+        # NACA definition
+        elif naca_des is not None:
+
+            # Cosine distribution of chord locations
+            theta = np.linspace(-np.pi, np.pi, 200)
+            x = 0.5*(1-np.cos(theta))
+
+            # 4-digit series
+            if len(naca_des) == 4:
+                m = float(naca_des[0])/100
+                p = float(naca_des[1])/10
+                t = float(naca_des[2:])/100
+
+                # Thickness distribution
+                y_t = 5*t*(0.2969*np.sqrt(x)-0.1260*x-0.3516*x**2+0.2843*x**3-0.1036*x**4) # Uses formulation to seal trailing edge
+
+                # Camber line equations
+                if abs(m)<1e-10 or abs(p)<1e-10: # Symmetric
+                    y_c = np.zeros_like(x)
+                    dy_c_dx = np.zeros_like(x)
+                else:
+                    y_c = np.where(x<p, m/p**2*(2*p*x-x**2), m/(1-p)**2*((1-2*p)+2*p*x-x**2))
+                    dy_c_dx = np.where(x<p, 2*m/p**2*(p-x), 2*m/(1-p**2)*(p-x))
+
+                # Outline points
+                X = x-y_t*np.sin(np.arctan(dy_c_dx))*np.sign(theta)
+                Y = y_c+y_t*np.cos(np.arctan(dy_c_dx))*np.sign(theta)
+
+                outline_points = np.concatenate([X[:,np.newaxis], Y[:,np.newaxis]], axis=1)
+
+        else:
+            return
+
+        # Create splines defining the outline as a function of distance along the outline
+        x_diff = np.diff(outline_points[:,0])
+        y_diff = np.diff(outline_points[:,1])
+        ds = np.sqrt(x_diff*x_diff+y_diff*y_diff)
+        ds = np.insert(ds, 0, 0.0)
+        s = np.cumsum(ds)
+        s_normed = s/s[-1]
+        self._x_outline = interp.UnivariateSpline(s_normed, outline_points[:,0], k=5, s=1e-10)
+        self._y_outline = interp.UnivariateSpline(s_normed, outline_points[:,1], k=5, s=1e-10)
 
 
     def get_CL(self, inputs):
@@ -221,3 +276,45 @@ class Airfoil:
         """
         if self._type == "linear":
             return self._CLa
+
+
+    def get_outline_points(self, N=200, cluster=True):
+        """Returns an array of outline points showing the geometry of the airfoil.
+
+        Parameters
+        ----------
+        N : int, optional
+            The number of outline points to return. Defaults to 200.
+
+        cluster : bool, optional
+            Whether to use cosing clustering at the leading and trailing edges. Defaults to true.
+
+        Returns
+        -------
+        ndarray
+            Outline points in airfoil coordinates.
+        """
+        if hasattr(self, "_x_outline"):
+
+            # Determine spacing of points
+            if cluster:
+                # Divide points between top and bottom
+                self._s_le = 0.5
+                N_t = int(N*self._s_le)
+                N_b = N-N_t
+                
+                # Create distributions using cosine clustering
+                theta_t = np.linspace(0.0, np.pi, N_t)
+                s_t = 0.5*(1-np.cos(theta_t))*self._s_le
+                theta_b = np.linspace(0.0, np.pi, N_b)
+                s_b = 0.5*(1-np.cos(theta_b))*(1-self._s_le)+self._s_le
+                s = np.concatenate([s_t, s_b])
+            else:
+                s = np.linspace(0.0, 1.0, N)
+
+            # Get outline
+            X = self._x_outline(s)
+            Y = self._y_outline(s)
+            return np.concatenate([X[:,np.newaxis], Y[:,np.newaxis]], axis=1)
+        else:
+            raise RuntimeError("The geometry has not been defined for airfoil {0}.".format(self.name))

@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import time
 import copy
+from stl import mesh
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
@@ -771,9 +772,9 @@ class Scene:
         # Takes the force vector and coverts it to lift, drag, and sideforce
 
         # Determine direction vectors
-        u_lift = np.cross(u_inf,[0.,1.,0.])
+        u_lift = np.cross(u_inf, [0.,1.,0.])
         u_lift = u_lift/np.linalg.norm(u_lift)
-        u_side = np.cross(u_lift,u_inf)
+        u_side = np.cross(u_lift, u_inf)
         u_side = u_side/np.linalg.norm(u_side)
 
         # Drag force
@@ -1788,6 +1789,74 @@ class Scene:
         return airplane_object.S_w, airplane_object.l_ref_lon, airplane_object.l_ref_lat
 
 
+    def export_stl(self, filename, section_resolution=200, aircraft=None):
+        """Generates a 3D model of the aircraft. If only one aircraft is specified, the model is centered on that
+        aircraft's origin. If more than one aircraft is specified, the model is centered on the origin of the earth-
+        fixed coordinate system.
+
+        Parameters
+        ----------
+        filename: str
+            Name of the file to export the model to. Must be .stl.
+
+        section_resolution : int
+            Number of points to use in dicretizing the airfoil section outlines. Defaults to 200.
+
+        aircraft : str or list
+            Name(s) of the aircraft to include in the model. Defaults to all aircraft in the scene.
+        """
+
+        # Specify the aircraft
+        if aircraft is None:
+            aircraft_names = list(self._airplanes.keys())
+        elif isinstance(aircraft, list):
+            aircraft_names = copy.copy(aircraft)
+        elif isinstance(aircraft, str):
+            aircraft_names = list(aircraft)
+        else:
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+
+        # Check for .stl file
+        if ".stl" not in filename:
+            raise IOError("{0} is not a .stl file.".format(filename))
+
+        # Model of single aircraft
+        if len(aircraft_names) == 1:
+            self._airplanes[aircraft_names[0]].export_stl(filename, section_resolution=section_resolution)
+
+        # Multiple aircraft
+        else:
+            num_facets = 0
+            vector_dict = {}
+
+            # Loop through aircraft
+            for aircraft_name in aircraft_names:
+                airplane_object = self._airplanes[aircraft_name]
+                vector_dict[aircraft_name] = {}
+
+                # Loop through segments
+                for segment_name, segment_object in airplane_object.wing_segments.items():
+                    vectors = segment_object.get_stl_vectors(section_res=section_resolution)
+                    vector_dict[aircraft_name][segment_name] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, vectors)
+                    num_facets += int(vectors.shape[0]/3)
+
+            # Allocate mesh
+            model_mesh = mesh.Mesh(np.zeros(num_facets, dtype=mesh.Mesh.dtype))
+
+            # Store vectors
+            index = 0
+            for aircraft_name in aircraft_names:
+                airplane_object = self._airplanes[aircraft_name]
+                for segment_name, segment_object in airplane_object.wing_segments.items():
+                    num_segment_facets = int(vector_dict[aircraft_name][segment_name].shape[0]/3)
+                    for i in range(index, index+num_segment_facets):
+                        for j in range(3):
+                            model_mesh.vectors[i][j] = vector_dict[aircraft_name][segment_name][3*(i-index)+j]
+                    index += num_segment_facets
+
+            # Export
+            model_mesh.save(filename)
+
     def aircraft_mean_aerodynamic_chord(self, aircraft=None, filename=None, verbose=False):
         """Returns the mean aerodynamic chord (MAC) for the specified aircraft.
 
@@ -1809,20 +1878,14 @@ class Scene:
                 {
                     "<AIRCRAFT_NAME>" : {
                         "length" : mean aerodynamic chord length,
-                        "C_point" : location of the quarter chord of the MAC determined by Eq. 2.6.2 from Nickel and Wohlfahrt "Tailless Aircraft",
-                        "25%_MAC_loc" : location of the quarter chord of the local section chord which matches the MAC; returns None for rectangular wings
+                        "C_point" : location of the quarter chord of the MAC determined by Eq. 2.6.2 from Nickel and Wohlfahrt "Tailless Aircraft"
                     }
                 }
-            
-            The two location definitions for the MAC will only match for certain situations (i.e. unswept wings, simple tapered wings, and circular wings).
-            It is assumed the user understands the assumptions made in determining each position and will treat the information accordingly. The C-point is 
-            typically regarded as a more accurate estimate of the wing aerodynamic center (it is the aerodynamic center assuming a constant section lift 
-            coefficient distribution).
         """
 
         # Specify the aircraft
         if aircraft is None:
-            aircraft_names = self._airplanes.keys()
+            aircraft_names = list(self._airplanes.keys())
         elif isinstance(aircraft, list):
             aircraft_names = copy.copy(aircraft)
         elif isinstance(aircraft, str):
@@ -1842,3 +1905,33 @@ class Scene:
                 json.dump(MAC, dump_handle)
 
         return MAC
+
+
+    def export_aircraft_stp(self, aircraft, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
+        """Creates a .stp file representing each lifting surface of the specified aircraft.
+        NOTE: FreeCAD must be installed and configured to use this function.
+
+        Parameters
+        ----------
+        aircraft : str
+            The aircraft to export a .stp file of. MAY ONLY SPECIFY ONE.
+
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+        
+        spline : bool, optional
+            Whether the wing segment sections should be represented using splines. This can cause issues with some geometries/CAD 
+            packages. Defaults to False.
+
+        maintain_sections : bool, optional
+            Whether the wing segment sections should be preserved in the loft. Defaults to True.
+        """
+
+        # Check for one aircraft
+        if isinstance(aircraft, str):
+            self._airplanes[aircraft].export_stp(file_tag=file_tag, section_resolution=section_resolution, spline=spline, maintain_sections=maintain_sections)
+        else:
+            raise IOError("{0} is not a proper aircraft specifier.".format(aircraft))

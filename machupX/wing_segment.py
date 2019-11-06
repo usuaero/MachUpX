@@ -4,6 +4,7 @@ import json
 import numpy as np
 import scipy.integrate as integ
 import scipy.interpolate as interp
+import os
 
 
 class WingSegment:
@@ -147,12 +148,12 @@ class WingSegment:
 
                 node_theta_space = list(np.linspace(0.0, np.pi, sec_N[i]+1))
                 for theta in node_theta_space[1:]:
-                    s = (1-np.cos(theta))/2 # Span fraction
+                    s = 0.5*(1-np.cos(theta)) # Span fraction
                     node_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
                 cp_theta_space = np.linspace(np.pi/sec_N[i], np.pi, sec_N[i])-np.pi/(2*sec_N[i])
                 for theta in cp_theta_space:
-                    s = (1-np.cos(theta))/2 # Span fraction
+                    s = 0.5*(1-np.cos(theta)) # Span fraction
                     cp_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
             self._node_span_locs = np.array(node_span_locs)
@@ -230,6 +231,13 @@ class WingSegment:
 
         
         else: # Array
+            if isinstance(data[0], np.void): # This will happen if the user inputs the array params as ints
+                new_data = np.zeros((data.shape[0],2))
+                for i in range(data.shape[0]):
+                    new_data[i,0] = data[i][0]
+                    new_data[i,1] = data[i][1]
+                data = new_data
+
             self._getter_data[name] = data
 
             def getter(span):
@@ -288,7 +296,6 @@ class WingSegment:
 
 
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
-            self._airfoil_data = np.empty((airfoil.shape[0], airfoil.shape[1]+1), dtype=None)
 
             # Store each airfoil and its span location
             for row in airfoil:
@@ -897,3 +904,159 @@ class WingSegment:
             return self._flap_eff*self._delta_flap
         else:
             return 0.0
+
+
+    def get_stl_vectors(self, section_res=200):
+        """Calculates and returns the outline vectors required for 
+        generating an .stl model of the wing segment.
+
+        Parameters
+        ----------
+        section_res : int, optional
+            Number of points to use in distcretizing the airfoil sections. Defaults to 200.
+
+        Returns
+        -------
+        ndarray
+            Array of outline vectors. First index is the facet index, second is the point
+            index, third is the vector components.
+        """
+
+        # Collect airfoil outlines
+        airfoil_outlines = {}
+        for airfoil in self._airfoils:
+            airfoil_outlines[airfoil.name] = airfoil.get_outline_points(section_res)
+
+        # Discretize by node locations
+        num_facets = self._N*(section_res-1)*2
+        vectors = np.zeros((num_facets*3,3))
+
+        # Generate vectors
+        for i in range(self._N):
+
+            # Root-ward node
+            root_span = self._node_span_locs[i]
+            root_outline = self._get_airfoil_outline_coords_at_span(root_span, section_res)
+
+            # Tip-ward node
+            tip_span = self._node_span_locs[i+1]
+            tip_outline = self._get_airfoil_outline_coords_at_span(tip_span, section_res)
+
+            # Create facets between the outlines
+            for j in range(section_res-1):
+                index = (2*i*(section_res-1)+2*j)*3
+
+                vectors[index] = root_outline[j]
+                vectors[index+1] = tip_outline[j+1]
+                vectors[index+2] = tip_outline[j]
+
+                vectors[index+3] = tip_outline[j+1]
+                vectors[index+4] = root_outline[j]
+                vectors[index+5] = root_outline[j+1]
+
+        return vectors
+
+
+    def _get_airfoil_outline_coords_at_span(self, span, N):
+        # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction with the specified number of points
+
+        # Collect airfoil outlines
+        airfoil_outlines = {}
+        for airfoil in self._airfoils:
+            airfoil_outlines[airfoil.name] = airfoil.get_outline_points(N)
+
+        # Linearly interpolate outlines, ignoring twist, etc for now
+        index = 0
+        while True:
+            if span >= self._airfoil_spans[index] and span <= self._airfoil_spans[index+1]:
+                total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+                root_weight = 1-abs(span-self._airfoil_spans[index])/total_span
+                tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
+                points = root_weight*airfoil_outlines[self._airfoils[index].name]+tip_weight*airfoil_outlines[self._airfoils[index+1].name]
+                break
+            index += 1
+
+        # Add twist, dihedral, and chord
+        twist = self.get_twist(span)
+        dihedral = self.get_dihedral(span)
+        chord = self.get_chord(span)
+
+        # Transform to body-fixed coordinates
+        if self._side == "left":
+            q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
+        else:
+            q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
+
+        untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
+        coords = self._get_quarter_chord_loc(span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_coords)
+
+        # Seal trailing edge
+        te = (coords[0]+coords[-1])*0.5
+        coords[0] = te
+        coords[-1] = te
+
+        return coords
+
+
+    def export_stp(self, airplane_name, file_tag="", section_res=200, spline=False, maintain_sections=True):
+        """Creates a FreeCAD part representing a loft of the wing segment.
+
+        Parameters
+        ----------
+        airplane_name: str
+            Name of the airplane this segment belongs to.
+
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+
+        section_res : int
+            Number of outline points to use for the sections. Defaults to 200.
+        
+        spline : bool, optional
+            Whether the wing segment sections should be represented using splines. This can cause issues with some geometries/CAD 
+            packages. Defaults to False.
+
+        maintain_sections : bool, optional
+            Whether the wing segment sections should be preserved in the loft. Defaults to True.
+        """
+
+        # Import necessary modules
+        import FreeCAD
+        import Part
+
+        # Create sections
+        sections = []
+        for s_i in self._node_span_locs:
+            points = []
+
+            # Get outline points
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)
+
+            # Check for wing going to a point
+            if np.all(np.all(outline == outline[0,:])):
+                #tip = FreeCAD.Base.Vector(*outline[0])
+                #points.append(tip)
+                #continue
+                #TODO loft to an actual point
+                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_res)
+
+            # Create outline points
+            for point in outline:
+                points.append(FreeCAD.Base.Vector(*point))
+
+            # Add to section list
+            if not spline: # Use polygon
+                section_polygon = Part.makePolygon(points)
+                sections.append(section_polygon)
+            else: # Use spline
+                section_spline = Part.BSplineCurve(points)
+                sections.append(section_spline.toShape())
+
+        # Loft
+        wing_loft = Part.makeLoft(sections, True, maintain_sections, False).Faces
+        wing_shell = Part.Shell(wing_loft)
+        wing_solid = Part.Solid(wing_shell)
+
+        # Export
+        abs_path = os.path.abspath("{0}{1}_{2}.stp".format(file_tag, airplane_name, self.name))
+        wing_solid.exportStep(abs_path)

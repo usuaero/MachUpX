@@ -140,6 +140,36 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"verbose" : boolean, optional**
 >>>>Defaults to false
+>>
+>>**"stl" : dict, optional"**
+>>>Exports a 3D model of the aircraft/scene using the stl format.
+>>>
+>>>**"filename" : str, optional**
+>>>>File to export the 3D model to. Defaults to the input filename with a ".stl" extension.
+>>>
+>>>**"section_resolution" : int, optional**
+>>>>Number of points to use in discretizing the airfoil section outlines. Defaults to 200.
+>>>
+>>>**"aircraft" : str or list, optional**
+>>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
+>>>
+>>**"stp" : dict, optional"**
+>>>Exports a STEP file describing each wing segment for the specified aircraft
+>>>
+>>>**"file_tag" : str, optional**
+>>>>Tag to prepend to each .stp file. The filename will be output as "<TAG><AIRCRAFT_NAME>_<SEGMENT_NAME>.stp". Defaults to no tag.
+>>>
+>>>**"section_resolution" : int, optional**
+>>>>Number of points to use in discretizing the airfoil section outlines. Defaults to 200.
+>>>
+>>>**"aircraft" : str or list, optional**
+>>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
+>>>
+>>>**"spline" : bool, optional**
+>>>>Whether each section outline should be rendered as a spline. Defaults to False, in which case the sections will be rendered as polygons. Setting this parameter can help with importing the resulting STEP file into other CAD packages.
+>>>
+>>>**"maintain_sections" : bool, optional**
+>>>>Whether the section outlines should be maintained in the loft of each wing segment. Defaults to True. This again can help with importing the resulting STEP file into other CAD packages.
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.
@@ -256,12 +286,12 @@ Describes an aircraft. Stored as a .json file
 >>>>Specifies whether this control causes symmetric or asymmetric control surface deflections (e.g. for a typical aircraft, the elevator control causes symmetric deflections whereas the aileron causes asymmetric deflections).
 >
 >**"airfoils" : dict**
->>Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of airfoils can be defined for the aircraft. MachUp pulls from these airfoil definitions as needed, depending on which airfoils are specified for the wings. A dictionary defining an airfoil has the following structure:
+>>Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of airfoils can be defined for the aircraft. MachUp pulls from these airfoil definitions as needed, depending on which airfoils are specified for the wings. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results. A dictionary defining an airfoil has the following structure:
 >
 >>**"<AIRFOIL_NAME>" : dict**
 >>
 >>>**"type" : string**
->>>>The type of information describing the airfoil. Can be "linear" and the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results.
+>>>>The type of information describing the airfoil. Can be "linear" and the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE.
 >>>
 >>>**"aL0" : float, optional**
 >>>>The zero-lift angle of attack in radians. Defaults to 0.0.
@@ -286,6 +316,15 @@ Describes an aircraft. Stored as a .json file
 >>>
 >>>**"CL_max" : float, optional**
 >>>>Maximum lift coefficient. Defaults to infinity.
+>>>
+>>>**"geometry" : dict, optional**
+>>>>Describes the geometry of the airfoil.
+>>>>
+>>>>**"outline_points" : str or array, optional**
+>>>>>Path to a file containing airfoil outline points or array of outline points. The first column contains x-coordinates and the second column contains y-coordinates, where x originates at the leading edge and points back along the chord line and y points up. If a file, it should be comma-delimited. The trailing edge should be sealed. The geometry specified here will only be used in generating 3D models and will not affect the aerodynamics. Cannot be specified along with "outline_points".
+>>>>
+>>>>**"NACA" : str, optional**
+>>>>>NACA designation for the airfoil. If given, MachUpX will automatically generate outline points using the NACA equations. Can only be NACA 4-digit series. Cannot be specified along with "outline_points". Will not affect aerodynamics.
 >>>
 >>>**"path" : string, optional**
 >>>>Path to file containing a JSON object describing the airfoil using the above keys.
@@ -329,11 +368,15 @@ Describes an aircraft. Stored as a .json file
 >>>>Length of the wing segment, discounting sweep. If "side" is specified as "both", the total span of the segment is twice this value.
 >>>
 >>>**"twist" : float, array, or string, optional**
+<<<<<<< HEAD
 >>>>Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the mounting angle of the wing segment and the segment will have no further twist. If specified as an array, the array gives the twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value:
 >>>>
 >>>>>**"twist" : [[0.0, 0.0], [0.5, 0.0], [0.5, 2.0], [1.0, 2.0]]**
 >>>>
 >>>>In the above example, the twist will be 0 degrees for the inner half of the wing and 2 degrees for the outer half of the wing. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
+=======
+>>>>Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the mounting angle of the wing segment and the segment will have no further twist. If specified as an array, the array gives the twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a **.csv** file containing the twist data formatted in columns, as with the array. There should be no header in this file. For properties as a function of span, MachUp will linearly interpolate intermediate values. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
+>>>>>>> v1.0.1-dev
 >>>
 >>>**"dihedral" : float, array, or string, optional**
 >>>>Gives the dihedral of the wing segment. This is a solid-body rotation of the wing about the body x-axis. Defined the same as "twist". Defaults to 0.

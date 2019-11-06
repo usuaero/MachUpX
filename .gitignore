@@ -117,3 +117,8 @@ compare/
 *_derivatives.json
 *_distributions.json
 *_vs_span_fraction.png
+*_pitch_trim.json
+*.stp
+*.step
+*.iges
+*.igs
