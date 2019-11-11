@@ -105,8 +105,7 @@ class Airplane:
 
         elif self.q.shape[0] == 4: # Quaternion
             # Check magnitude
-            if abs(np.linalg.norm(self.q)-1.0) > 1e-10:
-                raise IOError("Magnitude of orientation quaternion must be 1.0.")
+            self.q = self.q/np.linalg.norm(self.q)
 
         else:
             raise IOError("{0} is not an allowable orientation definition.".format(self.q))

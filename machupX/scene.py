@@ -206,18 +206,9 @@ class Scene:
 
         # Update member variables
         self._N += self._airplanes[airplane_name].get_num_cps()
-        self._perform_geometry_calculations()
         self._num_aircraft += 1
 
-
-    def _perform_geometry_calculations(self):
-        # Performs calculations necessary for solving NLL which are only dependent on geometry.
-        # This speeds up repeated calls to _solve(). This method should be called any time the 
-        # geometry is updated, an aircraft is added to the scene, or the state of an aircraft 
-        # changes. Note that all calculations occur in the flat-earth frame to all for multiple
-        # aircraft.
-
-        # Geometry
+        # Initialize arrays
         self._c_bar = np.zeros(self._N) # Average chord
         self._dS = np.zeros(self._N) # Differential planform area
         self._PC = np.zeros((self._N,3)) # Control point location
@@ -226,6 +217,28 @@ class Scene:
         self._u_a = np.zeros((self._N,3)) # Section unit vectors
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
+        self._rho = np.zeros(self._N)
+        self._nu = np.zeros(self._N)
+        self._a = np.ones(self._N)
+        self._Re = np.zeros(self._N)
+        self._M = np.zeros(self._N)
+        self._aL0 = np.zeros(self._N)
+        self._cp_v_inf = np.zeros((self._N,3))
+        self._cp_V_inf = np.zeros(self._N)
+        self._v_trans = np.zeros((self._num_aircraft,3))
+        self._CD = np.zeros(self._N)
+        self._Cm = np.zeros(self._N)
+
+        # Update geometry
+        self._perform_geometry_calculations()
+
+
+    def _perform_geometry_calculations(self):
+        # Performs calculations necessary for solving NLL which are only dependent on geometry.
+        # This speeds up repeated calls to _solve(). This method should be called any time the 
+        # geometry is updated, an aircraft is added to the scene, or the state of an aircraft 
+        # changes. Note that all calculations occur in the flat-earth frame to all for multiple
+        # aircraft.
 
         index = 0
         self._airplane_names = []
@@ -286,17 +299,9 @@ class Scene:
         start_time = time.time()
 
         # Gather necessary variables
-        # Atmosphere
-        self._rho = np.zeros(self._N)
-        self._nu = np.zeros(self._N)
-        self._a = np.ones(self._N)
-
         # Airfoil parameters
         alpha_approx = np.zeros(self._N)
-        self._Re = np.zeros(self._N)
-        self._M = np.zeros(self._N)
         CLa = np.zeros(self._N)
-        self._aL0 = np.zeros(self._N)
         esp_f_delta_f = np.zeros(self._N)
         alpha_approx = np.zeros(self._N)
 
@@ -305,12 +310,7 @@ class Scene:
         P1_v_inf = np.zeros((self._N,3))
 
         # Velocities at control points
-        self._cp_v_inf = np.zeros((self._N,3))
-        self._cp_V_inf = np.zeros(self._N)
         cp_u_inf = np.zeros((self._N,3))
-
-        # Aircraft velocities
-        self._v_trans = np.zeros((self._num_aircraft,3))
 
         index = 0
 
@@ -540,8 +540,6 @@ class Scene:
         self._q_inf = 0.5*self._rho*V*V
 
         # Store lift, drag, and moment coefficient distributions
-        self._CD = np.zeros(self._N)
-        self._Cm = np.zeros(self._N)
 
         r_CG = np.zeros((self._N,3))
 
