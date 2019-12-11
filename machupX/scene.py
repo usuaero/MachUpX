@@ -1810,7 +1810,7 @@ class Scene:
         elif isinstance(aircraft, list):
             aircraft_names = copy.copy(aircraft)
         elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
+            aircraft_names = [aircraft]
         else:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
 

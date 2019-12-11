@@ -18,11 +18,6 @@ if __name__=="__main__":
     with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
         airplane_dict = json.load(airplane_file_handle)
 
-<<<<<<< HEAD
-    input_dict["solver"]["type"] = "linear"
-
-=======
->>>>>>> v1.0.1-dev
     airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
@@ -58,41 +53,16 @@ if __name__=="__main__":
                                                     [0.9,  0.188],
                                                     [1,    0.06275]]
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 50
-    airplane_dict["wings"].pop("v_stab")
-    airplane_dict["wings"].pop("h_stab")
 
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    state["alpha"] = 2.0
-    state["beta"] = 0.0
-    state["velocity"] = 200
-    airplane_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[0.9, 1.0],[1.0, 0.5]]
-    #airplane_dict["wings"]["main_wing"]["chord"] = ["elliptic", 1.0]
-    airplane_dict["wings"]["main_wing"]["semispan"] = 4.0
-    airplane_dict["wings"].pop("v_stab")
-    airplane_dict["wings"].pop("h_stab")
-    #airplane_dict["wings"]["v_stab"]["chord"] = ["elliptic", 1.0]
-    #airplane_dict["wings"]["v_stab"]["sweep"] = 0.0
-    #airplane_dict["wings"]["h_stab"]["chord"] = ["elliptic", 1.0]
-    #airplane_dict["wings"]["h_stab"]["sweep"] = 0.0
-    airplane_dict["wings"]["main_wing"]["dihedral"] = 0.
-    airplane_dict["wings"]["main_wing"]["sweep"] = 45.
-    airplane_dict["wings"]["main_wing"]["grid"]["N"] = 100
-    airplane_dict["wings"]["main_wing"]["grid"]["flap_edge_cluster"] = True
-    airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.4
-    airplane_dict["wings"]["main_wing"]["control_surface"]["tip_span"] = 0.9
-
-    control_state["aileron"] = 20
-   
-    scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
-
     scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    print(json.dumps(FM["plane"]["total"], indent=4))
 
     #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
     #print(json.dumps(trim_angles["test_plane"], indent=4))
@@ -107,10 +77,10 @@ if __name__=="__main__":
 
     print("---MAC---")
     MAC = scene.aircraft_mean_aerodynamic_chord()
-    print(json.dumps(MAC["test_plane"], indent=4))
+    print(json.dumps(MAC["plane"], indent=4))
 
     print("---Aerodynamic Center---")
     AC = scene.aircraft_aero_center()
-    print(json.dumps(AC["test_plane"], indent=4))
+    print(json.dumps(AC["plane"], indent=4))
     
     scene.export_aircraft_stp("plane", section_resolution=50, spline=True, maintain_sections=True)
