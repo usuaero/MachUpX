@@ -379,11 +379,11 @@ class Scene:
 
         # Influence of vortex segment 0
         denom = (self._rj0i_mag*(self._rj0i_mag-np.einsum('ijk,ijk->ij', self._P0_u_inf[np.newaxis], self._rj0i)))
-        V_ji_due_to_0 = -np.cross(self._P0_u_inf, self._rj0i)/denom[:,:,np.newaxis]
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_u_inf, self._rj0i)/denom[:,:,np.newaxis], nan=0.0)
 
         # Influence of vortex segment 1
         denom = (self._rj1i_mag*(self._rj1i_mag-np.einsum('ijk,ijk->ij', self._P1_u_inf[np.newaxis], self._rj1i)))
-        V_ji_due_to_1 = np.cross(self._P1_u_inf, self._rj1i)/denom[:,:,np.newaxis]
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_u_inf, self._rj1i)/denom[:,:,np.newaxis], nan=0.0)
 
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + self._V_ji_due_to_bound + V_ji_due_to_1)
         self._V_ji_trans = self._V_ji.transpose((1,0,2))
