@@ -2,7 +2,7 @@
 
 ## Getting Python
 
-If you do nothave Python installed on your machine, it can be downloaded from [https://www.anaconda.com/distribution/](https://www.anaconda.com/distribution/). This is the Anaconda distribution, which we highly recommend (no we are not affiliated with nor do we receive financial support from Anaconda).
+If you do not have Python installed on your machine, it can be downloaded from [https://www.anaconda.com/distribution/](https://www.anaconda.com/distribution/). This is the Anaconda distribution, which we highly recommend (no we are not affiliated with nor do we receive financial support from Anaconda).
 
 ## Getting the Source Code
 
@@ -47,7 +47,7 @@ to verify MachUpX is working properly on your machine. Some warnings and depreci
 
 ## FreeCAD for Exporting STEP Files
 
-MachUpX is albe to generate CAD models of the airframe data provided using the STEP exchange format (.stp). These can be opened by any CAD package. In order to do this, MachUpX uses the FreeCAD Python API. As such, FreeCAD needs to be installed on your machine for this to work. FreeCAD can be downloaded from [https://www.freecadweb.org/](https://www.freecadweb.org/) or on Linux systems using
+MachUpX is able to generate CAD models of the airframe data provided using the STEP exchange format (.stp). These can be opened by any CAD package. In order to do this, MachUpX uses the FreeCAD Python API. As such, FreeCAD needs to be installed on your machine for this to work. FreeCAD can be downloaded from [https://www.freecadweb.org/](https://www.freecadweb.org/) or on Linux systems using
 
     $ sudo apt-get install freecad
 
