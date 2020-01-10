@@ -18,11 +18,8 @@ if __name__=="__main__":
     with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
         airplane_dict = json.load(airplane_file_handle)
 
-<<<<<<< HEAD
     input_dict["solver"]["type"] = "linear"
 
-=======
->>>>>>> v1.0.1-dev
     airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
