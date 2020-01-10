@@ -1534,7 +1534,7 @@ class Scene:
         elif isinstance(aircraft, list):
             aircraft_names = copy.copy(aircraft)
         elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
+            aircraft_names = [aircraft]
         else:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
@@ -1810,9 +1810,9 @@ class Scene:
         elif isinstance(aircraft, list):
             aircraft_names = copy.copy(aircraft)
         elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
+            aircraft_names = [aircraft]
         else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         # Check for .stl file
         if ".stl" not in filename:
@@ -1888,7 +1888,7 @@ class Scene:
         elif isinstance(aircraft, list):
             aircraft_names = copy.copy(aircraft)
         elif isinstance(aircraft, str):
-            aircraft_names = list(aircraft)
+            aircraft_names = [aircraft]
         else:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
