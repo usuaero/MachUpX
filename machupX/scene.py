@@ -377,7 +377,7 @@ class Scene:
         P1_V_inf = np.linalg.norm(P1_v_inf, axis=1)
         self._P1_u_inf = P1_v_inf/P1_V_inf[:,np.newaxis]
 
-        # Influence of vortex segment 0
+        # Influence of vortex segment 0; ignore if the radius goes to zero
         denom = (self._rj0i_mag*(self._rj0i_mag-np.einsum('ijk,ijk->ij', self._P0_u_inf[np.newaxis], self._rj0i)))
         V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_u_inf, self._rj0i)/denom[:,:,np.newaxis], nan=0.0)
 
@@ -1812,7 +1812,7 @@ class Scene:
         elif isinstance(aircraft, str):
             aircraft_names = [aircraft]
         else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft_name))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         # Check for .stl file
         if ".stl" not in filename:
