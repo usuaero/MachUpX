@@ -240,7 +240,7 @@ class Airplane:
         controls = self._input_dict.get("controls", {})
         for key in controls:
             self.control_names.append(key)
-            self._control_symmetry[key] = controls[key]["is_symmetric"]
+            self._control_symmetry[key] = controls[key].get("is_symmetric", True)
 
         self.set_control_state(control_state=init_control_state)
         
