@@ -356,15 +356,14 @@ class Scene:
                 P0_v_inf[cur_slice,:] = node_v_inf[:-1,:]
                 P1_v_inf[cur_slice,:] = node_v_inf[1:,:]
 
-                # Airfoil parameters
+                # Calculate airfoil parameters
                 alpha_approx[cur_slice] = np.einsum('ij,ij->i', cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
                 self._Re[cur_slice] = self._cp_V_inf[cur_slice]*self._c_bar[cur_slice]/self._nu[cur_slice]
                 self._M[cur_slice] = self._cp_V_inf[cur_slice]/self._a[cur_slice]
 
-                airfoil_params = np.concatenate((alpha_approx[cur_slice,np.newaxis], self._Re[cur_slice,np.newaxis], self._M[cur_slice,np.newaxis]), axis=1)
-
-                CLa[cur_slice] = segment_object.get_cp_CLa(airfoil_params)
-                self._aL0[cur_slice] = segment_object.get_cp_aL0(airfoil_params)
+                # Get lift slopes and zero-lift angles of attack
+                CLa[cur_slice] = segment_object.get_cp_CLa(alpha_approx[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                self._aL0[cur_slice] = segment_object.get_cp_aL0(self._Re[cur_slice], self._M[cur_slice])
                 esp_f_delta_f[cur_slice] = segment_object.get_cp_flap()
 
                 index += num_cps
@@ -448,7 +447,6 @@ class Scene:
             self._alpha = np.arctan2(v_ni, v_ai)
             self._Re = V_i*self._c_bar/self._nu
             self._M = V_i/self._a
-            airfoil_params = np.concatenate((self._alpha[:,np.newaxis], self._Re[:,np.newaxis], self._M[:,np.newaxis]), axis=1)
 
             index = 0
 
@@ -463,10 +461,10 @@ class Scene:
                     cur_slice = slice(index, index+num_cps)
 
                     # Get lift coefficient and lift slopes
-                    C_L[cur_slice] = segment_object.get_cp_CL(airfoil_params[cur_slice,:])
-                    C_La[cur_slice] = segment_object.get_cp_CLa(airfoil_params[cur_slice,:])
-                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(airfoil_params[cur_slice,:])
-                    C_LM[cur_slice] = segment_object.get_cp_CLM(airfoil_params[cur_slice,:])
+                    C_L[cur_slice] = segment_object.get_cp_CL(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_La[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                     index += num_cps
 
@@ -536,7 +534,6 @@ class Scene:
         V = np.sqrt(np.einsum('ij,ij->i', v, v))
         u = v/V[:,np.newaxis]
         alpha = np.arctan2(np.einsum('ij,ij->i', v, self._u_n), np.einsum('ij,ij->i', v, self._u_a))
-        airfoil_params = np.concatenate((alpha[:,np.newaxis], self._Re[:,np.newaxis], self._M[:,np.newaxis]), axis=1)
         self._q_inf = 0.5*self._rho*V*V
 
         # Store lift, drag, and moment coefficient distributions
@@ -593,7 +590,7 @@ class Scene:
 
                 # Determine viscid force
                 # Get drag coef and redimensionalize
-                self._CD[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_CD(airfoil_params[cur_slice,:])
+                self._CD[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_CD(alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
                 dD = self._q_inf[cur_slice]*self._dS[cur_slice]*self._CD[cur_slice]
 
                 # Determine vector and translate back into body-fixed
@@ -662,7 +659,7 @@ class Scene:
                 dM_vortex = np.cross(r_CG[cur_slice,:], dF_inv[cur_slice,:])
 
                 # Determine moment due to section moment coef
-                self._Cm[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(airfoil_params[cur_slice,:])
+                self._Cm[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
                 dM_section = -(self._q_inf[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*self._Cm[cur_slice])[:,np.newaxis]*self._u_s[cur_slice]
 
                 # Rotate back to body-fixed

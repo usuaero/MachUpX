@@ -1,6 +1,6 @@
 from .helpers import *
 from .wing_segment import WingSegment
-from .airfoil import Airfoil
+from airfoil_db import Airfoil
 
 import json
 import numpy as np

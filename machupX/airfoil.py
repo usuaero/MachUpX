@@ -30,6 +30,7 @@ class Airfoil:
 
 
     def __init__(self, name, input_dict={}):
+        raise RuntimeWarning("This airfoil class script is depreciated and no longer used")
 
         self.name = name
         self._input_dict = input_dict

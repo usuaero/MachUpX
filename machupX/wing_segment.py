@@ -616,214 +616,225 @@ class WingSegment:
         return (1-d)*coefs[i,j]+d*coefs[i,j+1]
 
 
-    def get_cp_CLa(self, params):
+    def get_cp_CLa(self, alpha, Rey, Mach):
         """Returns the lift slope at each control point.
 
         Parameters
         ----------
-        params : ndarray
-            Airfoil parameters.
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float
             Lift slope
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._flap_eff
-            new_params[:,4] = self._delta_flap
-
+        # Gather lift slopes
         CLas = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                CLas[i,j] = self._airfoils[j].get_CLa(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+            else:
+                CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLas)
 
 
-    def get_cp_aL0(self, params):
+    def get_cp_aL0(self, Rey, Mach):
         """Returns the zero-lift angle of attack at each control point. Used for the linear 
         solution to NLL.
 
         Parameters
         ----------
-        params : ndarray
-            Airfoil parameters.
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float
             Zero lift angle of attack
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._flap_eff
-            new_params[:,4] = self._delta_flap
-
+        # Gather zero-lift angles of attack
         aL0s = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                aL0s[i,j] = self._airfoils[j].get_aL0(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+            else:
+                aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, aL0s)
 
 
-    def get_cp_CLRe(self, params):
+    def get_cp_CLRe(self, alpha, Rey, Mach):
         """Returns the derivative of the lift coefficient with respect to Reynolds number at each control point
 
         Parameters
         ----------
-        params : ndarray
-            Airfoil parameters.
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float
             Z
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._flap_eff
-            new_params[:,4] = self._delta_flap
-
+        # Gather Reynolds slopes
         CLRes = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                CLRes[i,j] = self._airfoils[j].get_CLRe(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                CLRes[:,j] = self._airfoils[j].get_CLRe(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+            else:
+                CLRes[:,j] = self._airfoils[j].get_CLRe(alpha=alpha, Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLRes)
 
     
-    def get_cp_CLM(self, params):
+    def get_cp_CLM(self, alpha, Rey, Mach):
         """Returns the derivative of the lift coefficient with respect to Mach number at each control point
 
         Parameters
         ----------
-        params : ndarray
-            Airfoil parameters.
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float
             Z
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._flap_eff
-            new_params[:,4] = self._delta_flap
-
+        # Get Mach slopes
         CLMs = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                CLMs[i,j] = self._airfoils[j].get_CLM(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+            else:
+                CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLMs)
 
 
-    def get_cp_CL(self, params):
+    def get_cp_CL(self, alpha, Rey, Mach):
         """Returns the coefficient of lift at each control point as a function of params.
 
         Parameters
         ----------
-        params : ndarray
-            Airfoil parameters.
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float or ndarray
             Coefficient of lift
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._flap_eff
-            new_params[:,4] = self._delta_flap
-
+        # Get CL
         CLs = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                CLs[i,j] = self._airfoils[j].get_CL(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+            else:
+                CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLs)
 
 
-    def get_cp_CD(self, params):
+    def get_cp_CD(self, alpha, Rey, Mach):
         """Returns the coefficient of drag at each control point as a function of params.
 
         Parameters
         ----------
-        params : floats
-            Airfoil parameters.
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float
             Coefficient of drag
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._flap_eff
-            new_params[:,4] = self._delta_flap
-
+        # Get CD
         CDs = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                CDs[i,j] = self._airfoils[j].get_CD(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+            else:
+                CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CDs)
 
 
-    def get_cp_Cm(self, params):
+    def get_cp_Cm(self, alpha, Rey, Mach):
         """Returns the moment coefficient at each control point as a function of params.
 
         Parameters
         ----------
-        params : floats
-            Airfoil parameters.
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
 
         Returns
         -------
         float
             Moment coefficient
         """
-        if params.shape[0] != self._N:
-            raise ValueError("params with shape {0} does not match {1} control points.".format(params.shape, self._N))
 
-        new_params = np.zeros((self._N,5))
-        new_params[:,:3] = params
-        if self._has_control_surface:
-            new_params[:,3] = self._Cm_delta_flap
-            new_params[:,4] = self._delta_flap
-
+        # Get Cm
         Cms = np.zeros((self._N,self._num_airfoils))
-        for i in range(self._N):
-            for j in range(self._num_airfoils):
-                Cms[i,j] = self._airfoils[j].get_Cm(new_params[i,:])
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._Cm_delta_flap)
+            else:
+                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach)
 
+        # Interpolate
         return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, Cms)
 
 

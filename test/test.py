@@ -83,4 +83,4 @@ if __name__=="__main__":
     AC = scene.aircraft_aero_center()
     print(json.dumps(AC["plane"], indent=4))
     
-    scene.export_aircraft_stp("plane", section_resolution=50, spline=True, maintain_sections=True)
+    #scene.export_aircraft_stp("plane", section_resolution=50, spline=True, maintain_sections=True)
