@@ -1903,7 +1903,7 @@ class Scene:
         return MAC
 
 
-    def export_aircraft_stp(self, aircraft, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
+    def export_aircraft_stp(self, aircraft=None, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
         """Creates a .stp file representing each lifting surface of the specified aircraft.
         NOTE: FreeCAD must be installed and configured to use this function.
 

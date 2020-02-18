@@ -87,13 +87,14 @@ class Airplane:
         state : dict
             A dictionary describing the state of the aircraft. Same specification 
             as given in "Creating Input Files for MachUpX".
-
-        v_wind : ndarray
-            The local wind vector at the aircraft body-fixed origin in flat-earth 
-            coordinates. Defaults to [0.0, 0.0, 0.0].
         """
 
-        self.state_type = import_value("type", state, self._unit_sys, None)
+        # Check for ussers using depreciated state definitions
+        self.state_type = import_value("type", state, self._unit_sys, "none")
+        if self.state_type != "none":
+            raise IOError("Use of 'state_type' is no longer supported. See documentation for details.")
+
+        # Get position and angular rates
         self.p_bar = import_value("position", state, self._unit_sys, [0.0, 0.0, 0.0])
         self.w = import_value("angular_rates", state, self._unit_sys, [0.0, 0.0, 0.0])
 
@@ -110,48 +111,32 @@ class Airplane:
         else:
             raise IOError("{0} is not an allowable orientation definition.".format(self.q))
 
-        # Handle rigid-body definition of velocity
-        if self.state_type == "rigid-body":
-            # Check for mixing of specification types
+        # Set up velocity
+        v_value = import_value("velocity", state, self._unit_sys, None)
+
+        # Velocity magnitude
+        if isinstance(v_value, float):
+
+            # Get alpha and beta
+            alpha = import_value("alpha", state, self._unit_sys, 0.0)
+            beta = import_value("beta", state, self._unit_sys, 0.0)
+
+            # Set state
+            self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking
+            self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
+
+        # u, v, w
+        elif isinstance(v_value, np.ndarray):
+
+            # Make sure alpha and beta haven't also been given
             if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
-                raise IOError("Alpha and beta are not allowed as part of a rigid-body state specification.")
+                raise IOError("Alpha and beta are not allowed when the freestream velocity is a vector.")
 
-            # Set up velocity
-            self.v = import_value("velocity", state, self._unit_sys, None)# The user has specified translational velocity in flat-earth coordinates, so wind doesn't matter
-
-            # Check it is a vector
-            if not isinstance(self.v, np.ndarray):
-                raise IOError("For a rigid-body state definition, 'velocity' must be a 3-element vector.")
-
-        # Handle aerodynamic definition of velocity
-        elif self.state_type == "aerodynamic":
-
-            v_value = import_value("velocity", state, self._unit_sys, None)
-
-            # User has given a velocity magnitude, so alpha and beta are also needed
-            if isinstance(v_value, float):
-
-                alpha = import_value("alpha", state, self._unit_sys, 0.0)
-                beta = import_value("beta", state, self._unit_sys, 0.0)
-
-                self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking
-                self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
-
-            # User has given u, v, and w
-            elif isinstance(v_value, np.ndarray):
-
-                # Make sure alpha and beta haven't also been given
-                if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
-                    raise IOError("Alpha and beta are not allowed when the freestream velocity is a vector.")
-
-                # Transform to earth-fixed coordinates
-                self.v = v_wind+quaternion_inverse_transform(self.q, v_value)
-
-            else:
-                raise IOError("{0} is not an allowable velocity definition.".format(v_value))
+            # Transform to earth-fixed coordinates
+            self.v = v_wind+quaternion_inverse_transform(self.q, v_value)
 
         else:
-            raise IOError("{0} is not an acceptable state type.".format(self.state_type))
+            raise IOError("{0} is not an allowable velocity definition.".format(v_value))
 
 
     def get_aerodynamic_state(self, v_wind=[0.0, 0.0, 0.0]):

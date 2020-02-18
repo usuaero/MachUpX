@@ -24,7 +24,6 @@ def test_linear_NLL():
     }
 
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
-        "type" : "aerodynamic",
         "position" : [0, 0, 1000],
         "angular_rates" : [0.0, 0.0, 0.0],
         "velocity" : 100,
@@ -62,7 +61,6 @@ def test_nonlinear_NLL():
     }
 
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
-        "type" : "aerodynamic",
         "position" : [0, 0, 1000],
         "angular_rates" : [0.0, 0.0, 0.0],
         "velocity" : 100,
@@ -100,7 +98,6 @@ def test_sideslip():
     }
 
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
-        "type" : "aerodynamic",
         "position" : [0, 0, 1000],
         "angular_rates" : [0.0, 0.0, 0.0],
         "velocity" : 100,
@@ -138,7 +135,6 @@ def test_angular_rotation():
     }
 
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
-        "type" : "aerodynamic",
         "position" : [0, 0, 1000],
         "angular_rates" : [0.0, 0.1, 0.1],
         "velocity" : 100,
@@ -176,7 +172,6 @@ def test_flap_deflection():
     }
 
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
-        "type" : "aerodynamic",
         "position" : [0, 0, 1000],
         "angular_rates" : [0.0, 0.0, 0.0],
         "velocity" : 100,
@@ -214,7 +209,6 @@ def test_coefficients():
     }
 
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
-        "type" : "aerodynamic",
         "position" : [0, 0, 1000],
         "angular_rates" : [0.0, 0.0, 0.0],
         "velocity" : 100,
