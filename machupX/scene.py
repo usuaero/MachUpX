@@ -1930,7 +1930,7 @@ class Scene:
             self._airplanes[aircraft_name].export_stp(file_tag=file_tag, section_resolution=section_resolution, spline=spline, maintain_sections=maintain_sections)
 
 
-    def export_aircraft_dxf(self, aircraft=None, file_tag="", section_resolution=200):
+    def export_aircraft_dxf(self, **kwargs):
         """Creates a .dxf file representing each lifting surface of the specified aircraft.
 
         Parameters
@@ -1946,11 +1946,11 @@ class Scene:
         """
         
         # Specify the aircraft
-        aircraft_names = self._get_aircraft(aircraft)
+        aircraft_names = self._get_aircraft(kwargs.get("aircraft", None))
 
         # Loop through aircraft
         for aircraft_name in aircraft_names:
-            self._airplanes[aircraft_name].export_dxf(file_tag=file_tag, section_resolution=section_resolution)
+            self._airplanes[aircraft_name].export_dxf(**kwargs)
 
 
     def _get_aircraft(self, aircraft):

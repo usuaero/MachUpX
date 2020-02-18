@@ -120,12 +120,9 @@ def _run_prescribed_analyses(input_filename):
 
         # Export dxf
         elif key == "dxf":
-            aircraft = params.get("aircraft", None)
-            tag = params.get("file_tag", "")
-            res = params.get("section_resolution", 200)
 
             print("Exporting dxf...")
-            scene.export_aircraft_dxf(aircraft, file_tag=tag, section_resolution=res)
+            scene.export_aircraft_dxf(**params)
 
         # Unrecognized command
         else:

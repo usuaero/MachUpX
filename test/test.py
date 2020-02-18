@@ -110,4 +110,4 @@ if __name__=="__main__":
     AC = scene.aircraft_aero_center()
     print(json.dumps(AC["test_plane"], indent=4))
     
-    scene.export_aircraft_dxf("plane", section_resolution=50)
+    scene.export_aircraft_dxf(aircraft="plane", section_resolution=50)
