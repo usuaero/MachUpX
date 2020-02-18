@@ -13,7 +13,7 @@ W. F. Phillips, "Flow over Multiple Lifting Surfaces," Mechanics of
 Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
 ## Documentation
-Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Please refer to the documentation for instructions on installation, etc. Specific help with package functions can also be found in the docstrings.
+Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Please refer to the documentation for instructions on installation, etc. Specific help with package functions can also be found in the docstrings. Please read the documentation thoroughly before contacting the development team.
 
 ## Support
 There is an active MachUp discussion forum on [Google Groups](https://groups.google.com/forum/#!categories/machup_forum). Help on using MachUpX can be found there.
