@@ -9,6 +9,7 @@ import scipy.integrate as integ
 from stl import mesh
 import sys
 import os
+import warnings
 
 class Airplane:
     """A class defining an airplane.
@@ -109,6 +110,9 @@ class Airplane:
 
         else:
             raise IOError("{0} is not an allowable orientation definition.".format(self.q))
+
+        # Depreciation warning
+        warnings.warn(FutureWarning("Use of state types will be depreciated in version 2.0 of MachUpX."))
 
         # Handle rigid-body definition of velocity
         if self.state_type == "rigid-body":
