@@ -1,4 +1,5 @@
 from .helpers import *
+from .dxf import dxf_spline
 
 import json
 import numpy as np
@@ -1060,3 +1061,39 @@ class WingSegment:
         # Export
         abs_path = os.path.abspath("{0}{1}_{2}.stp".format(file_tag, airplane_name, self.name))
         wing_solid.exportStep(abs_path)
+
+
+    def export_dxf(self, airplane_name, file_tag="", section_res=200):
+        """Creates a dxf representing successive sections of the wing segment.
+
+        Parameters
+        ----------
+        airplane_name: str
+            Name of the airplane this segment belongs to.
+
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+
+        section_res : int
+            Number of outline points to use for the sections. Defaults to 200.
+        """
+
+        # Initialize arrays
+        X = np.zeros((self._N+1, section_res))
+        Y = np.zeros((self._N+1, section_res))
+        Z = np.zeros((self._N+1, section_res))
+
+        # Fill arrays
+        for i, s_i in enumerate(self._node_span_locs):
+
+            # Get outline points
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)
+
+            # Store in arrays
+            X[i,:] = outline[:,0]
+            Y[i,:] = outline[:,1]
+            Z[i,:] = outline[:,2]
+
+        # Export
+        abs_path = os.path.abspath("{0}{1}_{2}.dxf".format(file_tag, airplane_name, self.name))
+        dxf_spline(abs_path, X, Y, Z)

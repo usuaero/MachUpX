@@ -505,7 +505,7 @@ class Airplane:
 
 
     def export_stp(self, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
-        """Exports a .STEP file representing the aircraft.
+        """Exports .STEP files representing the aircraft.
 
         Parameters
         ----------
@@ -526,3 +526,20 @@ class Airplane:
         # Export wing segment parts
         for _,segment in self.wing_segments.items():
             segment.export_stp(self.name, file_tag=file_tag, section_res=section_resolution, spline=spline, maintain_sections=maintain_sections)
+
+
+    def export_dxf(self, file_tag="", section_resolution=200):
+        """Exports .dxf files representing the aircraft.
+
+        Parameters
+        ----------
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+        """
+
+        # Export wing segment parts
+        for _,segment in self.wing_segments.items():
+            segment.export_dxf(self.name, file_tag=file_tag, section_res=section_resolution)

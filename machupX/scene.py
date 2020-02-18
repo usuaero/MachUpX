@@ -1883,14 +1883,7 @@ class Scene:
         """
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = list(self._airplanes.keys())
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+        aircraft_names = self._get_aircraft(aircraft)
 
         MAC = {}
 
@@ -1906,14 +1899,14 @@ class Scene:
         return MAC
 
 
-    def export_aircraft_stp(self, aircraft, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
+    def export_aircraft_stp(self, aircraft=None, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
         """Creates a .stp file representing each lifting surface of the specified aircraft.
         NOTE: FreeCAD must be installed and configured to use this function.
 
         Parameters
         ----------
         aircraft : str
-            The aircraft to export a .stp file of. MAY ONLY SPECIFY ONE.
+            The aircraft to export a .stp file of.
 
         file_tag : str, optional
             Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
@@ -1929,8 +1922,47 @@ class Scene:
             Whether the wing segment sections should be preserved in the loft. Defaults to True.
         """
 
-        # Check for one aircraft
-        if isinstance(aircraft, str):
-            self._airplanes[aircraft].export_stp(file_tag=file_tag, section_resolution=section_resolution, spline=spline, maintain_sections=maintain_sections)
+        # Specify the aircraft
+        aircraft_names = self._get_aircraft(aircraft)
+
+        # Loop through aircraft
+        for aircraft_name in aircraft_names:
+            self._airplanes[aircraft_name].export_stp(file_tag=file_tag, section_resolution=section_resolution, spline=spline, maintain_sections=maintain_sections)
+
+
+    def export_aircraft_dxf(self, aircraft=None, file_tag="", section_resolution=200):
+        """Creates a .dxf file representing each lifting surface of the specified aircraft.
+
+        Parameters
+        ----------
+        aircraft : str
+            The aircraft to export .dxf files of.
+
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.dxf".
+
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+        """
+        
+        # Specify the aircraft
+        aircraft_names = self._get_aircraft(aircraft)
+
+        # Loop through aircraft
+        for aircraft_name in aircraft_names:
+            self._airplanes[aircraft_name].export_dxf(file_tag=file_tag, section_resolution=section_resolution)
+
+
+    def _get_aircraft(self, aircraft):
+        # Generates a list of aircraft to perform the function on
+
+        if aircraft is None:
+            aircraft_names = list(self._airplanes.keys())
+        elif isinstance(aircraft, list):
+            aircraft_names = copy.copy(aircraft)
+        elif isinstance(aircraft, str):
+            aircraft_names = [aircraft]
         else:
-            raise IOError("{0} is not a proper aircraft specifier.".format(aircraft))
+            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+
+        return aircraft_names
