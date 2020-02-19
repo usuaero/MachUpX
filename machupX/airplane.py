@@ -53,7 +53,7 @@ class Airplane:
         self._N = 0
 
         self._load_params(airplane_input)
-        self.set_state(init_state, v_wind=v_wind)
+        self.set_state(**init_state, v_wind=v_wind)
         self._create_airfoil_database()
         self._create_origin_segment()
         self._load_wing_segments()
@@ -80,26 +80,48 @@ class Airplane:
         self.l_ref_lat = import_value("lateral_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
 
 
-    def set_state(self, state, v_wind=[0.0, 0.0, 0.0]):
+    def set_state(self, **kwargs):
         """Sets the state of the aircraft from the provided dictionary.
+
         Parameters
         ----------
-        state : dict
-            A dictionary describing the state of the aircraft. Same specification 
-            as given in "Creating Input Files for MachUpX".
+        position : list, optional
+            Earth-fixed position. Defaults to [0.0, 0.0, 0.0].
+
+        velocity : float or list
+            Aircraft velocity.
+
+        alpha : float, optional
+            Aircraft angle of attack. Defaults to 0.0.
+
+        beta : float, optional
+            Aircraft sideslip angle. Defaults to 0.0.
+
+        orientation : list, optional
+            3-element vector given in the aircraft Euler angles or 4-element vector giving the
+            aircraft orientation quaternion. Defaults to [0.0, 0.0, 0.0] or [1.0, 0.0, 0.0, 0.0].
+
+        angular_rates : list, optional
+            Body-fixed rotation rates. Defaults to [0.0, 0.0, 0.0].
+
+        v_wind : list, optional
+            Local wind vector. Defaults to [0.0, 0.0, 0.0].
         """
 
+        # Get kwargs
+        v_wind = kwargs.get("v_wind", [0.0, 0.0, 0.0])
+
         # Check for ussers using depreciated state definitions
-        self.state_type = import_value("type", state, self._unit_sys, "none")
+        self.state_type = import_value("type", kwargs, self._unit_sys, "none")
         if self.state_type != "none":
             raise IOError("Use of 'state_type' is no longer supported. See documentation for details.")
 
         # Get position and angular rates
-        self.p_bar = import_value("position", state, self._unit_sys, [0.0, 0.0, 0.0])
-        self.w = import_value("angular_rates", state, self._unit_sys, [0.0, 0.0, 0.0])
+        self.p_bar = import_value("position", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
+        self.w = import_value("angular_rates", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
 
         # Set up orientation quaternion
-        self.q = import_value("orientation", state, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
+        self.q = import_value("orientation", kwargs, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
 
         if self.q.shape[0] == 3: # Euler angles
             self.q = euler_to_quaternion(np.radians(self.q))
@@ -112,14 +134,14 @@ class Airplane:
             raise IOError("{0} is not an allowable orientation definition.".format(self.q))
 
         # Set up velocity
-        v_value = import_value("velocity", state, self._unit_sys, None)
+        v_value = import_value("velocity", kwargs, self._unit_sys, None)
 
         # Velocity magnitude
         if isinstance(v_value, float):
 
             # Get alpha and beta
-            alpha = import_value("alpha", state, self._unit_sys, 0.0)
-            beta = import_value("beta", state, self._unit_sys, 0.0)
+            alpha = import_value("alpha", kwargs, self._unit_sys, 0.0)
+            beta = import_value("beta", kwargs, self._unit_sys, 0.0)
 
             # Set state
             self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking
@@ -129,7 +151,7 @@ class Airplane:
         elif isinstance(v_value, np.ndarray):
 
             # Make sure alpha and beta haven't also been given
-            if "alpha" in list(state.keys()) or "beta" in list(state.keys()):
+            if "alpha" in list(kwargs.keys()) or "beta" in list(kwargs.keys()):
                 raise IOError("Alpha and beta are not allowed when the freestream velocity is a vector.")
 
             # Transform to earth-fixed coordinates

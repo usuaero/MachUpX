@@ -57,13 +57,12 @@ def test_u_v_w_velocity_with_wind():
     input_dict["scene"]["atmosphere"]["V_wind"] = [100, 100, 0]
     
     aircraft_state = {}
-    aircraft_state["type"] = "rigid-body"
     aircraft_state["velocity"] = [100, 100, 0]
     input_dict["scene"]["aircraft"]["test_plane"]["state"] = aircraft_state
 
     scene = MX.Scene(input_dict)
 
-    assert np.allclose(scene._airplanes["test_plane"].v, [100, 100, 0], rtol=0.0, atol=1e-8)
+    assert np.allclose(scene._airplanes["test_plane"].v, [200, 200, 0], rtol=0.0, atol=1e-8)
 
 
 def test_get_alpha_and_beta():
