@@ -5,7 +5,7 @@ import os
 import sys
 
 setup(name = 'MachUpX',
-    version = '1.0.1',
+    version = '2.0.0',
     description = "MachUpX: A new implementation of Phillips' numerical lifting-line algorigthm, cobining the best of MachUp Pro and MachUp_Py",
     url = 'https://github.com/usuaero/MachUpX',
     author = 'usuaero',
