@@ -118,9 +118,15 @@ def _run_prescribed_analyses(input_filename):
             print("Exporting stp...")
             scene.export_aircraft_stp(aircraft, file_tag=tag, section_resolution=res, spline=spline, maintain_sections=sections)
 
+        # Export dxf
+        elif key == "dxf":
+
+            print("Exporting dxf...")
+            scene.export_aircraft_dxf(**params)
+
         # Unrecognized command
         else:
-            print("{0} is not recognized as a valid run command.".format(key))
+            print("{0} is not recognized as a valid run command. Skipping...".format(key))
 
     print("\nCompleted prescribed analyses. Exiting...")
 

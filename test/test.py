@@ -18,6 +18,8 @@ if __name__=="__main__":
     with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
         airplane_dict = json.load(airplane_file_handle)
 
+    input_dict["solver"]["type"] = "linear"
+
     airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
     state = airplane_state.get("state", {})
     control_state = airplane_state.get("control_state", {})
@@ -53,6 +55,8 @@ if __name__=="__main__":
                                                     [0.9,  0.188],
                                                     [1,    0.06275]]
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 50
+    #airplane_dict["wings"].pop("v_stab")
+    #airplane_dict["wings"].pop("h_stab")
 
     # Load scene
     scene = MX.Scene(input_dict)
@@ -83,4 +87,4 @@ if __name__=="__main__":
     AC = scene.aircraft_aero_center()
     print(json.dumps(AC["plane"], indent=4))
     
-    #scene.export_aircraft_stp("plane", section_resolution=50, spline=True, maintain_sections=True)
+    scene.export_aircraft_dxf(aircraft="plane", section_resolution=50)

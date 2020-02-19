@@ -1,4 +1,5 @@
 from .helpers import *
+from .dxf import dxf_spline
 
 import json
 import numpy as np
@@ -1009,7 +1010,7 @@ class WingSegment:
         return coords
 
 
-    def export_stp(self, airplane_name, file_tag="", section_res=200, spline=False, maintain_sections=True):
+    def export_stp(self, airplane_name, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
         """Creates a FreeCAD part representing a loft of the wing segment.
 
         Parameters
@@ -1020,7 +1021,7 @@ class WingSegment:
         file_tag : str, optional
             Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
 
-        section_res : int
+        section_resolution : int
             Number of outline points to use for the sections. Defaults to 200.
         
         spline : bool, optional
@@ -1041,7 +1042,7 @@ class WingSegment:
             points = []
 
             # Get outline points
-            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_resolution)
 
             # Check for wing going to a point
             if np.all(np.all(outline == outline[0,:])):
@@ -1049,7 +1050,7 @@ class WingSegment:
                 #points.append(tip)
                 #continue
                 #TODO loft to an actual point
-                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_res)
+                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_resolution)
 
             # Create outline points
             for point in outline:
@@ -1071,3 +1072,43 @@ class WingSegment:
         # Export
         abs_path = os.path.abspath("{0}{1}_{2}.stp".format(file_tag, airplane_name, self.name))
         wing_solid.exportStep(abs_path)
+
+
+    def export_dxf(self, airplane_name, **kwargs):
+        """Creates a dxf representing successive sections of the wing segment.
+
+        Parameters
+        ----------
+        airplane_name: str
+            Name of the airplane this segment belongs to.
+
+        file_tag : str, optional
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+
+        section_resolution : int
+            Number of outline points to use for the sections. Defaults to 200.
+        """
+
+        # Get kwargs
+        file_tag = kwargs.get("file_tag", "")
+        section_res = kwargs.get("section_resolution", 200)
+
+        # Initialize arrays
+        X = np.zeros((self._N+1, section_res))
+        Y = np.zeros((self._N+1, section_res))
+        Z = np.zeros((self._N+1, section_res))
+
+        # Fill arrays
+        for i, s_i in enumerate(self._node_span_locs):
+
+            # Get outline points
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)
+
+            # Store in arrays
+            X[i,:] = outline[:,0]
+            Y[i,:] = outline[:,1]
+            Z[i,:] = outline[:,2]
+
+        # Export
+        abs_path = os.path.abspath("{0}{1}_{2}.dxf".format(file_tag, airplane_name, self.name))
+        dxf_spline(abs_path, X, Y, Z)
