@@ -22,6 +22,12 @@ class Airplane:
         Path to the JSON object describing the airplane or dictionary
         containing the same information.
 
+    unit_system : str
+        Unit system to use for the aircraft. Can be "English" or "SI".
+
+    scene : machupX.Scene
+        Instance of the MUX scene this aircraft belongs to.
+
     state : dict
         Dictionary describing the initial state vector of the airplane.
 
@@ -43,10 +49,11 @@ class Airplane:
         If the input filepath or filename is invalid.
     """
 
-    def __init__(self, name, airplane_input, unit_system, init_state={}, init_control_state={}, v_wind=[0.0, 0.0, 0.0]):
+    def __init__(self, name, airplane_input, unit_system, scene, init_state={}, init_control_state={}, v_wind=[0.0, 0.0, 0.0]):
 
         self.name = name
         self._unit_sys = unit_system
+        self._scene = scene
         
         self.wing_segments = {}
         self._airfoil_database = {}
@@ -147,15 +154,15 @@ class Airplane:
             self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking
             self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
 
-        # u, v, w
-        elif isinstance(v_value, np.ndarray):
+        # Earth-fixed velocity vector
+        elif isinstance(v_value, np.ndarray) and v_value.shape == (3,):
 
             # Make sure alpha and beta haven't also been given
             if "alpha" in list(kwargs.keys()) or "beta" in list(kwargs.keys()):
                 raise IOError("Alpha and beta are not allowed when the freestream velocity is a vector.")
 
-            # Transform to earth-fixed coordinates
-            self.v = v_wind+quaternion_inverse_transform(self.q, v_value)
+            # Store
+            self.v = v_value
 
         else:
             raise IOError("{0} is not an allowable velocity definition.".format(v_value))
@@ -193,9 +200,9 @@ class Airplane:
 
 
     def set_aerodynamic_state(self, **kwargs):
-        """Sets the velocity of the aircraft so that its angle of attack and 
-        sideslip angle are what is desired. Scales the freestream velocity according 
-        to what is desired. DOES NOT CHANGE AIRCRAFT ORIENTATION.
+        """Sets the velocity of the aircraft so that its angle of attack and sideslip
+        angle are what is desired. Scales and rotates the aircraft's velocity to match
+        what is desired. DOES NOT CHANGE AIRCRAFT ORIENTATION.
 
         Parameters
         ----------

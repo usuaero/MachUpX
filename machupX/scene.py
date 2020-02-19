@@ -68,25 +68,30 @@ class Scene:
         self._unit_sys = self._input_dict.get("units", "English")
 
         # Setup atmospheric property getter functions
-        self._atmos = StandardAtmosphere(unit_sys=self._unit_sys)
-        self._get_density = self._initialize_density_getter()
-        self._get_wind = self._initialize_wind_getter()
+        atmos_dict = self._input_dict["scene"].get("atmosphere", {})
+        self._std_atmos = StandardAtmosphere(unit_sys=self._unit_sys)
+        self._get_density = self._initialize_density_getter(**atmos_dict)
+        self._get_wind = self._initialize_wind_getter(**atmos_dict)
+        self._get_viscosity = self._initialize_viscosity_getter(**atmos_dict)
+        self._get_sos = self._initialize_sos_getter(**atmos_dict)
 
         # Initialize aircraft geometries
         for i, airplane_name in enumerate(self._input_dict["scene"]["aircraft"]):
+
+            # Get inputs
             airplane_file = self._input_dict["scene"]["aircraft"][airplane_name]["file"]
             state = self._input_dict["scene"]["aircraft"][airplane_name].get("state",{})
             control_state = self._input_dict["scene"]["aircraft"][airplane_name].get("control_state",{})
 
+            # Instantiate
             self.add_aircraft(airplane_name, airplane_file, state=state, control_state=control_state)
 
 
-    def _initialize_density_getter(self):
+    def _initialize_density_getter(self, **kwargs):
 
         # Load value from dictionary
-        input_dict = self._input_dict["scene"].get("atmosphere", {})
-        default_density = self._atmos.rho(0.0)
-        rho = import_value("rho", input_dict, self._unit_sys, default_density)
+        default_density = self._std_atmos.rho(0.0)
+        rho = import_value("rho", kwargs, self._unit_sys, default_density)
 
         # Constant value
         if isinstance(rho, float):
@@ -101,7 +106,7 @@ class Scene:
                 raise IOError("{0} is not an allowable profile name.".format(rho))
 
             def density_getter(position):
-                return self._atmos.rho(-position[2])
+                return self._std_atmos.rho(-position[2])
             
         # Array
         elif isinstance(rho, np.ndarray):
@@ -126,13 +131,13 @@ class Scene:
         return density_getter
 
     
-    def _initialize_wind_getter(self):
+    def _initialize_wind_getter(self, **kwargs):
         
         # Load value from dict
-        input_dict = self._input_dict["scene"].get("atmosphere", {})
         default_wind = [0.0, 0.0, 0.0]
-        V_wind = import_value("V_wind", input_dict, self._unit_sys, default_wind)
+        V_wind = import_value("V_wind", kwargs, self._unit_sys, default_wind)
 
+        # Store wind
         if isinstance(V_wind, np.ndarray):
 
             if V_wind.shape == (3,): # Constant wind vector
@@ -173,6 +178,56 @@ class Scene:
         return wind_getter
 
 
+    def _initialize_viscosity_getter(self, **kwargs):
+
+        # Load value from dictionary
+        default_visc = self._std_atmos.nu(0.0)
+        nu = import_value("viscosity", kwargs, self._unit_sys, default_visc)
+
+        # Constant value
+        if isinstance(nu, float):
+            self._constant_nu = nu
+            def viscosity_getter(position):
+                return self._constant_nu
+
+        # Atmospheric profile name
+        elif isinstance(nu, str):
+
+            # Check we have that profile
+            if not nu in ["standard"]:
+                raise IOError("{0} is not an allowable profile name.".format(nu))
+
+            def viscosity_getter(position):
+                return self._std_atmos.nu(-position[2])
+
+        return viscosity_getter
+
+
+    def _initialize_sos_getter(self, **kwargs):
+
+        # Load value from dictionary
+        default_sos = self._std_atmos.a(0.0)
+        a = import_value("viscosity", kwargs, self._unit_sys, default_sos)
+
+        # Constant value
+        if isinstance(a, float):
+            self._constant_a = a
+            def sos_getter(position):
+                return self._constant_a
+
+        # Atmospheric profile name
+        elif isinstance(a, str):
+
+            # Check we have that profile
+            if not a in ["standard"]:
+                raise IOError("{0} is not an allowable profile name.".format(a))
+
+            def sos_getter(position):
+                return self._std_atmos.a(-position[2])
+
+        return sos_getter
+
+
     def add_aircraft(self, airplane_name, airplane_input, state={}, control_state={}):
         """Inserts an aircraft into the scene. Note if an aircraft was already specified
         in the input file, it has already been added to the scene.
@@ -202,7 +257,7 @@ class Scene:
         v_wind = self._get_wind(aircraft_position)
 
         # Create and store the aircraft object
-        self._airplanes[airplane_name] = Airplane(airplane_name, airplane_input, self._unit_sys, init_state=state, init_control_state=control_state, v_wind=v_wind)
+        self._airplanes[airplane_name] = Airplane(airplane_name, airplane_input, self._unit_sys, self, init_state=state, init_control_state=control_state, v_wind=v_wind)
 
         # Update member variables
         self._N += self._airplanes[airplane_name].get_num_cps()
@@ -217,17 +272,17 @@ class Scene:
         self._u_a = np.zeros((self._N,3)) # Section unit vectors
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
-        self._rho = np.zeros(self._N)
-        self._nu = np.zeros(self._N)
-        self._a = np.ones(self._N)
-        self._Re = np.zeros(self._N)
-        self._M = np.zeros(self._N)
-        self._aL0 = np.zeros(self._N)
-        self._cp_v_inf = np.zeros((self._N,3))
-        self._cp_V_inf = np.zeros(self._N)
+        self._rho = np.zeros(self._N) # Density
+        self._nu = np.zeros(self._N) # Viscosity
+        self._a = np.ones(self._N) # Speed of sound
+        self._Re = np.zeros(self._N) # Reynolds number
+        self._M = np.zeros(self._N) # Mach number
+        self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
+        self._cp_v_inf = np.zeros((self._N,3)) # Control point freestream vector
+        self._cp_V_inf = np.zeros(self._N) # Control point freestream magnitude
         self._v_trans = np.zeros((self._num_aircraft,3))
-        self._CD = np.zeros(self._N)
-        self._Cm = np.zeros(self._N)
+        self._CD = np.zeros(self._N) # Drag coefficient
+        self._Cm = np.zeros(self._N) # Moment coefficient
 
         # Update geometry
         self._perform_geometry_calculations()
@@ -340,8 +395,8 @@ class Scene:
 
                 # Atmospheric density, speed of sound, and viscosity
                 self._rho[cur_slice] = self._get_density(self._PC[cur_slice,:])
-                self._a[cur_slice] = self._atmos.a(-self._PC[cur_slice,2])
-                self._nu[cur_slice] = self._atmos.nu(-self._PC[cur_slice,2])
+                self._a[cur_slice] = self._get_sos(self._PC[cur_slice,:])
+                self._nu[cur_slice] = self._get_viscosity(self._PC[cur_slice,:])
 
                 # Freestream velocity at vortex nodes
                 # Due to wind
