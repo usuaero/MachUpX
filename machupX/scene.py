@@ -955,20 +955,20 @@ class Scene:
         self._solved = False
 
 
-    def display_wireframe(self, show_vortices=True, show_legend=False, filename=None):
+    def display_wireframe(self, **kwargs):
         """Displays a 3D wireframe plot of the scene.
 
         Parameters
         ----------
-        show_vortices : bool
+        show_vortices : bool, optional
             If this is set to True, the distribution of horseshoe vortices along each lifting surface will be 
             shown. Defaults to True.
 
-        show_legend : bool
+        show_legend : bool, optional
             If this is set to True, a legend will appear detailing which color corresponds to which wing segment.
-            Otherwise, the wing segments are all black.
+            Otherwise, the wing segments are all black. Defaults to False.
 
-        filename : str
+        filename : str, optional
             File to save an image of the wireframe to. If specified, the wireframe will not be 
             automatically displayed. If not specified, the wireframe will display to the user 
             and not save.
@@ -980,6 +980,11 @@ class Scene:
 
         # This matters for setting up the plot axis limits
         first_segment = True
+
+        # Kwargs
+        show_vortices = kwargs.get("show_vortices", True)
+        show_legend = kwargs.get("show_legend", False)
+        filename = kwargs.get("filename", None)
 
         # If the user wants the vortices displayed, make sure the linear NLL equation has been solved first
         if show_vortices and not self._solved:
@@ -1001,7 +1006,7 @@ class Scene:
 
                 # Decide if colors matter and the segment names need to be stored
                 if show_legend:
-                    ax.plot(points[:,0], points[:,1], points[:,2], '-', label=segment_name)
+                    ax.plot(points[:,0], points[:,1], points[:,2], '-', label=airplane_name+segment_name)
                 else:
                     ax.plot(points[:,0], points[:,1], points[:,2], 'k-')
 
@@ -1458,7 +1463,6 @@ class Scene:
 
         # Store the current orientation, angle of attack, and control deflection
         v_wind = self._get_wind(airplane_object.p_bar)
-        q0 = copy.copy(airplane_object.q)
         alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
         controls_original = copy.copy(airplane_object.current_control_state)
 
@@ -1550,7 +1554,7 @@ class Scene:
         return 0.5*rho*V*V
 
 
-    def aircraft_aero_center(self, aircraft=None, filename=None, verbose=False):
+    def aircraft_aero_center(self, **kwargs):
         """Returns the location of the aerodynamic center of the aircraft at the current state.
 
         Parameters
@@ -1581,18 +1585,12 @@ class Scene:
         """
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = self._airplanes.keys()
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+        aircraft_names = self._get_aircraft(**kwargs)
 
         ac_loc = {}
 
         # Loop through aircraft
+        verbose = kwargs.get("verbose", False)
         for aircraft_name in aircraft_names:
             if verbose: print("Calculating the aerodynamic center for {0}...".format(aircraft_name))
             airplane_object = self._airplanes[aircraft_name]
@@ -1645,6 +1643,8 @@ class Scene:
                 "Cm_ac" : Cm_ac
             }
 
+        # Export
+        filename = kwargs.get("filename", None)
         if filename is not None:
             with open(filename, 'w') as output_handle:
                 json.dump(ac_loc, output_handle, indent=4)
@@ -1652,7 +1652,7 @@ class Scene:
         return ac_loc
 
 
-    def distributions(self, filename=None, make_plots=[]):
+    def distributions(self, **kwargs):
         """Returns various parameters, as well as forces and moments, at each control point for all
         aircraft at the current state. solve_forces() should be called before this function. 
         Angular distributions are given in radians.
@@ -1692,6 +1692,7 @@ class Scene:
         index = 0
 
         # Setup table for saving to .txt file
+        filename = kwargs.get("filename", None)
         if filename is not None:
             item_types = [("aircraft", "U18"),
                           ("segment", "U18"),
@@ -1718,7 +1719,6 @@ class Scene:
         # Loop through airplanes
         for i, airplane_name in enumerate(self._airplane_names):
             airplane_object = self._airplanes[airplane_name]
-            airplane_cps = airplane_object.get_num_cps()
             dist[airplane_name] = {}
 
             # Loop through segments
@@ -1793,6 +1793,7 @@ class Scene:
             np.savetxt(filename, table_data, fmt=format_string, header=header)
 
         # Create plots specified by the user
+        make_plots = kwargs.get("make_plots", [])
         for param in make_plots:
             for aircraft_name in self._airplane_names:
                 for segment_name, segment_dist in dist[aircraft_name].items():
@@ -1814,7 +1815,7 @@ class Scene:
         aircraft_name : str
             The name of the aircraft to get the reference params for. Does
             not need to be specified if there is only one aircraft in the 
-            scene.
+            scene. Only one may be specified.
 
         Returns
         -------
@@ -1831,7 +1832,7 @@ class Scene:
         # Specify the only aircraft if not already specified
         if aircraft is None:
             if self._num_aircraft == 1:
-                aircraft_name = list(self._airplanes.keys())[0]
+                aircraft = list(self._airplanes.keys())[0]
             else:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
@@ -1839,7 +1840,7 @@ class Scene:
         return airplane_object.S_w, airplane_object.l_ref_lon, airplane_object.l_ref_lat
 
 
-    def export_stl(self, filename, section_resolution=200, aircraft=None):
+    def export_stl(self, **kwargs):
         """Generates a 3D model of the aircraft. If only one aircraft is specified, the model is centered on that
         aircraft's origin. If more than one aircraft is specified, the model is centered on the origin of the earth-
         fixed coordinate system.
@@ -1849,33 +1850,28 @@ class Scene:
         filename: str
             Name of the file to export the model to. Must be .stl.
 
-        section_resolution : int
+        section_resolution : int, optional
             Number of points to use in dicretizing the airfoil section outlines. Defaults to 200.
 
-        aircraft : str or list
+        aircraft : str or list, optional
             Name(s) of the aircraft to include in the model. Defaults to all aircraft in the scene.
         """
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = list(self._airplanes.keys())
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
-
-        # Check for .stl file
-        if ".stl" not in filename:
-            raise IOError("{0} is not a .stl file.".format(filename))
+        aircraft_names = self._get_aircraft(**kwargs)
 
         # Model of single aircraft
         if len(aircraft_names) == 1:
-            self._airplanes[aircraft_names[0]].export_stl(filename, section_resolution=section_resolution)
+            self._airplanes[aircraft_names[0]].export_stl(**kwargs)
+
+        # Check for .stl file
+        filename = kwargs.get("filename")
+        if ".stl" not in filename:
+            raise IOError("{0} is not a .stl file.".format(filename))
 
         # Multiple aircraft
         else:
+            section_resolution = kwargs.get("section_resolution", 200)
             num_facets = 0
             vector_dict = {}
 
@@ -1908,7 +1904,7 @@ class Scene:
             model_mesh.save(filename)
 
 
-    def aircraft_mean_aerodynamic_chord(self, aircraft=None, filename=None, verbose=False):
+    def aircraft_mean_aerodynamic_chord(self, **kwargs):
         """Returns the mean aerodynamic chord (MAC) for the specified aircraft.
 
         Parameters
@@ -1935,7 +1931,7 @@ class Scene:
         """
 
         # Specify the aircraft
-        aircraft_names = self._get_aircraft(aircraft)
+        aircraft_names = self._get_aircraft(**kwargs)
 
         MAC = {}
 
@@ -1944,6 +1940,7 @@ class Scene:
             MAC[aircraft_name] = self._airplanes[aircraft_name].get_MAC()
 
         # Export
+        filename = kwargs.get("filename", None)
         if filename is not None:
             with open(filename, 'w') as dump_handle:
                 json.dump(MAC, dump_handle)
@@ -1951,14 +1948,14 @@ class Scene:
         return MAC
 
 
-    def export_aircraft_stp(self, aircraft=None, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
+    def export_aircraft_stp(self, **kwargs):
         """Creates a .stp file representing each lifting surface of the specified aircraft.
         NOTE: FreeCAD must be installed and configured to use this function.
 
         Parameters
         ----------
-        aircraft : str
-            The aircraft to export a .stp file of.
+        aircraft : str, optional
+            The aircraft to export a .stp file of. Defaults to all aircraft in the scene.
 
         file_tag : str, optional
             Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
@@ -1975,11 +1972,11 @@ class Scene:
         """
 
         # Specify the aircraft
-        aircraft_names = self._get_aircraft(aircraft)
+        aircraft_names = self._get_aircraft(**kwargs)
 
         # Loop through aircraft
         for aircraft_name in aircraft_names:
-            self._airplanes[aircraft_name].export_stp(file_tag=file_tag, section_resolution=section_resolution, spline=spline, maintain_sections=maintain_sections)
+            self._airplanes[aircraft_name].export_stp(**kwargs)
 
 
     def export_aircraft_dxf(self, **kwargs):
@@ -1998,15 +1995,17 @@ class Scene:
         """
         
         # Specify the aircraft
-        aircraft_names = self._get_aircraft(kwargs.get("aircraft", None))
+        aircraft_names = self._get_aircraft(**kwargs)
 
         # Loop through aircraft
         for aircraft_name in aircraft_names:
             self._airplanes[aircraft_name].export_dxf(**kwargs)
 
 
-    def _get_aircraft(self, aircraft):
+    def _get_aircraft(self, **kwargs):
         # Generates a list of aircraft to perform the function on
+
+        aircraft = kwargs.get("aircraft", None)
 
         if aircraft is None:
             aircraft_names = list(self._airplanes.keys())

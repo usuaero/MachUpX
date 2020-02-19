@@ -100,23 +100,16 @@ def _run_prescribed_analyses(input_filename):
 
         # Export .stl
         elif key == "stl":
-            aircraft = params.get("aircraft", None)
-            res = params.get("section_resolution", 200)
-            filename = params.get("filename", input_filename.replace(".json", ".stl"))
+            filename = params.pop("filename", input_filename.replace(".json", ".stl"))
 
             print("Exporting stl...")
-            scene.export_stl(filename, section_resolution=res, aircraft=aircraft)
+            scene.export_stl(filename=filename, **params)
 
         # Export .stp
         elif key == "stp":
-            aircraft = params.get("aircraft", None)
-            tag = params.get("file_tag", "")
-            res = params.get("section_resolution", 200)
-            spline = params.get("spline", False)
-            sections = params.get("maintain_sections", True)
 
             print("Exporting stp...")
-            scene.export_aircraft_stp(aircraft, file_tag=tag, section_resolution=res, spline=spline, maintain_sections=sections)
+            scene.export_aircraft_stp(**params)
 
         # Export dxf
         elif key == "dxf":

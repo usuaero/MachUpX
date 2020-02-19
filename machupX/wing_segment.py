@@ -1010,7 +1010,7 @@ class WingSegment:
         return coords
 
 
-    def export_stp(self, airplane_name, file_tag="", section_resolution=200, spline=False, maintain_sections=True):
+    def export_stp(self, **kwargs):
         """Creates a FreeCAD part representing a loft of the wing segment.
 
         Parameters
@@ -1035,6 +1035,13 @@ class WingSegment:
         # Import necessary modules
         import FreeCAD
         import Part
+
+        # Kwargs
+        airplane_name = kwargs.get("airplane_name")
+        file_tag = kwargs.get("file_tag", "")
+        section_resolution = kwargs.get("section_resolution", 200)
+        spline = kwargs.get("spline", False)
+        maintain_sections = kwargs.get("maintain_sections", True)
 
         # Create sections
         sections = []

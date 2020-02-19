@@ -55,8 +55,8 @@ if __name__=="__main__":
                                                     [0.9,  0.188],
                                                     [1,    0.06275]]
     airplane_dict["wings"]["main_wing"]["grid"]["N"] = 50
-    #airplane_dict["wings"].pop("v_stab")
-    #airplane_dict["wings"].pop("h_stab")
+    airplane_dict["wings"].pop("v_stab")
+    airplane_dict["wings"].pop("h_stab")
 
     # Load scene
     scene = MX.Scene(input_dict)
@@ -71,13 +71,13 @@ if __name__=="__main__":
     #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
     #print(json.dumps(trim_angles["test_plane"], indent=4))
 
-    #print("---Trim State---")
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["test_plane"]["total"], indent=4))
+    print("---Trim State---")
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
 
-    #print("---Derivatives---")
-    #derivs = scene.aircraft_derivatives()
-    #print(json.dumps(derivs["test_plane"]["stability"], indent=4))
+    print("---Derivatives---")
+    derivs = scene.aircraft_derivatives()
+    print(json.dumps(derivs["plane"]["stability"], indent=4))
 
     print("---MAC---")
     MAC = scene.aircraft_mean_aerodynamic_chord()
@@ -87,4 +87,6 @@ if __name__=="__main__":
     AC = scene.aircraft_aero_center()
     print(json.dumps(AC["plane"], indent=4))
     
-    scene.export_aircraft_dxf(aircraft="plane", section_resolution=50)
+    #scene.export_aircraft_dxf(aircraft="plane", section_resolution=50)
+    #scene.export_stl(filename="test.stl")
+    #scene.export_aircraft_stp()
