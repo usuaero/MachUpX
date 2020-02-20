@@ -207,7 +207,7 @@ class Scene:
 
         # Load value from dictionary
         default_sos = self._std_atmos.a(0.0)
-        a = import_value("viscosity", kwargs, self._unit_sys, default_sos)
+        a = import_value("speed_of_sound", kwargs, self._unit_sys, default_sos)
 
         # Constant value
         if isinstance(a, float):
@@ -292,8 +292,7 @@ class Scene:
         # Performs calculations necessary for solving NLL which are only dependent on geometry.
         # This speeds up repeated calls to _solve(). This method should be called any time the 
         # geometry is updated, an aircraft is added to the scene, or the state of an aircraft 
-        # changes. Note that all calculations occur in the flat-earth frame to all for multiple
-        # aircraft.
+        # changes. Note that all calculations occur in the Earth-fixed frame.
 
         index = 0
         self._airplane_names = []
@@ -347,9 +346,10 @@ class Scene:
         self._solved = False
 
 
-    def _solve_linear(self, verbose=False):
+    def _solve_linear(self, **kwargs):
         # Determines the vortex strengths of all horseshoe vortices in the scene using the linearize equations
 
+        verbose = kwargs.get("verbose", False)
         if verbose: print("Running linear solver...")
         start_time = time.time()
 
@@ -460,13 +460,14 @@ class Scene:
         return end_time-start_time
 
 
-    def _solve_nonlinear(self, verbose=False):
+    def _solve_nonlinear(self, **kwargs):
         # Nonlinear improvement to the vector of gammas already determined
+        verbose = kwargs.get("verbose", False)
         if verbose: 
             print("Running nonlinear solver...")
             print("    Relaxation: {0}".format(self._solver_relaxation))
             print("    Convergence: {0}".format(self._solver_convergence))
-            print("{0:<20}{1:<20}".format("Iteration", "SRSSQ Error"))
+            print("{0:<20}{1:<20}".format("Iteration", "Error"))
         start_time = time.time()
 
         # This parameter, if set to true, will revert the nonlinear solution to a dimensional version of Phillips' original Jacobian.
@@ -534,7 +535,7 @@ class Scene:
             else:
                 R = 2*w_i_mag*self._Gamma-V_i*V_i*C_L*self._dS # My way
 
-            error = m.sqrt(np.sum(R*R))
+            error = np.linalg.norm(R)
 
             # Caclulate Jacobian
             J[:,:] = (2*self._Gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
@@ -575,9 +576,13 @@ class Scene:
         return end_time-start_time
 
 
-    def _integrate_forces_and_moments(self, non_dimensional=True, dimensional=True, verbose=False):
+    def _integrate_forces_and_moments(self, **kwargs):
         # Determines the forces and moments on each lifting surface
         start_time = time.time()
+
+        # Kwargs
+        non_dimensional = kwargs.get("non_dimensional", True)
+        dimensional = kwargs.get("dimensional", True)
 
         # Calculate force differential elements
         induced_vels = self._Gamma[:,np.newaxis,np.newaxis]*self._V_ji
@@ -842,7 +847,7 @@ class Scene:
         return L,D,S
 
 
-    def solve_forces(self, filename=None, non_dimensional=True, dimensional=True, verbose=False):
+    def solve_forces(self, **kwargs):
         """Solves the NLL equations to determine the forces and moments on the aircraft.
 
         Parameters
@@ -868,12 +873,16 @@ class Scene:
         dict:
             Dictionary of forces and moments acting on each wing segment.
         """
-        linear_time = self._solve_linear(verbose=verbose)
+
+        # Get timing information
+        linear_time = self._solve_linear(**kwargs)
         nonlinear_time = 0.0
         if self._nonlinear_solver:
-            nonlinear_time = self._solve_nonlinear(verbose=verbose)
-        integrate_time = self._integrate_forces_and_moments(non_dimensional=non_dimensional, dimensional=dimensional, verbose=verbose)
+            nonlinear_time = self._solve_nonlinear(**kwargs)
+        integrate_time = self._integrate_forces_and_moments(**kwargs)
 
+        # Output timing
+        verbose = kwargs.get("verbose", False)
         if verbose:
             print("Time to compute linear solution: {0} s".format(linear_time))
             print("Time to compute nonlinear solution: {0} s".format(nonlinear_time))
@@ -883,6 +892,7 @@ class Scene:
             print("Solution rate: {0} Hz".format(1/(total_time)))
 
         # Output to file
+        filename = kwargs.get("filename", None)
         if filename is not None:
             with open(filename, 'w') as json_file_handle:
                 json.dump(self._FM, json_file_handle, indent=4)
@@ -1075,7 +1085,7 @@ class Scene:
             plt.show()
 
 
-    def aircraft_derivatives(self, aircraft=None, filename=None):
+    def aircraft_derivatives(self, **kwargs):
         """Determines the stability, damping, and control derivatives at the 
         current state. Uses a central difference sceme.
 
@@ -1096,14 +1106,7 @@ class Scene:
         derivs = {}
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = list(self._airplanes.keys())
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+        aircraft_names = self._get_aircraft(**kwargs)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1117,6 +1120,7 @@ class Scene:
             derivs[aircraft_name]["control"] = self.aircraft_control_derivatives(aircraft=aircraft_name)[aircraft_name]
 
         # Export to file
+        filename = kwargs.get("filename", None)
         if filename is not None:
             with open(filename, 'w') as output_handle:
                 json.dump(derivs, output_handle, indent=4)
@@ -2007,12 +2011,18 @@ class Scene:
 
         aircraft = kwargs.get("aircraft", None)
 
+        # All aircraft
         if aircraft is None:
             aircraft_names = list(self._airplanes.keys())
+
+        # Some aircraft
         elif isinstance(aircraft, list):
             aircraft_names = copy.copy(aircraft)
+
+        # One aircraft
         elif isinstance(aircraft, str):
             aircraft_names = [aircraft]
+
         else:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 

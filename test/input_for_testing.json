@@ -1,12 +1,12 @@
 {
-    "tag" : "Ideal MachUpX input file.",
+    "tag" : "Input file used to unit tests. Most things in this file and the airplane file will be modified by MachUpX.",
     "run" : {
-        "forces" : {},
-        "stl" : {},
-        "distributions" : {
-            "make_plots" : ["section_CL"]
+        "solve_forces" : {
+            "verbose" : true
         },
-        "aero_derivatives" : {}
+        "distributions" : {},
+        "aero_derivatives" : {},
+        "pitch_trim" : {}
     },
     "solver" : {
         "type" : "nonlinear",

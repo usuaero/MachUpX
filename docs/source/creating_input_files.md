@@ -1,5 +1,5 @@
 # Input Files
-The basic input file for MachUp contains a JSON object which describes the scene and which aircraft are in the scene, along with the state of those aircraft in the scene. A separate JSON object is used to specify the geometry and controls of each aircraft. These aircraft objects can reference other files that store information on airfoil properties, chord distributions, sweep, etc., as will be discussed. At a minimum, two JSON objects will be created by the user, a scene object and an aircraft object.
+The basic input for MachUp contains a JSON object which describes the scene and which aircraft are in the scene, along with the state of those aircraft in the scene. A separate JSON object is used to specify the geometry and controls of each aircraft. These aircraft objects can reference other files that store information on airfoil properties, chord distributions, sweep, etc., as will be discussed. At a minimum, two JSON objects will be created by the user, a scene object and an aircraft object. These objects can be passed to MachUpX either as a .json file (this is the only way if MachUpX is being used through the command line) or as a Python dictionary, which is directly analagous to a .json file.
 
 ## JSON Format
 The basic structure of a JSON object is a set of key-value pairs, analogous to a Python dictionary. Examples can be found in the examples/ directory. The following sections describe the structure of the JSON objects used to interface with MachUp. Only one JSON object is specified per .json file. When using the JSON objects, only the scene object is passed to MachUp. As long as the paths to all other JSON objects are properly specified in the scene object, MachUp will automatically load all other required objects.
@@ -58,9 +58,11 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>A note on the specific input. Does not affect execution.
 >>
 >**"run" : dict, optional**
->>Gives the analyses MachUp is to run. This must be specified if the input file is being passed as a command line argument to MachUp. Otherwise, MachUp will return without performing any calculations. If this input file is being given to the API, this does not affect execution.
+>>Gives the analyses MachUp is to run. This must be specified if the input file is being passed as a command line argument to MachUp. Otherwise, MachUp will return without performing any calculations. **If the input file is used to initialize the Scene class within a script, rather than being passed as a command line argument, this set of run commands will be ignored.**
 >>
->>**"forces" : dict, optional**
+>>The outputs from the analyses will be stored in files automatically.If no filename is given by the user, MachUpX will automatically specify a filename based on the name of the input file. This means that all output files will be stored in the same directory as the input file, with the exception of .stp and .dxf files.
+>>
+>>**"solve_forces" : dict, optional**
 >>>Calculates the aerodynamic forces and moments on the aircraft at the current state.
 >>>
 >>>**"filename" : string, optional**
@@ -190,35 +192,47 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>Can be "linear" or "nonlinear". The lifing-line equations are solved first by solving a linear approximation and then improving the result using the full nonlinear equations and Newton's method. The linear approximation is reasonably accurate for high aspect ratio lifting surfaces at low angles of attack. Defaults to "linear".
 >>
 >>**"convergence" : float, optional**
->>>Threshold for convergence of the nonlinear solution. The nonlinear solver is considered complete once the square root of the sum of the squared residuals falls below this threshold. Defaults to 1e-10. Not necesary for linear solver.
+>>>Threshold for convergence of the nonlinear solution. The nonlinear solver is considered complete once the norm of the residuals falls below this threshold. Defaults to 1e-10. Has no effect on the linear solver.
 >>
 >>**"relaxation" : float, optional**
->>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 1.0. Not necesary for linear solver.
+>>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 1.0. Has no effect on the linear solver.
 >>
 >>**"max_iterations" : int, optional**
->>>Maximum number of iterations for the nonlinear solver. Defaults to 100. Not necesary for linear solver.
+>>>Maximum number of iterations for the nonlinear solver. Defaults to 100. Has no effect on the linear solver.
 >
 >**"units" : string, optional**
->>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. Defaults to "English".
+>>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. All outputs will be given in this unit system. Defaults to "English".
 >
 >**"scene" : dict**
 >
 >>**"atmosphere" : dict, optional**
->>Specifies the state of the atmosphere the aircraft exist in.
->>
+>>>Specifies the state of the atmosphere the aircraft exist in. If this dictionary is empty, the aircraft is assumed to be at sea-level in a standard atmosphere. If you take the time to specify these keys, you can put your aircraft anywhere, even on Mars! Note that while viscosity and speed of sound are specified here, they will have no effect on computations unless the airfoil section properties are given as functions of Mach and Reynolds numbers. However, for many applications, it is appropriate to ignore Mach and Reynolds effects.
+>>>
 >>>**"rho" : float, array, or string, optional**
 >>>>If a float, the atmospheric density is assumed constant. If an array is given, this is assumed to be either a density profile or a density field. MachUp will interpret a 2 column array as a profile where the first column is heights and the second column is densities. A 4 column array is a field where the first three columns are the position in earth-fixed coordinates and the fourth column is the density. MachUp will linearly interpolate these data. These arrays can alternatively be stored as a csv file, in which case, this value should be the path to the file. NOTE: Since MachUpX uses earth-fixed coordinates for position, altitude values should be negative (i.e. 1000 ft above sea level would be -1000 ft).
 >>>>
->>>>The following standard profiles can also be specified:
+>>>>If "rho" is a string, it is assumed the density is determined using an analytically defined atmosphere profile. The following profiles can be specified:
 >>>>
->>>>>"standard"
+>>>>>"standard" - Standard atmosphere profile.
 >>>>
 >>>>Defaults to density at sea-level.
 >>>>
 >>>**"V_wind" : vector, array, or string, optional**
->>>>If a vector is given, this is assumed to be the wind velocity vector given in earth-fixed coordinates which is constant throughout the scene. If an array is given, this is assumed to be either a wind profile or a wind field. MachUp will interpret a 4 column array as a velocity profile where the first column is heights and the last three columns are velocity components in earth-fixed coordinates. A 6 column array is a field where the first three columns are positions in earth-fixed coordinates and the fourth through sixth columns are velocity components in earth-fixed coordinates. These arrays can alternatively be stored as a csv file, in which case, this value should be the path to the file. 
+>>>>If a vector is given, this is assumed to be the wind velocity vector given in earth-fixed coordinates which is constant throughout the scene. If an array is given, this is assumed to be either a wind profile or a wind field. MachUp will interpret a 4 column array as a velocity profile where the first column is heights and the last three columns are velocity components in earth-fixed coordinates. A 6 column array is a field where the first three columns are positions in earth-fixed coordinates and the fourth through sixth columns are velocity components in earth-fixed coordinates. These arrays can alternatively be stored as a csv file, in which case, this value should be the path to the file. Defaults to no wind.
 >>>
->>>>Defaults to no wind.
+>>>**"viscosity" : float or string**
+>>>>*Kinematic* viscosity of the atmosphere. If a float, the viscosity is assumed to be constant. If a string, it is assumed the viscosity is determined using an analytically defined atmosphere profile. The following profiles can be specified:
+>>>>
+>>>>>"standard" - Standard atmosphere profile.
+>>>>
+>>>>Defaults to standard viscosity at sea-level.
+>>>
+>>>**"speed_of_sound" : float or string**
+>>>>Speed of sound in the atmosphere. If a float, the speed of sound is assumed to be constant. If a string, it is assumed the speed of sound is determined using an analytically defined atmosphere profile. The following profiles can be specified:
+>>>>
+>>>>>"standard" - Standard atmosphere profile.
+>>>>
+>>>>Defaults to standard speed of sound at sea-level.
 >>>
 >>**"aircraft" : dict**
 >>>Lists the aircraft to be placed in the scene. At least one must be specified. Please note that MachUpX is able to model interactions between multiple aircraft within the limitations of lifting-line theory. It is assumed the user understands these limitations and will use MachUpX appropriately. If importing more than one aircraft, simply repeat the following keys:
@@ -226,35 +240,22 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"<AIRPLANE_NAME>" : dict**
 >>>
 >>>>**"file" : string**
->>>>    Path to file containing the JSON object describing the aircraft.
+>>>>>Path to file containing the JSON object describing the aircraft.
 >>>>
 >>>>**"state" : dict**
 >>>>>Describes the state of the aircraft.
 >>>>>
->>>>>**"type" : string**
->>>>>>Specifies which definition of state is to be used. The difference lies in how the velocity and orientation are defined. There are two available types:
->>>>>>
->>>>>>**"aerodynamic"**
->>>>>>>This state type corresponds to the user defining the aerodynamic state of the aircraft. "position", "angular_rates", "orientation", "velocity", "alpha", and "beta" may then be specified.
->>>>>>
->>>>>>**"rigid-body"**
->>>>>>>This state type corresponds to the user defining the 6-DOF state vector for the aircraft. "position", "velocity", "orientation", and "angular_rates" may then be specified. 
->>>>>
 >>>>>**"position" : vector, optional**
 >>>>>>Position of the origin of the aircraft's body-fixed coordinate system in earth-fixed coordinates. Defaults to [0.0, 0.0, 0.0]
+>>>>>
+>>>>>**"velocity" : float or vector**
+>>>>>>Velocity vector of the aircraft in flat-earth coordinates or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
 >>>>>
 >>>>>**"orientation" : vector, optional**
 >>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.
 >>>>>
 >>>>>**"angular_rates" : vector, optional**
 >>>>>>Angular rates of the aircraft in body-fixed coordinates, corresponding to p, q, and r. Defaults to [0.0, 0.0, 0.0].
->>>>>
->>>>>**"velocity" : float or vector**
->>>>>>In the case of "type" = "rigid_body":
->>>>>>>Velocity vector of the aircraft in flat-earth coordinates. Cannot be float.
->>>>>>
->>>>>>In the case of "type" = "aerodynamic":
->>>>>>>Magnitude of the freestream velocity vector at the origin of the aircraft or the freestream velocity components u, v, and w. In the case of a vector, "alpha" and "beta" may not be specified.
 >>>>>
 >>>>>**"alpha" : float, optional**
 >>>>>>Aerodynamic angle of attack. Defaults to 0.

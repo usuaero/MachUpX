@@ -76,7 +76,6 @@ if __name__=="__main__":
     print(json.dumps(FM["plane"]["total"], indent=4))
 
     print("---Derivatives---")
-    derivs = scene.aircraft_derivatives()
     print(json.dumps(derivs["plane"]["stability"], indent=4))
 
     print("---MAC---")

@@ -116,7 +116,7 @@ Doctorate/
 *.stl
 *_forces.json
 *_derivatives.json
-*_distributions.json
+*_distributions.txt
 *_vs_span_fraction.png
 *_pitch_trim.json
 *.stp

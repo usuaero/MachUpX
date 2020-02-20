@@ -37,84 +37,70 @@ def _run_prescribed_analyses(input_filename):
         params = input_dict["run"].get(key, {})
 
         # Solve forces
-        if key == "forces":
-            filename = params.get("filename", input_filename.replace(".json", "_forces.json"))
-            dimensional = params.get("dimensional", True)
-            non_dimensional = params.get("non_dimensional", True)
-            verbose = params.get("verbose", True)
+        if key == "solve_forces":
+            filename = params.pop("filename", input_filename.replace(".json", "_forces.json"))
     
             print("\nCalculating aerodynamic forces...")
-            scene.solve_forces(filename=filename, dimensional=dimensional, non_dimensional=non_dimensional, verbose=verbose)
+            scene.solve_forces(filename=filename, **params)
     
         # Wireframe
         elif key == "display_wireframe":
-            show_legend = params.get("show_legend", False)
-            filename = params.get("filename", None)
     
             print("\nDisplaying wireframe...")
-            scene.display_wireframe(show_legend=show_legend, filename=filename)
+            scene.display_wireframe(**params)
 
         # Aerodynamic derivatives
         elif key == "aero_derivatives":
-            aircraft = params.get("aircraft", None)
-            filename = params.get("filename", input_filename.replace(".json", "_derivatives.json"))
+            filename = params.pop("filename", input_filename.replace(".json", "_derivatives.json"))
 
             print("\nCalculating aerodynamic derivatives...")
-            scene.aircraft_derivatives(aircraft=aircraft, filename=filename)
+            scene.aircraft_derivatives(filename=filename, **params)
 
         # Distributions
         elif key == "distributions":
-            filename = params.get("filename", input_filename.replace(".json", "_distributions.txt"))
-            make_plots = params.get("make_plots", [])
+            filename = params.pop("filename", input_filename.replace(".json", "_distributions.txt"))
 
-            print("\nCalculating distributions...")
-            scene.distributions(filename=filename, make_plots=make_plots)
+            print("\nExporting distributions...")
+            scene.distributions(filename=filename, **params)
 
         # Pitch trim
         elif key == "pitch_trim":
-            pitch_control = params.get("pitch_control", "elevator")
-            set_trim_state = params.get("set_trim_state", True)
-            verbose = params.get("verbose", False)
-            filename = params.get("filename", input_filename.replace(".json", "_pitch_trim.json"))
+            filename = params.pop("filename", input_filename.replace(".json", "_pitch_trim.json"))
 
-            print("Trimming aircraft in pitch...")
-            scene.aircraft_pitch_trim(pitch_control=pitch_control, filename=filename, set_trim_state=set_trim_state, verbose=verbose)
+            print("\nTrimming aircraft in pitch...")
+            scene.aircraft_pitch_trim(filename=filename, **params)
 
         # Aerodynamic center
         elif key == "aero_center":
-            aircraft = params.get("aircraft", None)
-            filename = params.get("filename", input_filename.replace(".json", "_aero_center.json"))
-            verbose = params.get("verbose", False)
+            filename = params.pop("filename", input_filename.replace(".json", "_aero_center.json"))
 
-            print("Calculating location of aerodynamic center...")
-            scene.aircraft_aero_center(aircraft=aircraft, filename=filename, verbose=verbose)
+            print("\nCalculating location of aerodynamic center...")
+            scene.aircraft_aero_center(filename=filename, **params)
 
         # MAC
         elif key == "MAC":
-            aircraft = params.get("aircraft", None)
-            filename = params.get("filename", input_filename.replace(".json", "_MAC.json"))
-            verbose = params.get("verbose", False)
+            filename = params.pop("filename", input_filename.replace(".json", "_MAC.json"))
 
-            print("Calculating mean aerodynamic chord...")
-            scene.aircraft_mean_aerodynamic_chord(aircraft=aircraft, filename=filename, verbose=verbose)
+            print("\nCalculating mean aerodynamic chord...")
+            scene.aircraft_mean_aerodynamic_chord(filename=filename, **params)
 
         # Export .stl
         elif key == "stl":
             filename = params.pop("filename", input_filename.replace(".json", ".stl"))
 
-            print("Exporting stl...")
+            print("\nExporting stl...")
             scene.export_stl(filename=filename, **params)
 
         # Export .stp
         elif key == "stp":
 
-            print("Exporting stp...")
+            print("\nExporting stp...")
             scene.export_aircraft_stp(**params)
 
         # Export dxf
         elif key == "dxf":
 
-            print("Exporting dxf...")
+            print("\nExporting dxf...")
             scene.export_aircraft_dxf(**params)
 
         # Unrecognized command
@@ -129,17 +115,22 @@ if __name__=="__main__":
     # Print sweet logo
     print()
     print('-----------------------------------------------')
+    print('|        M    A     C     H     U     P       |')
+    print('|      _____________       _____________      |')
+    print('|      \            \     /            /      |')
+    print('|       \            \   /            /       |')
+    print('|        \            \ /            /        |')
+    print('|         \            X            /         |')
+    print('|          \          / \          /          |')
+    print('|           \        |   |        /           |')
+    print('|           /       /     \       \           |')
+    print('|          /      /  -   -  \      \          |')
+    print('|         /     /  -  | |  -  \     \         |')
+    print('|        /    /__-    | |    -__\    \        |')
+    print('|       /            _| |_            \       |')
+    print('|      /____________/     \____________\      |')
     print('|                                             |')
-    print('|                         BBBBB               |')
-    print('|                       BB   BB               |')
-    print('|                     BB     BB               |')
-    print('|                    BB      BB               |')
-    print('|                  BB        BB               |')
-    print('|                 BB         BB               |')
-    print('|               BB           BB               |')
-    print('|              BB        BBBBBB               |')
-    print('|                                             |')
-    print('|                MachUpX 1.0                  |')
+    print('|              MachUpX 2.0.0                  |')
     print('|                                             |')
     print('|        (c) USU Aero Lab, LLC, 2019          |')
     print('|                                             |')
@@ -149,6 +140,7 @@ if __name__=="__main__":
     print('|        Submit bug reports on Github         |')
     print('|                                             |')
     print('-----------------------------------------------')
+
 
     # Check for interactive mode
     if "-i" in sys.argv:
