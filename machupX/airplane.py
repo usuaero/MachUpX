@@ -475,7 +475,7 @@ class Airplane:
         return results
 
 
-    def export_stl(self, filename, section_resolution=200):
+    def export_stl(self, **kwargs):
         """Exports a .stl model of the aircraft.
 
         Parameters
@@ -488,12 +488,14 @@ class Airplane:
         """
 
         # Check for .stl file
+        filename = kwargs.get("filename")
         if ".stl" not in filename:
             raise IOError("{0} is not a .stl file.".format(filename))
 
         # Loop through segments
         num_facets = 0
         vector_dict = {}
+        section_resolution = kwargs.get("section_resolution", 200)
         for segment_name, segment_object in self.wing_segments.items():
             vectors = segment_object.get_stl_vectors(section_resolution)
             vector_dict[segment_name] = vectors

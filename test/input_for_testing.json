@@ -6,7 +6,8 @@
         },
         "distributions" : {},
         "aero_derivatives" : {},
-        "pitch_trim" : {}
+        "pitch_trim" : {},
+        "stl" : {}
     },
     "solver" : {
         "type" : "nonlinear",

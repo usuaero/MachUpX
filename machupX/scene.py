@@ -1416,7 +1416,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_pitch_trim(self, pitch_control="elevator", filename=None, set_trim_state=True, verbose=False):
+    def aircraft_pitch_trim(self, **kwargs):
         """Returns the required angle of attack and elevator deflection for trim at the current state.
         THIS SHOULD ONLY BE USED IN THE CASE OF ONE AIRCRAFT IN THE SCENE AND NO WIND.
 
@@ -1445,6 +1445,7 @@ class Scene:
         """
         trim_angles = {}
 
+        verbose = kwargs.get("verbose", False)
         if verbose: print("\nTrimming...")
 
         # Make sure there is only one aircraft in the scene and the wind is constant
@@ -1461,6 +1462,7 @@ class Scene:
         airplane_object = self._airplanes[aircraft_name]
 
         # Setup output
+        pitch_control = kwargs.get("pitch_control", "elevator")
         if verbose:
             print("Trimming {0} using {1}.".format(aircraft_name, pitch_control))
             print("{0:<20}{1:<20}{2:<25}{3:<25}".format("Alpha", pitch_control, "Lift Residual", "Moment Residual"))
@@ -1516,12 +1518,14 @@ class Scene:
 
             if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
 
+        # Store results
         trim_angles[aircraft_name] = {
             "alpha" : alpha1,
             pitch_control : delta_flap1
         }
 
         # If the user wants, set the state to the new trim state
+        set_trim_state = kwargs.get("set_trim_state", True)
         if set_trim_state:
             airplane_object.set_aerodynamic_state(alpha=alpha1)
             self.set_aircraft_control_state({pitch_control : delta_flap1}, aircraft_name=aircraft_name)
@@ -1531,6 +1535,7 @@ class Scene:
             self.set_aircraft_control_state(controls_original, aircraft_name=aircraft_name)
 
         # Output results to file
+        filename = kwargs.get("filename", None)
         if filename is not None:
             with open(filename, 'w') as file_handle:
                 json.dump(trim_angles, file_handle, indent=4)

@@ -130,7 +130,7 @@ if __name__=="__main__":
     print('|       /            _| |_            \       |')
     print('|      /____________/     \____________\      |')
     print('|                                             |')
-    print('|              MachUpX 2.0.0                  |')
+    print('|               MachUpX 2.0.0                 |')
     print('|                                             |')
     print('|        (c) USU Aero Lab, LLC, 2019          |')
     print('|                                             |')
