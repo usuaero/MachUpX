@@ -205,6 +205,9 @@ class WingSegment:
 
         # Aerodynamic center offset
         ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+        if ac_offset_data == "kuchemann":
+            ac_offset_data = 0.0
+            # TODO: Implement Kuchemann's AC equations
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
 
@@ -595,7 +598,7 @@ class WingSegment:
         loc = self._get_quarter_chord_loc(span)
         loc += (self._get_ac_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_axial_vec(span)
         if single:
-            loc = loc.flatten()
+            loc = loc.item()
         return loc
 
 

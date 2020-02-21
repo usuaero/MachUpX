@@ -409,7 +409,7 @@ Describes an aircraft. Stored as a .json file
 >>>>Defaults to 1.0.
 >>>
 >>>**"ac_offset" : float, array, or string, optional**
->>>>Gives the offset of the section aerodynamic center from the quarter chord as a fraction of the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist". Defaults to 0.
+>>>>Gives the offset of the section aerodynamic center from the quarter chord as a fraction of the chord along the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist", except that it may be specified as "kuchemann", in which case the locus of aerodynamic centers will be specified using Kuchemann's equations (has no effect on straight wings, but is recommended for wings with constant sweep). Defaults to 0.
 >>>
 >>>**"airfoil" : string or array, optional**
 >>>>Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined under "airfoils" in this object. If specified as an array, the array gives the airfoil as a function of span. The first column gives the span location, as with "twist", and the second column gives the name of the airfoil at that location. Can also be the path to a csv file containing the airfoil distribution formatted in columns, as with the array. Defaults to the name of the first airfoil listed under "airfoils". Cannot have units.

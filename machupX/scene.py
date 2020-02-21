@@ -300,6 +300,8 @@ class Scene:
         self._PC = np.zeros((self._N,3)) # Control point location
         self._P0 = np.zeros((self._N,3)) # Inbound vortex node location
         self._P1 = np.zeros((self._N,3)) # Outbound vortex node location
+        self._P0_joint = np.zeros((self._N,3)) # Inbound vortex joint node location
+        self._P1_joint = np.zeros((self._N,3)) # Outbound vortex joint node location
         self._u_a = np.zeros((self._N,3)) # Section unit vectors
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))

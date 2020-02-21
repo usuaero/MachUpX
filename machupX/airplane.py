@@ -433,8 +433,8 @@ class Airplane:
             default to zero; the previous state is not preserved
         """
         # Store controls
-        for key, value in self.current_control_state.items():
-            self.current_control_state[key] = control_state.get(key, value)
+        for key,_ in self.current_control_state.items():
+            self.current_control_state[key] = control_state.get(key, 0.0)
 
         # Apply to wing segments
         for _,wing_segment in self.wing_segments.items():

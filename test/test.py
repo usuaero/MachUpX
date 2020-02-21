@@ -95,6 +95,7 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
+                "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -102,7 +103,8 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 40
+                    "N" : 40,
+                    "reid_corrections" : True
                 }
             }
         }
