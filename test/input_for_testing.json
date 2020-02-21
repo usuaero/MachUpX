@@ -1,5 +1,5 @@
 {
-    "tag" : "Input file used to unit tests. Most things in this file and the airplane file will be modified by MachUpX.",
+    "tag" : "Input file used in unit tests. Most things in this file and the airplane file will be modified by MachUpX.",
     "run" : {
         "solve_forces" : {
             "verbose" : true

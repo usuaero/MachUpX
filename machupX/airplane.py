@@ -251,13 +251,18 @@ class Airplane:
 
     def _initialize_controls(self, init_control_state):
         # Initializes the control surfaces on the airplane
+
+        # Store control parameters
         self._control_symmetry = {}
         self.control_names = []
+        self.current_control_state = {}
         controls = self._input_dict.get("controls", {})
         for key in controls:
             self.control_names.append(key)
             self._control_symmetry[key] = controls[key].get("is_symmetric", True)
+            self.current_control_state[key] = 0.0
 
+        # Set controls
         self.set_control_state(control_state=init_control_state)
         
 
@@ -427,7 +432,11 @@ class Airplane:
             Units may be specified as in the input file. Any deflections not given will 
             default to zero; the previous state is not preserved
         """
-        self.current_control_state = copy.deepcopy(control_state)
+        # Store controls
+        for key, value in self.current_control_state.items():
+            self.current_control_state[key] = control_state.get(key, value)
+
+        # Apply to wing segments
         for _,wing_segment in self.wing_segments.items():
             wing_segment.apply_control(control_state, self._control_symmetry)
 

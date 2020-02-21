@@ -9,58 +9,113 @@ from mpl_toolkits import mplot3d
 
 if __name__=="__main__":
     
-    input_file = "test/input_for_testing.json"
+    # Specify input
+    input_dict = {
+        "solver" : {
+            "type" : "nonlinear",
+            "convergence" : 1e-10,
+            "relaxation" : 0.9
+        },
+        "units" : "English",
+        "scene" : {
+            "atmosphere" : {},
+            "aircraft" : {}
+        }
+    }
 
-    # Alter input
-    with open(input_file, 'r') as input_handle:
-        input_dict = json.load(input_handle)
+    # Specify airplane
+    airplane_dict = {
+        "CG" : [0,0,0],
+        "weight" : 100.0,
+        "reference" : {
+            "area" : 8.0,
+            "longitudinal_length" : 1.0,
+            "lateral_length" : 4.0
+        },
+        "controls" : {
+            "aileron" : {
+                "is_symmetric" : False
+            },
+            "elevator" : {
+                "is_symmetric" : True
+            },
+            "rudder" : {
+                "is_symmetric" : False
+            }
+        },
+        "airfoils" : "test/airfoils_for_testing.json",
+        "wings" : {
+            "main_wing" : {
+                "ID" : 1,
+                "side" : "both",
+                "is_main" : True,
+                "semispan" : 4.0,
+                "airfoil" : "NACA_0010",
+                "control_surface" : {
+                    "chord_fraction" : 0.1,
+                    "control_mixing" : {
+                        "aileron" : 1.0
+                    }
+                },
+                "grid" : {
+                    "N" : 40
+                }
+            },
+            "h_stab" : {
+                "ID" : 2,
+                "side" : "both",
+                "is_main" : False,
+                "connect_to" : {
+                    "ID" : 1,
+                    "location" : "root",
+                    "dx" : -3.0
+                },
+                "semispan" : 2.0,
+                "airfoil" : "NACA_0010",
+                "control_surface" : {
+                    "chord_fraction" : 0.5,
+                    "control_mixing" : {
+                        "elevator" : 1.0
+                    }
+                },
+                "grid" : {
+                    "N" : 40
+                }
+            },
+            "v_stab" : {
+                "ID" : 3,
+                "side" : "right",
+                "is_main" : False,
+                "connect_to" : {
+                    "ID" : 1,
+                    "location" : "root",
+                    "dx" : -3.0,
+                    "dz" : -0.1
+                },
+                "semispan" : 2.0,
+                "dihedral" : 90.0,
+                "airfoil" : "NACA_0010",
+                "control_surface" : {
+                    "chord_fraction" : 0.5,
+                    "control_mixing" : {
+                        "rudder" : 1.0
+                    }
+                },
+                "grid" : {
+                    "N" : 40
+                }
+            }
+        }
+    }
 
-    with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
-        airplane_dict = json.load(airplane_file_handle)
-
-    input_dict["solver"]["type"] = "linear"
-
-    airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
-    state = airplane_state.get("state", {})
-    control_state = airplane_state.get("control_state", {})
-
-    airplane_dict["wings"]["main_wing"]["sweep"] = [[0.0, 0.0],
-                                                    [0.2, 15.0],
-                                                    [1.0, 40.0]]
-    airplane_dict["wings"]["main_wing"]["dihedral"] = [[0.0, 0.0],
-                                                       [0.8, 10.0],
-                                                       [0.9, 65.0],
-                                                       [1.0, 70.0]]
-    airplane_dict["wings"]["main_wing"]["chord"] = [[0,    0.775],
-                                                    [0.01, 0.773800639863482],
-                                                    [0.02, 0.77021023126586],
-                                                    [0.03, 0.764251740569511],
-                                                    [0.04, 0.755963281780915],
-                                                    [0.05, 0.745397872751082],
-                                                    [0.06, 0.732623096042232],
-                                                    [0.07, 0.717720666630031],
-                                                    [0.08, 0.70078590920661],
-                                                    [0.09, 0.681927148427836],
-                                                    [0.1,  0.661265016005187],
-                                                    [0.11, 0.638931679074468],
-                                                    [0.12, 0.615069994777171],
-                                                    [0.13, 0.589832596462292],
-                                                    [0.14, 0.563380917353767],
-                                                    [0.15, 0.535884157928753],
-                                                    [0.16, 0.507518203611983],
-                                                    [0.17, 0.478464499709282],
-                                                    [0.18, 0.448908890776805],
-                                                    [0.19, 0.419040431850092],
-                                                    [0.2,  0.389050179137017],
-                                                    [0.9,  0.188],
-                                                    [1,    0.06275]]
-    airplane_dict["wings"]["main_wing"]["grid"]["N"] = 50
-    airplane_dict["wings"].pop("v_stab")
-    airplane_dict["wings"].pop("h_stab")
+    # Specify state
+    state = {
+        "velocity" : [100, "mph"]
+    }
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    scene.add_aircraft("plane", airplane_dict, state=state)
 
     scene.display_wireframe()
 
@@ -68,8 +123,8 @@ if __name__=="__main__":
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
-    #print(json.dumps(trim_angles["test_plane"], indent=4))
+    trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
+    print(json.dumps(trim_angles["plane"], indent=4))
 
     print("---Trim State---")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
