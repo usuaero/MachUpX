@@ -1,4 +1,4 @@
-from .helpers import *
+from .helpers import quaternion_inverse_transform, quaternion_transform, check_filepath, import_value
 from .airplane import Airplane
 from .standard_atmosphere import StandardAtmosphere
 
@@ -229,7 +229,7 @@ class Scene:
 
 
     def add_aircraft(self, airplane_name, airplane_input, state={}, control_state={}):
-        """Inserts an aircraft into the scene. Note if an aircraft was already specified
+        """Inserts an aircraft into the scene. Note if an aircraft was specified
         in the input file, it has already been added to the scene.
 
         Parameters
@@ -250,8 +250,8 @@ class Scene:
         ------
         IOError
             If the input is invalid.
-
         """
+
         # Determine the local wind vector for setting the state of the aircraft
         aircraft_position = state.get("position", [0.0, 0.0, 0.0])
         v_wind = self._get_wind(aircraft_position)
@@ -262,6 +262,37 @@ class Scene:
         # Update member variables
         self._N += self._airplanes[airplane_name].get_num_cps()
         self._num_aircraft += 1
+
+        # Update geometry
+        self._initialize_storage_arrays()
+        self._perform_geometry_calculations()
+
+
+    def remove_aircraft(self, airplane_name):
+        """Removes an aircraft from the scene.
+
+        Parameters
+        ----------
+        airplane_name : str
+            Name of the airplane to be removed.
+        """
+
+        # Remove aircraft from dictionary
+        try:
+            deleted_aircraft = self._airplanes.pop(airplane_name)
+        except KeyError:
+            raise RuntimeError("The scene has no aircraft named {0}.".format(airplane_name))
+
+        # Update quantities
+        self._N -= deleted_aircraft.get_num_cps()
+        self._num_aircraft -= 1
+
+        # Reinitialize arrays
+        self._initialize_storage_arrays()
+        self._perform_geometry_calculations()
+
+
+    def _initialize_storage_arrays(self):
 
         # Initialize arrays
         self._c_bar = np.zeros(self._N) # Average chord
@@ -283,9 +314,6 @@ class Scene:
         self._v_trans = np.zeros((self._num_aircraft,3))
         self._CD = np.zeros(self._N) # Drag coefficient
         self._Cm = np.zeros(self._N) # Moment coefficient
-
-        # Update geometry
-        self._perform_geometry_calculations()
 
 
     def _perform_geometry_calculations(self):

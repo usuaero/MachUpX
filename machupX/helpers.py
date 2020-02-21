@@ -244,20 +244,24 @@ def quaternion_to_euler(q):
     # Converts an orientation quaternion to Euler angles
     # Phillips Mech. of Flight 11.7.11
     E = np.zeros(3)
+    q0 = q[0]
+    q1 = q[1]
+    q2 = q[2]
+    q3 = q[3]
 
-    quantity = q[0]*q[2]-q[1]*q[3]
+    quantity = q0*q2-q1*q3
 
-    if quantity == 0.5:
-        E[0] = 2*np.arcsin(q[1]/np.cos(np.pi/4))
-        E[1] = np.pi/2
-        E[2] = 0.0
-    elif quantity == -0.5:
-        E[0] = 2*np.arcsin(q[1]/np.cos(np.pi/4))
-        E[1] = -np.pi/2
-        E[2] = 0.0
+    if quantity != 0.5 and quantity != -0.5:
+        q02 = q0*q0
+        q12 = q1*q1
+        q22 = q2*q2
+        q32 = q3*q3
+        E[0] = np.arctan2(2*(q0*q1+q2*q3), q02+q32-q12-q22)
+        E[1] = np.arcsin(2*(q0*q2-q1*q3))
+        E[2] = np.arctan2(2*(q0*q3+q1*q2), q02+q12-q22-q32)
     else:
-        E[0] = np.arctan2(2*(q[0]*q[1]+q[2]*q[3]), q[0]**2+q[3]**2-q[1]**2-q[2]**2)
-        E[1] = np.arcsin(2*(q[0]*q[2]-q[1]*q[3]))
-        E[2] = np.arctan2(2*(q[0]*q[3]+q[1]*q[2]), q[0]**2+q[1]**2-q[2]**2-q[3]**2)
+        E[0] = 2*np.arcsin(q1/np.cos(np.pi/4))
+        E[1] = np.pi*quantity
+        E[2] = 0.0
 
     return E

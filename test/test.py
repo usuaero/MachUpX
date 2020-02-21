@@ -86,6 +86,7 @@ if __name__=="__main__":
     print("---Aerodynamic Center---")
     AC = scene.aircraft_aero_center()
     print(json.dumps(AC["plane"], indent=4))
+    scene.remove_aircraft("plane")
     
     #scene.export_aircraft_dxf(aircraft="plane", section_resolution=50)
     #scene.export_stl(filename="test.stl")

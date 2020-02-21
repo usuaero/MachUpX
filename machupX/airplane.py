@@ -1,4 +1,4 @@
-from .helpers import *
+from .helpers import import_value, quaternion_to_euler, euler_to_quaternion, check_filepath, quaternion_transform, quaternion_inverse_transform
 from .wing_segment import WingSegment
 from airfoil_db import Airfoil
 
@@ -10,6 +10,7 @@ from stl import mesh
 import sys
 import os
 import warnings
+import copy
 
 class Airplane:
     """A class defining an airplane.
