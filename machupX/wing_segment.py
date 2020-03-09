@@ -82,6 +82,9 @@ class WingSegment:
         distribution = grid_dict.get("distribution", "cosine_cluster")
         flap_edge_cluster = grid_dict.get("flap_edge_cluster", True)
         extra_discont = grid_dict.get("cluster_points", [])
+        self._reid_corr = grid_dict.get("reid_corrections", False)
+        self._delta_joint = grid_dict.get("joint_length", 0.15)
+        self._sigma_blend = grid_dict.get("blending_distance", 0.25)
 
         # Set origin offset
         self._delta_origin = np.zeros(3)
@@ -433,7 +436,30 @@ class WingSegment:
 
     def _setup_node_data(self):
         # Creates and stores vectors of important data at each node
+
+        # Nodes on AC
         self.nodes = self._get_section_ac_loc(self._node_span_locs)
+
+        # Nodes offset from AC
+        if self._reid_corr:
+
+            # Get normal vectors to the AC locus
+            T = np.gradient(self.nodes, self._node_span_locs*self.b, edge_order=2, axis=0)
+            T = T/np.linalg.norm(T, axis=1)[:,np.newaxis]
+            N = np.gradient(T, self._node_span_locs*self.b, edge_order=2, axis=0)
+            N = N/np.linalg.norm(N, axis=1)[:,np.newaxis]
+
+            # Make sure normal vectors point backwards
+            direction = np.inner(N, np.array([-1.0, 0.0, 0.0]))
+            N = np.where(direction[:,np.newaxis] < 0.0, -N, N)
+
+            # Get offset
+            c = self.get_chord(self._node_span_locs)
+            self.nodes_prime = self.nodes+c[:,np.newaxis]*self._delta_joint*N
+
+        # No offset if the Reid corrections are not being used
+        else:
+            self.nodes_prime = self.nodes
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):

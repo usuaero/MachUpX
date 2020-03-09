@@ -61,7 +61,10 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 40
+                    "N" : 10,
+                    "reid_corrections" : True,
+                    "joint_length" : 0.15,
+                    "blending_distance" : 0.25
                 }
             #},
             #"h_stab" : {

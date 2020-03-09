@@ -428,6 +428,15 @@ Describes an aircraft. Stored as a .json file
 >>>>
 >>>>**"cluster_points" : list, optional**
 >>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used is "distribution" is "cosine_cluster". Defaults to no extra clustering.
+>>>>
+>>>>**"reid_corrections" : bool, optional**
+>>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip. Defaults to False.
+>>>>
+>>>>**"joint_length" : float, optional**
+>>>>>The non-dimensional joint lengths to be used in the Reid corrections. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive.
+>>>>
+>>>>**"blending_distance" : float, optional**
+>>>>>The non-dimensional AC-locus blending distance to be used in the Reid corrections. Defaults to 0.25. Note that any blending distance less than the default is considered by Reid to be numerically sensitive.
 >>>
 >>>**"control_surface" : dict, optional**
 >>>>Defines a control surface on the trailing edge of the wing segment. Uses Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
