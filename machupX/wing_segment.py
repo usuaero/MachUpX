@@ -1,11 +1,13 @@
-from .helpers import check_filepath, import_value
+from .helpers import check_filepath, import_value, euler_to_quaternion, quaternion_inverse_transform
 from .dxf import dxf_spline
 
 import json
 import numpy as np
+import math as m
 import scipy.integrate as integ
 import scipy.interpolate as interp
 import os
+import warnings
 
 
 class WingSegment:
@@ -59,8 +61,8 @@ class WingSegment:
 
         if self.ID != 0: # These do not need to be run for the origin segment
             self._initialize_params()
-            self._initialize_getters()
             self._initialize_airfoils(airfoil_dict)
+            self._initialize_getters()
             self._setup_control_surface(self._input_dict.get("control_surface", None))
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
@@ -166,7 +168,7 @@ class WingSegment:
 
         elif isinstance(distribution, list): # User-specified distribution
             if len(distribution) != self._N*2+1:
-                raise IOError("User specified distribution must have length of 2*N+1. Got length {0}, needed length {1}.".format(len(distribution), self._N*2+1))
+                raise IOError("User specified distribution must have length of 2*N+1. Got length {0}; needed length {1}.".format(len(distribution), self._N*2+1))
 
             self._node_span_locs = np.array(distribution[0::2])
             self._cp_span_locs = np.array(distribution[1::2])
@@ -205,9 +207,50 @@ class WingSegment:
 
         # Aerodynamic center offset
         ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+
+        # Generate Kuchemann offset
         if ac_offset_data == "kuchemann":
-            ac_offset_data = 0.0
-            # TODO: Implement Kuchemann's AC equations
+
+            # If the sweep is not constant, don't calculate an offset
+            if not isinstance(sweep_data, float):
+                warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
+                ac_offset_data = 0.0
+
+            # Calculate offset as a fraction of the local chord
+            else:
+                
+                # Get constants
+                CLa_root = self._airfoils[0].get_CLa(alpha=0.0)
+                area = integ.quad(lambda s : self.get_chord(s), 0, 1)[0]
+                R_A = 0.5*self.b/area
+                sweep = self.get_sweep(0.0)
+
+                # Calculate effective global wing sweep
+                sweep_eff = sweep/(1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25
+                tan_k = m.tan(sweep_eff)
+                sweep_div = tan_k/sweep_eff
+                K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**(m.pi/(4.0*(m.pi+2.0*abs(sweep_eff))))
+
+                # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
+                if self._side == "left":
+                    locs = np.copy(self._node_span_locs)[::-1]
+                else:
+                    locs = np.copy(self._node_span_locs)
+                z = locs*self.b
+                c = self.get_chord(locs)
+                center_inf = z/c
+                tip_inf = (self.b-z)/c
+
+                # Get hyperbolic interpolation
+                l = np.sqrt(1+(2.0*m.pi*sweep_div*center_inf)**2)-2*m.pi*sweep_div*center_inf-np.sqrt(1+(2.0*m.pi*sweep_div*tip_inf)**2)+2*m.pi*sweep_div*tip_inf
+
+                # Calculate offset
+                ac_offset = -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))
+
+                # Assemble array
+                ac_offset_data = np.concatenate((locs[:,np.newaxis], ac_offset[:,np.newaxis]), axis=1)
+
+        # Create getter
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
 
@@ -216,11 +259,15 @@ class WingSegment:
 
         if isinstance(data, float): # Constant
             if angular_data:
-                self._getter_data[name] = np.radians(data).item()
+                self._getter_data[name] = m.radians(data)
             else:
                 self._getter_data[name] = data
 
             def getter(span):
+                """
+                span : float or ndarray
+                    Non-dimensional span location.
+                """
                 converted = False
                 if isinstance(span, float):
                     converted = True
@@ -236,15 +283,19 @@ class WingSegment:
         
         else: # Array
             if isinstance(data[0], np.void): # This will happen if the user inputs the array params as ints
-                new_data = np.zeros((data.shape[0],2))
+                new_data = np.zeros((data.shape[0],2), dtype=float)
                 for i in range(data.shape[0]):
                     new_data[i,0] = data[i][0]
                     new_data[i,1] = data[i][1]
                 data = new_data
 
-            self._getter_data[name] = data
+            self._getter_data[name] = np.copy(data)
 
             def getter(span):
+                """
+                span : float or ndarray
+                    Non-dimensional span location.
+                """
                 converted = False
                 if isinstance(span, float):
                     converted = True

@@ -1701,10 +1701,13 @@ class Scene:
         filename : str
             Output file to write the distributions to. Saves as a .txt file. Defaults to no file.
 
-        make_plots : list
+        make_plots : list, optional
             List of keys from the dist dictionary to make plots of. A plot of the parameter as a function 
             of span fraction for each wing segment will then be generated and saved. This can create 
             a lot of plots!
+
+        show_plots : bool, optional
+            Whether to show the plots, rather than automatically saving them. Defaults to False.
 
         Returns
         -------
@@ -1841,7 +1844,10 @@ class Scene:
                     plt.xlabel("Span Fraction")
                     plt.ylabel(param)
                     plt.title(segment_name)
-                    plt.savefig("{0}_{1}_{2}_vs_span_fraction".format(aircraft_name, segment_name, param))
+                    if kwargs.get("show_plots", False):
+                        plt.show()
+                    else:
+                        plt.savefig("{0}_{1}_{2}_vs_span_fraction".format(aircraft_name, segment_name, param))
                     plt.close()
 
         return dist

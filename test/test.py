@@ -50,7 +50,10 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "semispan" : 4.0,
+                "chord" : 1.0,
                 "airfoil" : "NACA_0010",
+                "sweep" : 45.0,
+                "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "control_mixing" : {
@@ -60,59 +63,58 @@ if __name__=="__main__":
                 "grid" : {
                     "N" : 40
                 }
-            },
-            "h_stab" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -3.0
-                },
-                "semispan" : 2.0,
-                "airfoil" : "NACA_0010",
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "elevator" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40
-                }
-            },
-            "v_stab" : {
-                "ID" : 3,
-                "side" : "right",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -3.0,
-                    "dz" : -0.1
-                },
-                "semispan" : 2.0,
-                "dihedral" : 90.0,
-                "airfoil" : "NACA_0010",
-                "ac_offset" : "kuchemann",
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "rudder" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True
-                }
+            #},
+            #"h_stab" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -4.0
+            #    },
+            #    "semispan" : 2.0,
+            #    "airfoil" : "NACA_0010",
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "elevator" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 40
+            #    }
+            #},
+            #"v_stab" : {
+            #    "ID" : 3,
+            #    "side" : "right",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -4.0,
+            #        "dz" : -0.1
+            #    },
+            #    "semispan" : 2.0,
+            #    "dihedral" : 90.0,
+            #    "airfoil" : "NACA_0010",
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "rudder" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 40
+            #    }
             }
         }
     }
 
     # Specify state
     state = {
-        "velocity" : [100, "mph"]
+        "velocity" : [100, "mph"],
+        "alpha" : 2.0
     }
 
     # Load scene
@@ -120,31 +122,28 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state)
 
     scene.display_wireframe()
+    #scene.distributions(make_plots=['cpx'], show_plots=True)
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
-    print(json.dumps(trim_angles["plane"], indent=4))
+    #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
+    #print(json.dumps(trim_angles["plane"], indent=4))
 
-    print("---Trim State---")
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    #print("---Trim State---")
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
 
-    print("---Derivatives---")
-    derivs = scene.aircraft_derivatives()
-    print(json.dumps(derivs["plane"]["stability"], indent=4))
+    #print("---Derivatives---")
+    #derivs = scene.aircraft_derivatives()
+    #print(json.dumps(derivs["plane"]["stability"], indent=4))
 
-    print("---MAC---")
-    MAC = scene.aircraft_mean_aerodynamic_chord()
-    print(json.dumps(MAC["plane"], indent=4))
+    #print("---MAC---")
+    #MAC = scene.aircraft_mean_aerodynamic_chord()
+    #print(json.dumps(MAC["plane"], indent=4))
 
-    print("---Aerodynamic Center---")
-    AC = scene.aircraft_aero_center()
-    print(json.dumps(AC["plane"], indent=4))
-    scene.remove_aircraft("plane")
-    
-    #scene.export_aircraft_dxf(aircraft="plane", section_resolution=50)
-    #scene.export_stl(filename="test.stl")
-    #scene.export_aircraft_stp()
+    #print("---Aerodynamic Center---")
+    #AC = scene.aircraft_aero_center()
+    #print(json.dumps(AC["plane"], indent=4))
+    #scene.remove_aircraft("plane")
