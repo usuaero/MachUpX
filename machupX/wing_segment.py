@@ -67,7 +67,10 @@ class WingSegment:
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
             self._setup_cp_data()
-            self.initialize_ac_locus()
+
+            # Aerodynamic center offset
+            ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+            self.initialize_ac_locus(ac_offset=ac_offset_data)
 
     
     def _initialize_params(self):
@@ -385,11 +388,15 @@ class WingSegment:
         self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
-    def initialize_ac_locus(self):
-        # Creates and stores vectors containing information about the locus of aerodynamic centers
+    def initialize_ac_locus(self, **kwargs):
+        """Sets up the locus of aerodynamic centers for this wing segment.
 
-        # Aerodynamic center offset
-        ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+        Parameters
+        ----------
+        ac_offset : str, float, or list
+            As defined in "Creating Input Files" under "ac_offset".
+        """
+        ac_offset_data = import_value("ac_offset", kwargs, self._unit_sys, 0)
 
         # Generate Kuchemann offset
         if ac_offset_data == "kuchemann":
@@ -464,7 +471,7 @@ class WingSegment:
             u_a = self._get_axial_vec(self._node_span_locs)
             k = np.einsum('ij,ij->i', T, u_a)
             c1 = np.sqrt(1/(1-k*k))
-            c2 = -k*c1
+            c2 = -c1*k
             u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T
             u_j = u_j/np.linalg.norm(u_j)
 
@@ -501,17 +508,11 @@ class WingSegment:
         -------
         WingSegment
             Returns a newly created wing segment.
-
-        Raises
-        ------
-        RuntimeError
-            If the segment could not be added.
-
         """
 
         # This can only be called on the origin segment
         if self.ID != 0:
-            raise RuntimeError("Please add segments only at the origin segment.")
+            raise RuntimeError("Segments can only be added at the origin segment.")
 
         else:
             return self._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)

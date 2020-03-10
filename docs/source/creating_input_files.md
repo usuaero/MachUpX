@@ -198,7 +198,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 1.0. Has no effect on the linear solver.
 >>
 >>**"max_iterations" : int, optional**
->>>Maximum number of iterations for the nonlinear solver. Defaults to 100. Has no effect on the linear solver.
+>>>Maximum number of iterations for the nonlinear solver (the NLL algorithm is not known to have solver convergence issues). Defaults to 100. Has no effect on the linear solver.
 >
 >**"units" : string, optional**
 >>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. All outputs will be given in this unit system. Defaults to "English".

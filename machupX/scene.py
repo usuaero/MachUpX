@@ -29,14 +29,18 @@ class Scene:
 
     def __init__(self, scene_input):
 
+        # Initialize basic storage objects
         self._airplanes = {}
         self._airplane_names = []
         self._segment_names = []
         self._N = 0
         self._num_aircraft = 0
-        self._solved = False # Track whether the current scene state has been solved
-        # Should be set to False any time any state variable is changed without immediately thereafter calling solve_forces()
 
+        # Track whether the scene in its current state has been solved
+        # Should be set to False any time any state variable is changed without immediately thereafter calling solve_forces()
+        self._solved = False
+
+        # Import information from the input
         self._load_params(scene_input)
 
 
@@ -53,9 +57,9 @@ class Scene:
         elif isinstance(scene_input, dict):
             self._input_dict = copy.deepcopy(scene_input)
 
+        # Input format not recognized
         else:
-            raise IOError("Input to Scene class initializer must be a file path or Python dictionary.")
-
+            raise IOError("Input to Scene class initializer must be a file path or Python dictionary, not type {0}.".format(type(scene_input)))
 
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
@@ -230,7 +234,7 @@ class Scene:
 
     def add_aircraft(self, airplane_name, airplane_input, state={}, control_state={}):
         """Inserts an aircraft into the scene. Note if an aircraft was specified
-        in the input file, it has already been added to the scene.
+        in the input object, it has already been added to the scene.
 
         Parameters
         ----------
@@ -238,18 +242,13 @@ class Scene:
             Name of the airplane to be added.
 
         airplane_input : str or dict
-            Path to the JSON object or dictionary describing the airplane.
+            JSON object (path) or dictionary describing the airplane.
 
         state : dict
             Dictionary describing the state of the airplane.
 
         control_state : dict
             Dictionary describing the state of the controls.
-
-        Raises
-        ------
-        IOError
-            If the input is invalid.
         """
 
         # Determine the local wind vector for setting the state of the aircraft

@@ -296,22 +296,22 @@ class Airplane:
             If the input is improperly specified.
         """
 
-        #Let me take a moment to explain the structure of wing segments in MachUpX. This is
-        #for the sake of other developers. The way we have decided to define wing segements 
-        #makes them fall very naturally into a tree-type structure. Any given wing segment 
-        #is attached (we use this term loosely; more accurately, the position of one wing 
-        #segment is defined relative to another) to another wing segment or the origin. 
-        #Eventually, these all lead back to the origin. The origin here is a "dummy" wing 
-        #segment which has no other properties than an ID of 0. Adding a wing segment is done
-        #recursively via the tree. Each wing segment knows which wing segments attach to it.
-        #However, no wing segment knows who it attaches to, only the location of its origin. 
+        # Let me take a moment to explain the structure of wing segments in MachUpX. This is
+        # for the sake of other developers. The way we have decided to define wing segments 
+        # makes them fall very naturally into a tree-type structure. Any given wing segment 
+        # is attached (we use this term loosely; more accurately, the position of one wing 
+        # segment is defined relative to another) to another wing segment or the origin. 
+        # Eventually, these all lead back to the origin. The origin here is a "dummy" wing 
+        # segment which has no other properties than an ID of 0. Adding a wing segment is done
+        # recursively via the tree. Each wing segment knows which wing segments attach to it.
+        # However, no wing segment knows who it attaches to, only the location of its origin. 
 
-        #The tree structure makes certain operations, such as integrating forces and moments 
-        #and applying structural deformations, very natural. However, generating the lifting-
-        #line matrix equations from this structure is very cumbersome. Therefore, we also 
-        #store references to each wing segment at the Airplane level in a list. This makes 
-        #generating the lifting-line matrix much more friendly. This makes the code a little 
-        #more fragile, but this is Python and we assume the user is being responsible.
+        # The tree structure makes certain operations, such as integrating forces and moments 
+        # and applying structural deformations, very natural. However, generating the lifting-
+        # line matrix equations from this structure is very cumbersome. Therefore, we also 
+        # store references to each wing segment at the Airplane level in a list. This makes 
+        # generating the lifting-line matrix much more friendly. This makes the code a little 
+        # more fragile, but this is Python and we assume the user is being responsible.
         
         if wing_segment_name in self.wing_segments.keys():
             raise IOError("Wing segment {0} already exists in this airplane.".format(wing_segment_name))
