@@ -53,6 +53,8 @@ if __name__=="__main__":
                 "chord" : 1.0,
                 "airfoil" : "NACA_0010",
                 "sweep" : 45.0,
+                "dihedral" : [[0.0, 45.0],
+                              [1.0, 0.0]],
                 "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,

@@ -67,7 +67,7 @@ class WingSegment:
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
             self._setup_cp_data()
-            self._setup_node_data()
+            self.initialize_ac_locus()
 
     
     def _initialize_params(self):
@@ -207,54 +207,6 @@ class WingSegment:
             self.get_chord = self._build_elliptic_chord_dist(chord_data[1])
         else: # Linear distribution
             self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
-
-        # Aerodynamic center offset
-        ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
-
-        # Generate Kuchemann offset
-        if ac_offset_data == "kuchemann":
-
-            # If the sweep is not constant, don't calculate an offset
-            if not isinstance(sweep_data, float):
-                warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
-                ac_offset_data = 0.0
-
-            # Calculate offset as a fraction of the local chord
-            else:
-                
-                # Get constants
-                CLa_root = self._airfoils[0].get_CLa(alpha=0.0)
-                area = integ.quad(lambda s : self.get_chord(s), 0, 1)[0]
-                R_A = 0.5*self.b/area
-                sweep = self.get_sweep(0.0)
-
-                # Calculate effective global wing sweep
-                sweep_eff = sweep/(1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25
-                tan_k = m.tan(sweep_eff)
-                sweep_div = tan_k/sweep_eff
-                K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**(m.pi/(4.0*(m.pi+2.0*abs(sweep_eff))))
-
-                # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
-                if self._side == "left":
-                    locs = np.copy(self._node_span_locs)[::-1]
-                else:
-                    locs = np.copy(self._node_span_locs)
-                z = locs*self.b
-                c = self.get_chord(locs)
-                center_inf = z/c
-                tip_inf = (self.b-z)/c
-
-                # Get hyperbolic interpolation
-                l = np.sqrt(1+(2.0*m.pi*sweep_div*center_inf)**2)-2*m.pi*sweep_div*center_inf-np.sqrt(1+(2.0*m.pi*sweep_div*tip_inf)**2)+2*m.pi*sweep_div*tip_inf
-
-                # Calculate offset
-                ac_offset = -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))
-
-                # Assemble array
-                ac_offset_data = np.concatenate((locs[:,np.newaxis], ac_offset[:,np.newaxis]), axis=1)
-
-        # Create getter
-        self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
 
     def _build_getter_linear_f_of_span(self, data, name, angular_data=False):
@@ -426,7 +378,6 @@ class WingSegment:
         self.u_a_cp = self._get_axial_vec(self._cp_span_locs)
         self.u_n_cp = self._get_normal_vec(self._cp_span_locs)
         self.u_s_cp = self._get_span_vec(self._cp_span_locs)
-        self.control_points = self._get_section_ac_loc(self._cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
         self.twist_cp = self.get_twist(self._cp_span_locs)
         self.dihedral_cp = self.get_dihedral(self._cp_span_locs)
@@ -434,28 +385,92 @@ class WingSegment:
         self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
-    def _setup_node_data(self):
-        # Creates and stores vectors of important data at each node
+    def initialize_ac_locus(self):
+        # Creates and stores vectors containing information about the locus of aerodynamic centers
 
-        # Nodes on AC
+        # Aerodynamic center offset
+        ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+
+        # Generate Kuchemann offset
+        if ac_offset_data == "kuchemann":
+
+            # If the sweep is not constant, don't calculate an offset
+            sweep_data = self._getter_data["sweep"]
+            if not isinstance(sweep_data, float):
+                warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
+                ac_offset_data = 0.0
+
+            # If the sweep is zero, don't calculate an offset
+            elif abs(sweep_data) < 1e-10:
+                warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of zero sweep. Reverting to no offset.")
+                ac_offset_data = 0.0
+
+            # Calculate offset as a fraction of the local chord
+            else:
+                
+                # Get constants
+                CLa_root = self._airfoils[0].get_CLa(alpha=0.0)
+                area = integ.quad(lambda s : self.get_chord(s), 0, 1)[0]
+                R_A = 0.5*self.b/area
+                sweep = self.get_sweep(0.0)
+
+                # Calculate effective global wing sweep
+                sweep_eff = sweep/(1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25
+                tan_k = m.tan(sweep_eff)
+                sweep_div = tan_k/sweep_eff
+                K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**(m.pi/(4.0*(m.pi+2.0*abs(sweep_eff))))
+
+                # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
+                if self._side == "left":
+                    locs = np.copy(self._node_span_locs)[::-1]
+                else:
+                    locs = np.copy(self._node_span_locs)
+                z = locs*self.b
+                c = self.get_chord(locs)
+                center_inf = z/c
+                tip_inf = (self.b-z)/c
+
+                # Get hyperbolic interpolation
+                l = np.sqrt(1+(2.0*m.pi*sweep_div*center_inf)**2)-2*m.pi*sweep_div*center_inf-np.sqrt(1+(2.0*m.pi*sweep_div*tip_inf)**2)+2*m.pi*sweep_div*tip_inf
+
+                # Calculate offset
+                ac_offset = -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))
+
+                # Assemble array
+                ac_offset_data = np.concatenate((locs[:,np.newaxis], ac_offset[:,np.newaxis]), axis=1)
+
+        # Create getter
+        self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
+
+        # Store control points
+        self.control_points = self._get_section_ac_loc(self._cp_span_locs)
+
+        # Store nodes on AC
         self.nodes = self._get_section_ac_loc(self._node_span_locs)
 
-        # Nodes offset from AC
+        # Store nodes offset from AC
         if self._reid_corr:
 
-            # Get normal vectors to the AC locus
+            # Get normal vectors to the AC locus lying in the plane of the chord
+            # These equatiosn ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
+            # ac tangent and the axial vector (i.e. chord line). You get these by solving
+            #
+            #   < u_j, T > = 0
+            #   < u_j, u_a > > 0
+            #   u_j = c1*u_a+c2*T
+            #
             T = np.gradient(self.nodes, self._node_span_locs*self.b, edge_order=2, axis=0)
             T = T/np.linalg.norm(T, axis=1)[:,np.newaxis]
-            N = np.gradient(T, self._node_span_locs*self.b, edge_order=2, axis=0)
-            N = N/np.linalg.norm(N, axis=1)[:,np.newaxis]
-
-            # Make sure normal vectors point backwards
-            direction = np.inner(N, np.array([-1.0, 0.0, 0.0]))
-            N = np.where(direction[:,np.newaxis] < 0.0, -N, N)
+            u_a = self._get_axial_vec(self._node_span_locs)
+            k = np.einsum('ij,ij->i', T, u_a)
+            c1 = np.sqrt(1/(1-k*k))
+            c2 = -k*c1
+            u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T
+            u_j = u_j/np.linalg.norm(u_j)
 
             # Get offset
             c = self.get_chord(self._node_span_locs)
-            self.nodes_prime = self.nodes+c[:,np.newaxis]*self._delta_joint*N
+            self.nodes_prime = self.nodes+c[:,np.newaxis]*self._delta_joint*u_j
 
         # No offset if the Reid corrections are not being used
         else:
