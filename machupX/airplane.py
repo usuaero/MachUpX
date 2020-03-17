@@ -276,7 +276,7 @@ class Airplane:
         self._origin_segment = WingSegment("origin", origin_dict, "both", self._unit_sys, self._airfoil_database)
 
     
-    def add_wing_segment(self, wing_segment_name, input_dict):
+    def add_wing_segment(self, wing_segment_name, input_dict, recalculate_geometry=True):
         """Adds a wing segment to the airplane.
 
         Parameters
@@ -328,11 +328,146 @@ class Airplane:
             self.wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
             self._N += self.wing_segments[wing_segment_name+"_right"]._N
 
+        if recalculate_geometry:
+            self._calculate_geometry()
+
 
     def _load_wing_segments(self):
         # Reads in the wing segments from the input dict and attaches them
         for key in self._input_dict.get("wings", {}):
-            self.add_wing_segment(key, self._input_dict["wings"][key])
+            self.add_wing_segment(key, self._input_dict["wings"][key], recalculate_geometry=False)
+
+        # Perform geometry calculations
+        self._calculate_geometry()
+
+
+    def _calculate_geometry(self):
+        # Figures out which wing segments are contiguous and sets up the lists of control points and vortex nodes
+
+        # Initialize arrays
+        self.c_bar = np.zeros(self._N) # Average chord
+        self.dS = np.zeros(self._N) # Differential planform area
+        self.PC = np.zeros((self._N,3)) # Control point location
+        self.P0 = np.zeros((self._N,self._N,3)) # Inbound vortex node location (effective locus of aerodynamic centers)
+        self.P1 = np.zeros((self._N,self._N,3)) # Outbound vortex node location (effective locus of aerodynamic centers)
+        self.P0_joint = np.zeros((self._N,self._N,3)) # Inbound vortex joint node location (effective locus of aerodynamic centers)
+        self.P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location (effective locus of aerodynamic centers)
+        self.u_a = np.zeros((self._N,3)) # Section unit vectors
+        self.u_n = np.zeros((self._N,3))
+        self.u_s = np.zeros((self._N,3))
+
+        # Group wing segments into wings
+        self._sort_segments_into_wings()
+
+        # Gather segment data
+        self._wing_N = []
+        curr_index = 0
+        for i in range(self._num_wings):
+            self._wing_N.append(0)
+            for segment in self._segments_in_wings[i]:
+                N = segment._N
+                self._wing_N[i] += N
+                curr_slice = slice(curr_index, curr_index+N)
+                self.c_bar[curr_slice] = segment.c_bar_cp
+
+        # Calculate effective loci of aerodynamic centers
+
+        # Place vortex joint locations
+
+        #    # Get normal vectors to the AC locus lying in the plane of the chord
+        #    # These equatiosn ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
+        #    # ac tangent and the axial vector (i.e. chord line). You get these by solving
+        #    #
+        #    #   < u_j, T > = 0
+        #    #   < u_j, u_a > > 0
+        #    #   u_j = c1*u_a+c2*T
+        #    #
+        #    T = np.gradient(self.nodes, self._node_span_locs*self.b, edge_order=2, axis=0)
+        #    T = T/np.linalg.norm(T, axis=1)[:,np.newaxis]
+        #    u_a = self._get_axial_vec(self._node_span_locs)
+        #    k = np.einsum('ij,ij->i', T, u_a)
+        #    c1 = np.sqrt(1/(1-k*k))
+        #    c2 = -c1*k
+        #    u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T
+        #    u_j = u_j/np.linalg.norm(u_j)
+
+        #    # Get offset
+        #    c = self.get_chord(self._node_span_locs)
+        #    self.nodes_prime = self.nodes+c[:,np.newaxis]*self._delta_joint*u_j
+
+
+    def _sort_segments_into_wings(self):
+        # Groups segments into wings for calculating effective ac loci
+        wing_IDs = []
+
+        # Get user selections
+        for segment in self.wing_segments.values():
+            if segment.wing_ID is not None and segment.wing_ID not in wing_IDs:
+                wing_IDs.append(segment.wing_ID)
+
+        # To allow for max() check in while loop
+        if len(wing_IDs) == 0:
+            wing_IDs.append(-1)
+
+        # Assign IDs and group
+        curr_ID = 0
+        self._segments_in_wings = []
+        finished = False
+        while not finished or curr_ID <= max(wing_IDs):
+
+            # Create storage
+            self._segments_in_wings.append([])
+
+            # Check if the user has called for the current ID
+            if curr_ID in wing_IDs:
+
+                # Gather segments with that ID
+                for segment in self.wing_segments.values():
+                    if segment.wing_ID == curr_ID:
+                        self._segments_in_wings[curr_ID].append(segment)
+
+            else:
+                
+                # Assign current ID to segment with no specified wing
+                for segment in self.wing_segments.values():
+
+                    # Look for segment with no ID
+                    if segment.wing_ID is None:
+                        segment.wing_ID = curr_ID
+                        self._segments_in_wings[curr_ID].append(segment)
+
+                        # Look for matching half
+                        segment_root_name = segment.name.replace("_right", "").replace("_left", "")
+                        for partner_segment in self.wing_segments.values():
+                            if segment_root_name in partner_segment.name and partner_segment.wing_ID is None:
+                                partner_segment.wing_ID = curr_ID
+                                self._segments_in_wings[curr_ID].append(partner_segment)
+                                break
+
+                        break
+                
+                # If there are no unspecified wings left
+                else:
+                    finished = True
+
+            curr_ID += 1
+
+        # Store number of wings
+        self._num_wings = curr_ID
+
+        # Delete empty wings
+        empty = []
+        for i in range(self._num_wings):
+            if len(self._segments_in_wings[i]) == 0:
+                empty.append(i)
+                self._num_wings -= 1
+        for index in empty[::-1]:
+            del self._segments_in_wings[index]
+
+        # Reassign IDs
+        for i in range(self._num_wings):
+            for segment in self._segments_in_wings[i]:
+                segment.wing_ID = i
 
 
     def _check_reference_params(self):

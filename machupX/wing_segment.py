@@ -69,8 +69,7 @@ class WingSegment:
             self._setup_cp_data()
 
             # Aerodynamic center offset
-            ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
-            self.initialize_ac_locus(ac_offset=ac_offset_data)
+            self._initialize_ac_locus()
 
     
     def _initialize_params(self):
@@ -85,9 +84,12 @@ class WingSegment:
         distribution = grid_dict.get("distribution", "cosine_cluster")
         flap_edge_cluster = grid_dict.get("flap_edge_cluster", True)
         extra_discont = grid_dict.get("cluster_points", [])
-        self._reid_corr = grid_dict.get("reid_corrections", False)
-        self._delta_joint = grid_dict.get("joint_length", 0.15)
-        self._sigma_blend = grid_dict.get("blending_distance", 0.25)
+        self.reid_corr = grid_dict.get("reid_corrections", False)
+        self.delta_joint = grid_dict.get("joint_length", 0.15)
+        self.sigma_blend = grid_dict.get("blending_distance", 0.25)
+        self.wing_ID = grid_dict.get("wing_ID", None)
+        if self.wing_ID is not None and self.wing_ID < 0:
+            raise IOError("'wing_ID' for wing segment {0} cannot be negative. Got {1}.".format(self.name, self.wing_ID))
 
         # Set origin offset
         self._delta_origin = np.zeros(3)
@@ -388,15 +390,9 @@ class WingSegment:
         self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
-    def initialize_ac_locus(self, **kwargs):
-        """Sets up the locus of aerodynamic centers for this wing segment.
-
-        Parameters
-        ----------
-        ac_offset : str, float, or list
-            As defined in "Creating Input Files" under "ac_offset".
-        """
-        ac_offset_data = import_value("ac_offset", kwargs, self._unit_sys, 0)
+    def _initialize_ac_locus(self):
+        # Sets up the locus of aerodynamic centers for this wing segment.
+        ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
 
         # Generate Kuchemann offset
         if ac_offset_data == "kuchemann":
@@ -454,34 +450,7 @@ class WingSegment:
 
         # Store nodes on AC
         self.nodes = self._get_section_ac_loc(self._node_span_locs)
-
-        # Store nodes offset from AC
-        if self._reid_corr:
-
-            # Get normal vectors to the AC locus lying in the plane of the chord
-            # These equatiosn ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
-            # ac tangent and the axial vector (i.e. chord line). You get these by solving
-            #
-            #   < u_j, T > = 0
-            #   < u_j, u_a > > 0
-            #   u_j = c1*u_a+c2*T
-            #
-            T = np.gradient(self.nodes, self._node_span_locs*self.b, edge_order=2, axis=0)
-            T = T/np.linalg.norm(T, axis=1)[:,np.newaxis]
-            u_a = self._get_axial_vec(self._node_span_locs)
-            k = np.einsum('ij,ij->i', T, u_a)
-            c1 = np.sqrt(1/(1-k*k))
-            c2 = -c1*k
-            u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T
-            u_j = u_j/np.linalg.norm(u_j)
-
-            # Get offset
-            c = self.get_chord(self._node_span_locs)
-            self.nodes_prime = self.nodes+c[:,np.newaxis]*self._delta_joint*u_j
-
-        # No offset if the Reid corrections are not being used
-        else:
-            self.nodes_prime = self.nodes
+        self.nodes_prime = self.nodes
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):

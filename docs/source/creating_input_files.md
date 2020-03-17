@@ -347,7 +347,7 @@ Describes an aircraft. Stored as a .json file
 >>>>Path to file containing a JSON object describing the airfoil using the above keys.
 >
 >**"wings" : dict**
->>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the examples/ directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface.
+>>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the examples/ directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface, therefore, a wing with multiple control surfaces must be created from multiple wing segments.
 >
 >>**"<WING_SEGMENT_NAME>" : dict**
 >>
@@ -379,10 +379,10 @@ Describes an aircraft. Stored as a .json file
 >>>>>Displacement of the origin from the selected reference point in the body-fixed z- direction. Defaults to 0.
 >>>>
 >>>>**"y_offset" : float, optional**
->>>>>Distance the origin should be shifted from the centerline (positive offset corresponds to outward). If "side" is specified as "both", this effect is mirrored. Defaults to 0.
+>>>>>Distance the origin should be shifted from the centerline (positive offset corresponds to outward from the x-z plane). If "side" is specified as "both", this effect is mirrored. Defaults to 0.
 >>>
 >>>**"semispan" : float**
->>>>Length of the wing segment, discounting sweep. If "side" is specified as "both", the total span of the segment is twice this value.
+>>>>Length of the wing segment in the y-direction (i.e. discounting sweep). If "side" is specified as "both", the total span of the segment is twice this value.
 >>>
 >>>**"twist" : float, array, or string, optional**
 >>>>Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the mounting angle of the wing segment and the segment will have no further twist. If specified as an array, the array gives the twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value:
@@ -392,13 +392,13 @@ Describes an aircraft. Stored as a .json file
 >>>>In the above example, the twist will be 0 degrees for the inner half of the wing and 2 degrees for the outer half of the wing. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
 >>>
 >>>**"dihedral" : float, array, or string, optional**
->>>>Gives the dihedral of the wing segment. This is a solid-body rotation of the wing about the body x-axis. Defined the same as "twist". Defaults to 0.
+>>>>Gives the dihedral of the wing segment. Defined the same as "twist". Defaults to 0.
 >>>
 >>>**"sweep" : float, array, or string, optional**
->>>>Gives the sweep angle of the wing segment. Sweeping the wing is a shear tranformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from the plane of symmetry. Defined the same as "twist". Defaults to 0.
+>>>>Gives the sweep angle of the wing segment. Sweeping the wing is a shear transformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from thex-z plane. Defined the same as "twist". Defaults to 0.
 >>>
 >>>**"chord" : float, array, or string, optional**
->>>>Gives the chord length of the wing segment. Defined the same as "twist". Can optionally be specified as elliptic using the following definition:
+>>>>Gives the chord length of the wing segment. Defined the same as "twist", except that it can also be specified as elliptic using the following definition:
 >>>
 >>>>>**"chord" : ["elliptic", 1.0]**
 >>>
@@ -409,13 +409,13 @@ Describes an aircraft. Stored as a .json file
 >>>>Defaults to 1.0.
 >>>
 >>>**"ac_offset" : float, array, or string, optional**
->>>>Gives the offset of the section aerodynamic center from the quarter chord as a fraction of the chord along the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist", except that it may also be specified as "kuchemann" for wings of constant sweep, in which case the locus of aerodynamic centers will be specified using Kuchemann's equations (has no effect on straight wings, but is recommended for wings with constant sweep). Defaults to 0.
+>>>>Gives the offset of the section aerodynamic center from the quarter chord. By default, MachUpX assumes the locus of aerodynamic centers for a given wing segment falls on the quarter chord line. This allows shifting the locus along the chord line for greater accuracy. This shift is given as a fraction of the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist", except that it may also be specified as "kuchemann" *for wings of constant sweep*, in which case the locus of aerodynamic centers will be specified using Kuchemann's equations (has no effect on straight wings, but is recommended for wings with constant sweep). Specifying "kuchemann" for a wing segment with variable sweep will result in an error. Defaults to 0.
 >>>
 >>>**"airfoil" : string or array, optional**
->>>>Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined under "airfoils" in this object. If specified as an array, the array gives the airfoil as a function of span. The first column gives the span location, as with "twist", and the second column gives the name of the airfoil at that location. Can also be the path to a csv file containing the airfoil distribution formatted in columns, as with the array. Defaults to the name of the first airfoil listed under "airfoils". Cannot have units.
+>>>>Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined under "airfoils" within the parent aircraft object, in which case the section properties will be constant across the span. If specified as an array, the array gives the airfoil as a function of span. The first column gives the span location, as with "twist", and the second column gives the name of the airfoil at that location. MachUpX will interpolate airfoil properties between the given points. Can also be the path to a csv file containing the airfoil distribution formatted in columns, as with the array. Defaults to the name of the first airfoil listed under "airfoils". Cannot have units.
 >>>
 >>>**"grid" : dict, optional**
->>>>Describes the distribution of control points along the wing.
+>>>>Describes the distribution of control points along the wing and certain corrections to the structure of the grid.
 >>>>
 >>>>**"N" : int, optional**
 >>>>>Number of horseshoe vortices used to model the wing segment in the numerical lifting-line algorithm. This is the number of horseshoe vortices per semispan. Defaults to 40.
@@ -424,7 +424,7 @@ Describes an aircraft. Stored as a .json file
 >>>>>Specifies how vortex nodes and control points are to be distributed along the wing segment. Can be "linear", "cosine_cluster", or a list of span locations. "linear" will distribute the control points and vortex nodes evenly along the span. "cosine_cluster" will implement traditional cosine clustering, where points are spaced evenly in theta causing them to cluster at the tips of each segment. If this is a list, it must be an ordered list of span locations of length 2N+1 explicitly giving the span fraction location of each vortex node and control point. Should be arranged as ```[node_0_loc, cp_0_loc, node_1_loc, cp_1_loc,..., node_N_loc, cp_N_loc, node_N+1_loc]```. Defaults to "cosine_cluster".
 >>>>
 >>>>**"flap_edge_cluster" : bool, optional**
->>>>>If true, control points will be clustered around the edges of control surfaces. Can only be used if "distribution" is "cosine_cluster". Defaults to true.
+>>>>>If true, control points will be clustered around the edges of control surfaces. Can only be used if "distribution" is "cosine_cluster". Defaults to True.
 >>>>
 >>>>**"cluster_points" : list, optional**
 >>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used is "distribution" is "cosine_cluster". Defaults to no extra clustering.
@@ -437,6 +437,9 @@ Describes an aircraft. Stored as a .json file
 >>>>
 >>>>**"blending_distance" : float, optional**
 >>>>>The non-dimensional AC-locus blending distance to be used in the Reid corrections. Defaults to 0.25. Note that any blending distance less than the default is considered by Reid to be numerically sensitive.
+>>>>
+>>>>**"wing_ID" : int, optional**
+>>>>>ID of the wing this wing segment belongs to. This is only needed if the Reid corrections are being used. This is not the same as the ID of the wing segment that this wing segment connects to. Rather, this parameter is used to group wing segments into contiguous wings that share a single locus of aerodynamic centers. This is required for the general implementation of numerical lifting-line. If this is not specified, MachUpX will assume this wing segment is isolated in space, except from its mirror image if the two halves are contiguous. Must be positive and should start at 0. Defaults to None.
 >>>
 >>>**"control_surface" : dict, optional**
 >>>>Defines a control surface on the trailing edge of the wing segment. Uses Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
