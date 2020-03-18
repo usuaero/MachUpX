@@ -87,7 +87,7 @@ def test_variable_airfoil_section_get_lift():
         for key in wing_segments:
             N = wing_segments[key]._N
             CL = wing_segments[key].get_cp_CL(np.repeat(alpha, N), 0.0, 0.0)
-            if wing_segments[key]._side == "left":
+            if wing_segments[key].side == "left":
                 assert np.allclose(CL, CLs[i], rtol=0.0, atol=1e-8)
             else:
                 assert np.allclose(CL, CLs[i,::-1], rtol=0.0, atol=1e-8)
@@ -126,7 +126,7 @@ def test_variable_airfoil_section_get_drag():
         for key in wing_segments:
             N = wing_segments[key]._N
             CD = wing_segments[key].get_cp_CD(np.repeat(alpha, N), 0.0, 0.0)
-            if wing_segments[key]._side == "left":
+            if wing_segments[key].side == "left":
                 assert np.allclose(CD, CDs[i], rtol=0.0, atol=1e-8)
             else:
                 assert np.allclose(CD, CDs[i,::-1], rtol=0.0, atol=1e-8)
@@ -164,7 +164,7 @@ def test_variable_airfoil_section_get_moment():
         for key in wing_segments:
             N = wing_segments[key]._N
             Cm = wing_segments[key].get_cp_Cm(np.repeat(alpha, N), 0.0, 0.0)
-            if wing_segments[key]._side == "left":
+            if wing_segments[key].side == "left":
                 assert np.allclose(Cm, Cms[i], rtol=0.0, atol=1e-8)
             else:
                 assert np.allclose(Cm, Cms[i,::-1], rtol=0.0, atol=1e-8)
@@ -201,7 +201,7 @@ def test_variable_airfoil_section_from_file_get_lift():
         for key in wing_segments:
             N = wing_segments[key]._N
             CL = wing_segments[key].get_cp_CL(np.repeat(alpha, N), 0.0, 0.0)
-            if wing_segments[key]._side == "left":
+            if wing_segments[key].side == "left":
                 assert np.allclose(CL, CLs[i], rtol=0.0, atol=1e-8)
             else:
                 assert np.allclose(CL, CLs[i,::-1], rtol=0.0, atol=1e-8)
