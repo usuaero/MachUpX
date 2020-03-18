@@ -49,7 +49,7 @@ class WingSegment:
         self.name = name
         self._input_dict = input_dict
         self._unit_sys = unit_sys
-        self._side = side
+        self.side = side
         self._origin = np.asarray(origin)
 
         self._attached_segments = {}
@@ -98,7 +98,7 @@ class WingSegment:
         self._delta_origin[1] = connect_dict.get("dy", 0.0)
         self._delta_origin[2] = connect_dict.get("dz", 0.0)
 
-        if self._side == "left":
+        if self.side == "left":
             self._delta_origin[1] -= connect_dict.get("y_offset", 0.0)
 
         else:
@@ -186,7 +186,7 @@ class WingSegment:
 
         # In order to follow the airfoil sign convention (i.e. positive vorticity creates positive lift) 
         # node and control point locations must always proceed from left to right.
-        if self._side == "left":
+        if self.side == "left":
             self._node_span_locs = self._node_span_locs[::-1]
             self._cp_span_locs = self._cp_span_locs[::-1]
 
@@ -424,7 +424,7 @@ class WingSegment:
                 K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**(m.pi/(4.0*(m.pi+2.0*abs(sweep_eff))))
 
                 # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
-                if self._side == "left":
+                if self.side == "left":
                     locs = np.copy(self._node_span_locs)[::-1]
                 else:
                     locs = np.copy(self._node_span_locs)
@@ -575,7 +575,7 @@ class WingSegment:
         ds = np.zeros((span_array.shape[0],3))
         for i, span in enumerate(span_array):
             ds[i,0] = integ.quad(lambda s : -np.tan(self.get_sweep(s)), 0, span)[0]*self.b
-            if self._side == "left":
+            if self.side == "left":
                 ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
             else:
                 ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
@@ -603,7 +603,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        if self._side == "left":
+        if self.side == "left":
             return np.asarray([-C_twist, -S_twist*S_dihedral, S_twist*C_dihedral]).T
         else:
             return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
@@ -624,7 +624,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        if self._side == "left":
+        if self.side == "left":
             return np.asarray([-S_twist, C_twist*S_dihedral, -C_twist*C_dihedral]).T
         else:
             return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
@@ -642,7 +642,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        if self._side == "left":
+        if self.side == "left":
             return np.asarray([np.zeros(span_array.size), -C_dihedral, -S_dihedral]).T
         else:
             return np.asarray([np.zeros(span_array.size), -C_dihedral, S_dihedral]).T
@@ -956,7 +956,7 @@ class WingSegment:
         self._delta_flap = 0.0
         for key in self._control_mixing:
             deflection = import_value(key, control_state, self._unit_sys, 0.0)
-            if self._side == "right" or control_symmetry[key]:
+            if self.side == "right" or control_symmetry[key]:
                 self._delta_flap += deflection*self._control_mixing.get(key, 0.0)
             else:
                 self._delta_flap -= deflection*self._control_mixing.get(key, 0.0)
@@ -1059,7 +1059,7 @@ class WingSegment:
         chord = self.get_chord(span)
 
         # Transform to body-fixed coordinates
-        if self._side == "left":
+        if self.side == "left":
             q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
         else:
             q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))

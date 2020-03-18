@@ -361,21 +361,32 @@ class Airplane:
 
         # Gather segment data
         self._wing_N = []
-        curr_index = 0
+        cur_index = 0
         for i in range(self._num_wings):
             self._wing_N.append(0)
+            wing_nodes = []
             for segment in self._segments_in_wings[i]:
                 N = segment._N
                 self._wing_N[i] += N
-                curr_slice = slice(curr_index, curr_index+N)
-                self.c_bar[curr_slice] = segment.c_bar_cp
+                cur_slice = slice(cur_index, cur_index+N)
 
-        # Calculate effective loci of aerodynamic centers
+                # Store sectio geometry
+                self.c_bar[cur_slice] = segment.c_bar_cp
+                self.PC[cur_slice,:] = segment.control_points
+                self.dS[cur_slice] = segment.dS
+                wing_nodes.append(segment.nodes)
+
+                # Section direction vectors
+                self.u_a[cur_slice,:] = segment.u_a_cp
+                self.u_n[cur_slice,:] = segment.u_n_cp
+                self.u_s[cur_slice,:] = segment.u_s_cp
+
+            # Calculate effective loci of aerodynamic centers
 
         # Place vortex joint locations
 
         #    # Get normal vectors to the AC locus lying in the plane of the chord
-        #    # These equatiosn ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
+        #    # These equations ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
         #    # ac tangent and the axial vector (i.e. chord line). You get these by solving
         #    #
         #    #   < u_j, T > = 0
@@ -468,6 +479,48 @@ class Airplane:
         for i in range(self._num_wings):
             for segment in self._segments_in_wings[i]:
                 segment.wing_ID = i
+
+        # Sort segments along wingspan from left to right
+        for i in range(self._num_wings):
+            sorted_segments = []
+
+            # Sort left segments
+            while True:
+                next_segment = None
+                norm_to_beat = 0.0
+                for segment in self._segments_in_wings[i]:
+                    if "_left" in segment.name:
+                        tip = segment.get_tip_loc()
+                        norm = m.sqrt(tip[1]*tip[1]+tip[2]*tip[2])
+                        if norm_to_beat < norm and segment not in sorted_segments:
+                            next_segment = segment
+                            norm_to_beat = norm
+
+                # If nothing new got added to the sorted list, we're done with the left segments
+                if next_segment is None:
+                    break
+
+                # Add segment to list
+                sorted_segments.append(next_segment)
+
+            # Sort right segments
+            while True:
+                next_segment = None
+                norm_to_beat = np.inf
+                for segment in self._segments_in_wings[i]:
+                    if "_right" in segment.name:
+                        tip = segment.get_tip_loc()
+                        norm = m.sqrt(tip[1]*tip[1]+tip[2]*tip[2])
+                        if norm_to_beat > norm and segment not in sorted_segments:
+                            next_segment = segment
+                            norm_to_beat = norm
+
+                # If nothing new got added to the sorted list, we're done with the right segments
+                if next_segment is None:
+                    break
+
+                # Add segment to list
+                sorted_segments.append(next_segment)
 
 
     def _check_reference_params(self):

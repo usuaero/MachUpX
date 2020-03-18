@@ -147,6 +147,29 @@ if __name__=="__main__":
                     "joint_length" : 0.15,
                     "blending_distance" : 0.25
                 }
+            },
+            "v_stab_outer" : {
+                "ID" : 5,
+                "side" : "right",
+                "is_main" : False,
+                "connect_to" : {
+                    "ID" : 3
+                },
+                "semispan" : 2.0,
+                "dihedral" : 90.0,
+                "airfoil" : "NACA_0010",
+                "control_surface" : {
+                    "chord_fraction" : 0.5,
+                    "control_mixing" : {
+                        "rudder" : 1.0
+                    }
+                },
+                "grid" : {
+                    "N" : 40,
+                    "reid_corrections" : True,
+                    "joint_length" : 0.15,
+                    "blending_distance" : 0.25
+                }
             }
         }
     }
