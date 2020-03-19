@@ -54,3 +54,5 @@ If we assume the section lift coefficient is constant over the span, as is often
 This can be interpreted as an area-weighted average of the section aerodynamic centers. N&W call this the "C-Point" or "Center of Lift for Constant Local Lift Coefficient". This fits. They then recommend the CG be placed **at least** 6-12% of the MAC in front of the C-Point for a flying wing. As the main wing constitutes the entire airframe of a flying wing, this is simply the recommendation that the aircraft have a static margin of at least 6-12%. Very reasonable.
 
 I have coded up both methods of determining the main wing aerodynamic center. For unswept wings, the 25% MAC location and the average of the section aerodynamic centers are the same, i.e. 0. For swept straight and tapered wings, they are also the same. For swept elliptic wings, however, the two results diverge.
+
+## Definition of Sideforce
