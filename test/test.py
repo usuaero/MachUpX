@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear",
+            "type" : "linear",
             "convergence" : 1e-10,
             "relaxation" : 0.9
         },
@@ -184,7 +184,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
 
-    scene.display_wireframe()
+    #scene.display_wireframe()
     #scene.distributions(make_plots=['cpx'], show_plots=True)
 
     print("Original state")

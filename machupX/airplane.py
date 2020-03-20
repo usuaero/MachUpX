@@ -322,11 +322,11 @@ class Airplane:
 
         if side == "left" or side == "both":
             self.wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys, self._airfoil_database)
-            self._N += self.wing_segments[wing_segment_name+"_left"]._N
+            self._N += self.wing_segments[wing_segment_name+"_left"].N
 
         if side == "right" or side == "both":
             self.wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
-            self._N += self.wing_segments[wing_segment_name+"_right"]._N
+            self._N += self.wing_segments[wing_segment_name+"_right"].N
 
         if recalculate_geometry:
             self._calculate_geometry()
@@ -348,40 +348,115 @@ class Airplane:
         self.c_bar = np.zeros(self._N) # Average chord
         self.dS = np.zeros(self._N) # Differential planform area
         self.PC = np.zeros((self._N,3)) # Control point location
+        self.PC_span_locs = np.zeros(self._N) # Control point span locations
         self.P0 = np.zeros((self._N,self._N,3)) # Inbound vortex node location (effective locus of aerodynamic centers)
+        self.P0_span__locs = np.zeros(self._N)
         self.P1 = np.zeros((self._N,self._N,3)) # Outbound vortex node location (effective locus of aerodynamic centers)
+        self.P1_span__locs = np.zeros(self._N)
         self.P0_joint = np.zeros((self._N,self._N,3)) # Inbound vortex joint node location (effective locus of aerodynamic centers)
         self.P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location (effective locus of aerodynamic centers)
         self.u_a = np.zeros((self._N,3)) # Section unit vectors
         self.u_n = np.zeros((self._N,3))
         self.u_s = np.zeros((self._N,3))
+        reid_corr = np.zeros(self._N) # Whether to use Reid corrections
+        sigma_blend = np.zeros(self._N) # Blending distance
+        delta_joint = np.zeros(self._N) # Joint length
 
         # Group wing segments into wings
         self._sort_segments_into_wings()
 
         # Gather segment data
         self._wing_N = []
+        self._wing_slices = []
+        self._wing_node_spans = []
         cur_index = 0
         for i in range(self._num_wings):
+
+            # Reset params for this wing
             self._wing_N.append(0)
-            wing_nodes = []
-            for segment in self._segments_in_wings[i]:
-                N = segment._N
+            cur_span_from_left_tip = 0.0
+            wing_node_spans = []
+
+            # Loop through segments
+            for j,segment in enumerate(self._segments_in_wings[i]):
+
+                # Determine slice for this segment
+                N = segment.N
                 self._wing_N[i] += N
                 cur_slice = slice(cur_index, cur_index+N)
 
-                # Store sectio geometry
+                # Store section geometry
                 self.c_bar[cur_slice] = segment.c_bar_cp
                 self.PC[cur_slice,:] = segment.control_points
                 self.dS[cur_slice] = segment.dS
-                wing_nodes.append(segment.nodes)
+
+                # General NLL parameters
+                reid_corr[cur_slice] = segment.reid_corr
+                sigma_blend[cur_slice] = segment.sigma_blend
+                delta_joint[cur_slice] = segment.delta_joint
+
+                # Store control point span locations
+                if segment.side == "left":
+                    self.PC_span_locs[cur_slice] = cur_span_from_left_tip+(1.0-segment.cp_span_locs)*segment.b
+                else:
+                    self.PC_span_locs[cur_slice] = cur_span_from_left_tip+segment.cp_span_locs*segment.b
+                
+                # Store node span locations
+                if segment.side == "left":
+                    node_spans = cur_span_from_left_tip+(1.0-segment.node_span_locs)*segment.b
+                else:
+                    node_spans = cur_span_from_left_tip+segment.node_span_locs*segment.b
+                if j == 0:
+                    wing_node_spans.append(node_spans)
+                else:
+                    wing_node_spans.append(node_spans[1:])
+
+                # Store original node locations, to be updated point by point
+                self.P0[:,cur_slice,:] = segment.nodes[:-1]
+                self.P1[:,cur_slice,:] = segment.nodes[1:]
 
                 # Section direction vectors
                 self.u_a[cur_slice,:] = segment.u_a_cp
                 self.u_n[cur_slice,:] = segment.u_n_cp
                 self.u_s[cur_slice,:] = segment.u_s_cp
 
-            # Calculate effective loci of aerodynamic centers
+                # Update for next segment
+                cur_index += N
+                cur_span_from_left_tip += segment.b
+
+            # Determine slice for this wing
+            self._wing_slices.append(slice(cur_index-self._wing_N[i], cur_index))
+
+            # Concatenate nodes
+            self._wing_node_spans.append(np.concatenate(wing_node_spans))
+
+        # Calculate effective loci of aerodynamic centers
+        cur_wing = 0
+        gradient = np.gradient(self.PC[self._wing_slices[cur_wing]], self.PC_span_locs[self._wing_slices[cur_wing]], edge_order=2, axis=0)
+        for i in range(self._N):
+
+            # Check if we've moved beyond the correct wing
+            if i >= self._wing_slices[cur_wing].stop:
+                cur_wing += 1
+
+                # Update gradient
+                gradient = np.gradient(self.PC[self._wing_slices[cur_wing]], self.PC_span_locs[self._wing_slices[cur_wing]], edge_order=2, axis=0)
+
+            # General NLL corrections; if this is skipped, the node locations remain unchanged
+            if reid_corr[i]:
+
+                # Get control point of interest
+                wing_index = i-self._wing_slices[cur_wing].start # Index of control point within this wing
+                PC = self.PC[i,:]
+                PC_span = self.PC_span_locs[i]
+                PC_deriv = gradient[wing_index]
+
+                # Create straight locus of AC based off the current the control point
+                ds = self._wing_node_spans[cur_wing]-PC_span
+                straight_ac = PC + PC_deriv*ds
+
+                # Get interpolation function
+                blend = np.exp(-sigma_blend[i]*ds*ds)
 
         # Place vortex joint locations
 
@@ -521,6 +596,8 @@ class Airplane:
 
                 # Add segment to list
                 sorted_segments.append(next_segment)
+
+            self._segments_in_wings[i] = sorted_segments
 
 
     def _check_reference_params(self):

@@ -80,7 +80,7 @@ class WingSegment:
 
         # Grid parameters
         grid_dict = self._input_dict.get("grid", {})
-        self._N = grid_dict.get("N", 40)
+        self.N = grid_dict.get("N", 40)
         distribution = grid_dict.get("distribution", "cosine_cluster")
         flap_edge_cluster = grid_dict.get("flap_edge_cluster", True)
         extra_discont = grid_dict.get("cluster_points", [])
@@ -143,11 +143,11 @@ class WingSegment:
             num_sec = len(discont)-1
             sec_N = []
             for i in range(num_sec):
-                N = round(self._N*(discont[i+1]-discont[i]))
+                N = round(self.N*(discont[i+1]-discont[i]))
                 sec_N.append(N)
 
             # Check all the points are accounted for
-            diff = sum(sec_N)-self._N
+            diff = sum(sec_N)-self.N
             if diff != 0:
                 sec_N[0] -= diff # Use the root segment to make up the difference
 
@@ -167,19 +167,19 @@ class WingSegment:
                     s = 0.5*(1-np.cos(theta)) # Span fraction
                     cp_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
-            self._node_span_locs = np.array(node_span_locs)
-            self._cp_span_locs = np.array(cp_span_locs)
+            self.node_span_locs = np.array(node_span_locs)
+            self.cp_span_locs = np.array(cp_span_locs)
 
         elif distribution == "linear": # Linear spacing
-            self._node_span_locs = np.linspace(0.0, 1.0, self._N+1)
-            self._cp_span_locs = np.linspace(1/(2*self._N), 1.0-1/(2*self._N), self._N)
+            self.node_span_locs = np.linspace(0.0, 1.0, self.N+1)
+            self.cp_span_locs = np.linspace(1/(2*self.N), 1.0-1/(2*self.N), self.N)
 
         elif isinstance(distribution, list): # User-specified distribution
-            if len(distribution) != self._N*2+1:
-                raise IOError("User specified distribution must have length of 2*N+1. Got length {0}; needed length {1}.".format(len(distribution), self._N*2+1))
+            if len(distribution) != self.N*2+1:
+                raise IOError("User specified distribution must have length of 2*N+1. Got length {0}; needed length {1}.".format(len(distribution), self.N*2+1))
 
-            self._node_span_locs = np.array(distribution[0::2])
-            self._cp_span_locs = np.array(distribution[1::2])
+            self.node_span_locs = np.array(distribution[0::2])
+            self.cp_span_locs = np.array(distribution[1::2])
 
         else:
             raise IOError("Distribution type {0} not recognized for wing segment {1}.".format(distribution, self.name))
@@ -187,8 +187,8 @@ class WingSegment:
         # In order to follow the airfoil sign convention (i.e. positive vorticity creates positive lift) 
         # node and control point locations must always proceed from left to right.
         if self.side == "left":
-            self._node_span_locs = self._node_span_locs[::-1]
-            self._cp_span_locs = self._cp_span_locs[::-1]
+            self.node_span_locs = self.node_span_locs[::-1]
+            self.cp_span_locs = self.cp_span_locs[::-1]
 
 
     def _initialize_getters(self):
@@ -335,20 +335,20 @@ class WingSegment:
         # Sets up the control surface on this wing segment
 
         # These values are needed whether or not a control surface exists
-        self._delta_flap = np.zeros(self._N) # Positive deflection is down
+        self._delta_flap = np.zeros(self.N) # Positive deflection is down
         self._has_control_surface = False
         self._Cm_delta_flap = 0.0
 
         if control_dict is not None:
             self._has_control_surface = True
 
-            self._cp_flap_chord_frac = np.zeros(self._N)
+            self._cp_flap_chord_frac = np.zeros(self.N)
             self._control_mixing = {}
 
             # Determine which control points are affected by the control surface
             root_span = control_dict.get("root_span", 0.0)
             tip_span = control_dict.get("tip_span", 1.0)
-            self._cp_in_control_surface = (self._cp_span_locs >= root_span) & (self._cp_span_locs <= tip_span)
+            self._cp_in_control_surface = (self.cp_span_locs >= root_span) & (self.cp_span_locs <= tip_span)
 
             # Determine the flap chord fractions at each control point
             chord_data = import_value("chord_fraction", control_dict, self._unit_sys, 0.25)
@@ -357,7 +357,7 @@ class WingSegment:
             else: # Variable chord fraction
                 if chord_data[0,0] != root_span or chord_data[-1,0] != tip_span:
                     raise IOError("Endpoints of flap chord distribution must match specified root and tip span locations.")
-                self._cp_flap_chord_frac[self._cp_in_control_surface] = np.interp(self._cp_span_locs[self._cp_in_control_surface], chord_data[:,0], chord_data[:,1])
+                self._cp_flap_chord_frac[self._cp_in_control_surface] = np.interp(self.cp_span_locs[self._cp_in_control_surface], chord_data[:,0], chord_data[:,1])
 
             # Store mixing
             self._control_mixing = control_dict.get("control_mixing", {})
@@ -380,14 +380,14 @@ class WingSegment:
 
     def _setup_cp_data(self):
         # Creates and stores vectors of important data at each control point
-        self.u_a_cp = self._get_axial_vec(self._cp_span_locs)
-        self.u_n_cp = self._get_normal_vec(self._cp_span_locs)
-        self.u_s_cp = self._get_span_vec(self._cp_span_locs)
+        self.u_a_cp = self._get_axial_vec(self.cp_span_locs)
+        self.u_n_cp = self._get_normal_vec(self.cp_span_locs)
+        self.u_s_cp = self._get_span_vec(self.cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
-        self.twist_cp = self.get_twist(self._cp_span_locs)
-        self.dihedral_cp = self.get_dihedral(self._cp_span_locs)
-        self.sweep_cp = self.get_sweep(self._cp_span_locs)
-        self.dS = abs(self._node_span_locs[1:]-self._node_span_locs[:-1])*self.b*self.c_bar_cp
+        self.twist_cp = self.get_twist(self.cp_span_locs)
+        self.dihedral_cp = self.get_dihedral(self.cp_span_locs)
+        self.sweep_cp = self.get_sweep(self.cp_span_locs)
+        self.dS = abs(self.node_span_locs[1:]-self.node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
     def _initialize_ac_locus(self):
@@ -425,9 +425,9 @@ class WingSegment:
 
                 # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
                 if self.side == "left":
-                    locs = np.copy(self._node_span_locs)[::-1]
+                    locs = np.copy(self.node_span_locs)[::-1]
                 else:
-                    locs = np.copy(self._node_span_locs)
+                    locs = np.copy(self.node_span_locs)
                 z = locs*self.b
                 c = self.get_chord(locs)
                 center_inf = z/c
@@ -446,10 +446,10 @@ class WingSegment:
         self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
         # Store control points
-        self.control_points = self._get_section_ac_loc(self._cp_span_locs)
+        self.control_points = self._get_section_ac_loc(self.cp_span_locs)
 
         # Store nodes on AC
-        self.nodes = self._get_section_ac_loc(self._node_span_locs)
+        self.nodes = self._get_section_ac_loc(self.node_span_locs)
         self.nodes_prime = self.nodes
 
 
@@ -666,7 +666,7 @@ class WingSegment:
 
     def _get_cp_avg_chord_lengths(self):
         #Returns the average local chord length at each control point on the segment.
-        node_chords = self.get_chord(self._node_span_locs)
+        node_chords = self.get_chord(self.node_span_locs)
         return (node_chords[1:]+node_chords[:-1])/2
 
 
@@ -703,7 +703,7 @@ class WingSegment:
         """
 
         # Gather lift slopes
-        CLas = np.zeros((self._N,self._num_airfoils))
+        CLas = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
@@ -711,7 +711,7 @@ class WingSegment:
                 CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLas)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLas)
 
 
     def get_cp_aL0(self, Rey, Mach):
@@ -733,7 +733,7 @@ class WingSegment:
         """
 
         # Gather zero-lift angles of attack
-        aL0s = np.zeros((self._N,self._num_airfoils))
+        aL0s = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
@@ -741,7 +741,7 @@ class WingSegment:
                 aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, aL0s)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, aL0s)
 
 
     def get_cp_CLRe(self, alpha, Rey, Mach):
@@ -765,7 +765,7 @@ class WingSegment:
         """
 
         # Gather Reynolds slopes
-        CLRes = np.zeros((self._N,self._num_airfoils))
+        CLRes = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 CLRes[:,j] = self._airfoils[j].get_CLRe(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
@@ -773,7 +773,7 @@ class WingSegment:
                 CLRes[:,j] = self._airfoils[j].get_CLRe(alpha=alpha, Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLRes)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLRes)
 
     
     def get_cp_CLM(self, alpha, Rey, Mach):
@@ -797,7 +797,7 @@ class WingSegment:
         """
 
         # Get Mach slopes
-        CLMs = np.zeros((self._N,self._num_airfoils))
+        CLMs = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
@@ -805,7 +805,7 @@ class WingSegment:
                 CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLMs)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLMs)
 
 
     def get_cp_CL(self, alpha, Rey, Mach):
@@ -829,7 +829,7 @@ class WingSegment:
         """
 
         # Get CL
-        CLs = np.zeros((self._N,self._num_airfoils))
+        CLs = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
@@ -837,7 +837,7 @@ class WingSegment:
                 CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CLs)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLs)
 
 
     def get_cp_CD(self, alpha, Rey, Mach):
@@ -861,7 +861,7 @@ class WingSegment:
         """
 
         # Get CD
-        CDs = np.zeros((self._N,self._num_airfoils))
+        CDs = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
@@ -869,7 +869,7 @@ class WingSegment:
                 CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, CDs)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CDs)
 
 
     def get_cp_Cm(self, alpha, Rey, Mach):
@@ -893,7 +893,7 @@ class WingSegment:
         """
 
         # Get Cm
-        Cms = np.zeros((self._N,self._num_airfoils))
+        Cms = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
                 Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._Cm_delta_flap)
@@ -901,7 +901,7 @@ class WingSegment:
                 Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach)
 
         # Interpolate
-        return self._airfoil_interpolator(self._cp_span_locs, self._airfoil_spans, Cms)
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, Cms)
 
 
     def get_outline_points(self):
@@ -912,18 +912,18 @@ class WingSegment:
         ndarray
             Array of outline points.
         """
-        spans = np.linspace(0, 1, self._N)
+        spans = np.linspace(0, 1, self.N)
         qc_points = self._get_quarter_chord_loc(spans)
         chords = self.get_chord(spans)
         axial_vecs = self._get_axial_vec(spans)
 
-        points = np.zeros((self._N*2+1,3))
+        points = np.zeros((self.N*2+1,3))
 
         # Leading edge
-        points[:self._N,:] = qc_points - 0.25*(axial_vecs*chords[:,np.newaxis])
+        points[:self.N,:] = qc_points - 0.25*(axial_vecs*chords[:,np.newaxis])
 
         # Trailing edge
-        points[-2:self._N-1:-1,:] = qc_points + 0.75*(axial_vecs*chords[:,np.newaxis])
+        points[-2:self.N-1:-1,:] = qc_points + 0.75*(axial_vecs*chords[:,np.newaxis])
 
         # Complete the circle
         points[-1,:] = points[0,:]
@@ -1005,18 +1005,18 @@ class WingSegment:
             airfoil_outlines[airfoil.name] = airfoil.get_outline_points(section_res)
 
         # Discretize by node locations
-        num_facets = self._N*(section_res-1)*2
+        num_facets = self.N*(section_res-1)*2
         vectors = np.zeros((num_facets*3,3))
 
         # Generate vectors
-        for i in range(self._N):
+        for i in range(self.N):
 
             # Root-ward node
-            root_span = self._node_span_locs[i]
+            root_span = self.node_span_locs[i]
             root_outline = self._get_airfoil_outline_coords_at_span(root_span, section_res)
 
             # Tip-ward node
-            tip_span = self._node_span_locs[i+1]
+            tip_span = self.node_span_locs[i+1]
             tip_outline = self._get_airfoil_outline_coords_at_span(tip_span, section_res)
 
             # Create facets between the outlines
@@ -1110,7 +1110,7 @@ class WingSegment:
 
         # Create sections
         sections = []
-        for s_i in self._node_span_locs:
+        for s_i in self.node_span_locs:
             points = []
 
             # Get outline points
@@ -1166,12 +1166,12 @@ class WingSegment:
         section_res = kwargs.get("section_resolution", 200)
 
         # Initialize arrays
-        X = np.zeros((self._N+1, section_res))
-        Y = np.zeros((self._N+1, section_res))
-        Z = np.zeros((self._N+1, section_res))
+        X = np.zeros((self.N+1, section_res))
+        Y = np.zeros((self.N+1, section_res))
+        Z = np.zeros((self.N+1, section_res))
 
         # Fill arrays
-        for i, s_i in enumerate(self._node_span_locs):
+        for i, s_i in enumerate(self.node_span_locs):
 
             # Get outline points
             outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)

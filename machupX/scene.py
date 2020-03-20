@@ -336,7 +336,7 @@ class Scene:
             # Loop through segments
             for segment_name, segment_object in airplane_object.wing_segments.items():
                 self._segment_names[i].append(segment_name)
-                num_cps = segment_object._N
+                num_cps = segment_object.N
                 cur_slice = slice(index, index+num_cps)
 
                 # Geometries
@@ -411,7 +411,7 @@ class Scene:
             # Loop through segments
             for segment_name in self._segment_names[i]:
                 segment_object = airplane_object.wing_segments[segment_name]
-                num_cps = segment_object._N
+                num_cps = segment_object.N
                 cur_slice = slice(index, index+num_cps)
 
                 # Freestream velocity at control points
@@ -545,7 +545,7 @@ class Scene:
                 # Loop through segments
                 for segment_name in self._segment_names[i]:
                     segment_object = airplane_object.wing_segments[segment_name]
-                    num_cps = segment_object._N
+                    num_cps = segment_object.N
                     cur_slice = slice(index, index+num_cps)
 
                     # Get lift coefficient and lift slopes
@@ -674,7 +674,7 @@ class Scene:
 
             # Loop through segments
             for segment_name in self._segment_names[i]:
-                num_cps = airplane_object.wing_segments[segment_name]._N
+                num_cps = airplane_object.wing_segments[segment_name].N
                 cur_slice = slice(index, index+num_cps)
 
                 # Radii from control points to the aircraft's center of gravity
@@ -1040,7 +1040,7 @@ class Scene:
 
             # Loop through segments
             for segment_name, segment_object in airplane_object.wing_segments.items():
-                num_cps = segment_object._N
+                num_cps = segment_object.N
                 cur_slice = slice(index, index+num_cps)
 
                 # Get the outline points and transform to earth-fixed
@@ -1770,7 +1770,7 @@ class Scene:
             # Loop through segments
             for segment_name in self._segment_names[i]:
                 segment_object = airplane_object.wing_segments[segment_name]
-                num_cps = segment_object._N
+                num_cps = segment_object.N
                 cur_slice = slice(index, index+num_cps)
                 dist[airplane_name][segment_name] = {}
 
