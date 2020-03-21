@@ -67,6 +67,7 @@ class WingSegment:
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
             self._setup_cp_data()
+            self._setup_node_data()
 
             # Aerodynamic center offset
             self._initialize_ac_locus()
@@ -390,6 +391,11 @@ class WingSegment:
         self.dS = abs(self.node_span_locs[1:]-self.node_span_locs[:-1])*self.b*self.c_bar_cp
 
 
+    def _setup_node_data(self):
+        self.u_a_node = self._get_axial_vec(self.node_span_locs)
+        self.c_node = self.get_chord(self.node_span_locs)
+
+
     def _initialize_ac_locus(self):
         # Sets up the locus of aerodynamic centers for this wing segment.
         ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
@@ -450,7 +456,7 @@ class WingSegment:
 
         # Store nodes on AC
         self.nodes = self._get_section_ac_loc(self.node_span_locs)
-        self.nodes_prime = self.nodes
+        self.nodes_prime = self.nodes # TODO: Get rid of this
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):

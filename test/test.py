@@ -53,8 +53,8 @@ if __name__=="__main__":
                 "chord" : 1.0,
                 "airfoil" : "NACA_0010",
                 "sweep" : 45.0,
-                "dihedral" : [[0.0, 45.0],
-                              [1.0, 0.0]],
+                "dihedral" : [[0.0, 0.0],
+                              [1.0, 00.0]],
                 "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
@@ -69,107 +69,107 @@ if __name__=="__main__":
                     "blending_distance" : 0.25,
                     "wing_ID" : 9
                 }
-            },
-            "main_wing_outer" : {
-                "ID" : 4,
-                "side" : "both",
-                "is_main" : True,
-                "connect_to" : {
-                    "ID" : 1
-                },
-                "semispan" : 4.0,
-                "chord" : 1.0,
-                "airfoil" : "NACA_0010",
-                "sweep" : 15.0,
-                "dihedral" : [[0.0, 45.0],
-                              [1.0, 0.0]],
-                "ac_offset" : "kuchemann",
-                "control_surface" : {
-                    "chord_fraction" : 0.1,
-                    "control_mixing" : {
-                        "aileron" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25,
-                    "wing_ID" : 9
-                }
-            },
-            "h_stab" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -4.0
-                },
-                "semispan" : 2.0,
-                "airfoil" : "NACA_0010",
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "elevator" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
-                }
-            },
-            "v_stab" : {
-                "ID" : 3,
-                "side" : "right",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -4.0,
-                    "dz" : -0.1
-                },
-                "semispan" : 2.0,
-                "dihedral" : 90.0,
-                "airfoil" : "NACA_0010",
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "rudder" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
-                }
-            },
-            "v_stab_outer" : {
-                "ID" : 5,
-                "side" : "right",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 3
-                },
-                "semispan" : 2.0,
-                "dihedral" : 90.0,
-                "airfoil" : "NACA_0010",
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "rudder" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
-                }
+            #},
+            #"main_wing_outer" : {
+            #    "ID" : 4,
+            #    "side" : "both",
+            #    "is_main" : True,
+            #    "connect_to" : {
+            #        "ID" : 1
+            #    },
+            #    "semispan" : 4.0,
+            #    "chord" : 1.0,
+            #    "airfoil" : "NACA_0010",
+            #    "sweep" : 45.0,
+            #    "dihedral" : [[0.0, 0.0],
+            #                  [1.0, 0.0]],
+            #    "ac_offset" : "kuchemann",
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.1,
+            #        "control_mixing" : {
+            #            "aileron" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 10,
+            #        "reid_corrections" : True,
+            #        "joint_length" : 0.15,
+            #        "blending_distance" : 0.25,
+            #        "wing_ID" : 9
+            #    }
+            #},
+            #"h_stab" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -4.0
+            #    },
+            #    "semispan" : 2.0,
+            #    "airfoil" : "NACA_0010",
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "elevator" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 10,
+            #        "reid_corrections" : True,
+            #        "joint_length" : 0.15,
+            #        "blending_distance" : 0.25
+            #    }
+            #},
+            #"v_stab" : {
+            #    "ID" : 3,
+            #    "side" : "right",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -4.0,
+            #        "dz" : -0.1
+            #    },
+            #    "semispan" : 2.0,
+            #    "dihedral" : 90.0,
+            #    "airfoil" : "NACA_0010",
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "rudder" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 40,
+            #        "reid_corrections" : True,
+            #        "joint_length" : 0.15,
+            #        "blending_distance" : 0.25
+            #    }
+            #},
+            #"v_stab_outer" : {
+            #    "ID" : 5,
+            #    "side" : "right",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 3
+            #    },
+            #    "semispan" : 2.0,
+            #    "dihedral" : 90.0,
+            #    "airfoil" : "NACA_0010",
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "rudder" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 40,
+            #        "reid_corrections" : True,
+            #        "joint_length" : 0.15,
+            #        "blending_distance" : 0.25
+            #    }
             }
         }
     }
