@@ -158,6 +158,11 @@ class WingSegment:
 
             for i in range(num_sec):
 
+                # For segments with no assigned control points, raise a warning and skip
+                if sec_N[i] == 0:
+                    warnings.warn("""Not enough control points for {0} to distribute between {1} and {2} percent span. Properties of this section will not factor into results. If undesired, increase number of control points or alter clustering.""".format(self.name, int(discont[i]*100), int(discont[i+1]*100)))
+                    continue
+
                 node_theta_space = list(np.linspace(0.0, np.pi, sec_N[i]+1))
                 for theta in node_theta_space[1:]:
                     s = 0.5*(1-np.cos(theta)) # Span fraction

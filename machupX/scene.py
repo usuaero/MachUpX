@@ -1775,7 +1775,7 @@ class Scene:
                 dist[airplane_name][segment_name] = {}
 
                 # Control point locations
-                dist[airplane_name][segment_name]["span_frac"] = list(segment_object._cp_span_locs)
+                dist[airplane_name][segment_name]["span_frac"] = list(segment_object.cp_span_locs)
                 dist[airplane_name][segment_name]["cpx"] = list(self._PC[cur_slice,0])
                 dist[airplane_name][segment_name]["cpy"] = list(self._PC[cur_slice,1])
                 dist[airplane_name][segment_name]["cpz"] = list(self._PC[cur_slice,2])
