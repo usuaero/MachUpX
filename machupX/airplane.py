@@ -485,7 +485,19 @@ class Airplane:
                 u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                 u_j = u_j/np.linalg.norm(u_j)
                 c = self.P0_chord[wing_slice]
-                self.nodes_prime = self.nodes+c[:,np.newaxis]*self._delta_joint*u_j
+                self.P0_joint[i,wing_slice,:] = self.P0[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
+                # P1
+                T1 = np.gradient(self.P1[i,wing_slice,:], self.P1_span_locs[wing_slice], edge_order=2, axis=0)
+                T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
+                u_a = self.P1_u_a[wing_slice]
+                k = np.einsum('ij,ij->i', T1, u_a)
+                c1 = np.sqrt(1/(1-k*k))
+                c2 = -c1*k
+                u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
+                u_j = u_j/np.linalg.norm(u_j)
+                c = self.P1_chord[wing_slice]
+                self.P1_joint[i,wing_slice,:] = self.P1[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
             else:
 
@@ -493,13 +505,15 @@ class Airplane:
                 self.P0_joint = np.copy(self.P0)
                 self.P1_joint = np.copy(self.P1)
 
-        # Plot
-        fig = plt.figure(figsize=plt.figaspect(1.0))
-        ax = fig.gca(projection='3d')
-        for i in range(self._N):
-            ax.plot(self.P0[i,:,0], self.P0[i,:,1], self.P0[i,:,2], 'r-')
-            ax.plot(self.P1[i,:,0], self.P1[i,:,1], self.P1[i,:,2], 'b-')
-        plt.show()
+        ## Plot
+        #fig = plt.figure(figsize=plt.figaspect(1.0))
+        #ax = fig.gca(projection='3d')
+        #for i in range(self._N):
+        #    ax.plot(self.P0[i,:,0], self.P0[i,:,1], self.P0[i,:,2], 'r-')
+        #    ax.plot(self.P0_joint[i,:,0], self.P0_joint[i,:,1], self.P0_joint[i,:,2], color='orange')
+        #    ax.plot(self.P1[i,:,0], self.P1[i,:,1], self.P1[i,:,2], 'b-')
+        #    ax.plot(self.P1_joint[i,:,0], self.P1_joint[i,:,1], self.P1_joint[i,:,2], 'g-')
+        #plt.show()
 
 
     def _sort_segments_into_wings(self):
