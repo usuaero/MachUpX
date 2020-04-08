@@ -385,14 +385,14 @@ Describes an aircraft. Stored as a .json file
 >>>>Length of the wing segment in the y-direction (i.e. discounting sweep). If "side" is specified as "both", the total span of the segment is twice this value.
 >>>
 >>>**"twist" : float, array, or string, optional**
->>>>Gives the GEOMETRIC twist of the wing. If specified as a float, then this is simply the mounting angle of the wing segment and the segment will have no further twist. If specified as an array, the array gives the twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value:
+>>>>Gives the GEOMETRIC twist of the wing, meaning the angle of the chord line of each airfoil section relative to the body x-axis. If specified as a float, then all sections will make that angle with the horizontal and it will be as if the wing is untwisted but mounted at that angle. If specified as an array, the array gives the local twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value, as below:
 >>>>
 >>>>>**"twist" : [[0.0, 0.0], [0.5, 0.0], [0.5, 2.0], [1.0, 2.0]]**
 >>>>
 >>>>In the above example, the twist will be 0 degrees for the inner half of the wing and 2 degrees for the outer half of the wing. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
 >>>
 >>>**"dihedral" : float, array, or string, optional**
->>>>Gives the dihedral of the wing segment. Defined the same as "twist". Defaults to 0.
+>>>>Gives the dihedral of the wing segment. Defined the same as "twist". If defined as a distribution, this specifies the local dihedral angle at each point along the wing. Defaults to 0.
 >>>
 >>>**"sweep" : float, array, or string, optional**
 >>>>Gives the sweep angle of the wing segment. Sweeping the wing is a shear transformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from thex-z plane. Defined the same as "twist". Defaults to 0.
@@ -430,7 +430,7 @@ Describes an aircraft. Stored as a .json file
 >>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used is "distribution" is "cosine_cluster". Defaults to no extra clustering.
 >>>>
 >>>>**"reid_corrections" : bool, optional**
->>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip. Defaults to False.
+>>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). For those not familiar with the general implementation of numerical lifting-line, it is highly recommended to read the paper. These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip but may cause unexpected behavior for the uninformed user. Defaults to False.
 >>>>
 >>>>**"joint_length" : float, optional**
 >>>>>The non-dimensional joint lengths to be used in the Reid corrections. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive.

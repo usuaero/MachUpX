@@ -87,7 +87,7 @@ class WingSegment:
         extra_discont = grid_dict.get("cluster_points", [])
         self.reid_corr = grid_dict.get("reid_corrections", False)
         self.delta_joint = grid_dict.get("joint_length", 0.15)
-        self.sigma_blend = grid_dict.get("blending_distance", 0.25)
+        self.blend_dist = grid_dict.get("blending_distance", 0.25)
         self.wing_ID = grid_dict.get("wing_ID", None)
         if self.wing_ID is not None and self.wing_ID < 0:
             raise IOError("'wing_ID' for wing segment {0} cannot be negative. Got {1}.".format(self.name, self.wing_ID))
