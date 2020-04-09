@@ -3,14 +3,18 @@ from .airplane import Airplane
 from .standard_atmosphere import StandardAtmosphere
 
 import json
+import time
+import copy
+import warnings
+
 import numpy as np
 import math as m
 import scipy.interpolate as sinterp
+import scipy.optimize as sopt
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import time
-import copy
+
 from stl import mesh
+from mpl_toolkits.mplot3d import Axes3D
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
@@ -63,7 +67,7 @@ class Scene:
 
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
-        self._nonlinear_solver = solver_params.get("type", "linear") == "nonlinear"
+        self._solver_type = solver_params.get("type", "linear")
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
@@ -376,6 +380,40 @@ class Scene:
             self._V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
 
         self._solved = False
+
+
+    def _solve_w_scipy(self, **kwargs):
+        # Determines the votrex strengths using scipy.fsolve
+
+        verbose = kwargs.get("verbose", False)
+        if verbose: print("Running scipy solver...")
+        start_time = time.time()
+
+        # Initial guess
+        gamma_init = np.zeros(self._N)
+
+        # Get solution
+        self._Gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
+
+        # Check for no solution
+        if ier != 1:
+            print("Scipy.optimize.fsolve was unable to find a solution.")
+            print("Error message: {0}".format(mesg))
+            warnings.warn("Scipy solver failed. Reverting to nonlinear solution...")
+            return -1
+
+        # Output fsolve info
+        if verbose:
+            print("   Number of function calls: {0}".format(info["nfev"]))
+            print("   Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
+
+        end_time = time.time()
+        return end_time-start_time
+
+
+    def _lifting_line_residual(self, gamma):
+        self._Gamma = gamma
+        return np.ones(self._N)
 
 
     def _solve_linear(self, **kwargs):
@@ -906,22 +944,37 @@ class Scene:
             Dictionary of forces and moments acting on each wing segment.
         """
 
-        # Get timing information
-        linear_time = self._solve_linear(**kwargs)
-        nonlinear_time = 0.0
-        if self._nonlinear_solver:
-            nonlinear_time = self._solve_nonlinear(**kwargs)
+        # Solve for gamma distribution
+        fsolve_time = 0.0
+        if self._solver_type == "scipy_fsolve":
+            fsolve_time = self._solve_w_scipy(**kwargs)
+
+        if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
+
+            if fsolve_time == -1:
+                fsolve_time = 0.0
+
+            # Linear solution
+            linear_time = self._solve_linear(**kwargs)
+
+            # Nonlinear improvement
+            nonlinear_time = 0.0
+            if self._solver_type == "nonlinear":
+                nonlinear_time = self._solve_nonlinear(**kwargs)
+
+        # Integrate forces and moments
         integrate_time = self._integrate_forces_and_moments(**kwargs)
 
         # Output timing
         verbose = kwargs.get("verbose", False)
         if verbose:
-            print("Time to compute linear solution: {0} s".format(linear_time))
-            print("Time to compute nonlinear solution: {0} s".format(nonlinear_time))
+            print("Time to compute circulation distribution using scipy.fsolve: {0} s".format(fsolve_time))
+            print("Time to compute circulation distribution using linear equations: {0} s".format(linear_time))
+            print("Time to compute nonlinear improvement to circulation distribution: {0} s".format(nonlinear_time))
+            total_time = linear_time+nonlinear_time+integrate_time+fsolve_time
             print("Time to integrate forces: {0} s".format(integrate_time))
-            total_time = linear_time+nonlinear_time+integrate_time
             print("Total time: {0} s".format(total_time))
-            print("Solution rate: {0} Hz".format(1/(total_time)))
+            print("Solution rate: {0} Hz".format(1/total_time))
 
         # Output to file
         filename = kwargs.get("filename", None)
@@ -962,12 +1015,16 @@ class Scene:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
         # Determine wind velocity
-        aircraft_position = state.get("position", [0,0,0])
+        aircraft_position = state.get("position", np.array([0,0,0]))
         v_wind = self._get_wind(aircraft_position)
 
         # Set state and update precalcs for NLL
-        self._airplanes[aircraft_name].set_state(state, v_wind=v_wind)
-        self._perform_geometry_calculations()
+        old_position = self._airplanes[aircraft_name].p_bar
+        self._airplanes[aircraft_name].set_state(**state, v_wind=v_wind)
+
+        # If the position has changed, then we need to update the geometry
+        if not np.allclose(old_position, aircraft_position):
+            self._perform_geometry_calculations()
 
 
     def set_aircraft_control_state(self, control_state={}, aircraft_name=None):

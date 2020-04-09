@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "linear",
+            "type" : "scipy_fsolve",
             "convergence" : 1e-10,
             "relaxation" : 0.9
         },
@@ -68,36 +68,7 @@ if __name__=="__main__":
                     "N" : 10,
                     "reid_corrections" : True,
                     "joint_length" : 0.15,
-                    "blending_distance" : 0.25,
-                    "wing_ID" : 9
-                }
-            },
-            "main_wing_outer" : {
-                "ID" : 4,
-                "side" : "both",
-                "is_main" : True,
-                "connect_to" : {
-                    "ID" : 1
-                },
-                "semispan" : 4.0,
-                "chord" : 1.0,
-                "airfoil" : "NACA_0010",
-                "sweep" : 45.0,
-                "dihedral" : [[0.0, 0.0],
-                              [1.0, 0.0]],
-                "ac_offset" : "kuchemann",
-                "control_surface" : {
-                    "chord_fraction" : 0.1,
-                    "control_mixing" : {
-                        "aileron" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25,
-                    "wing_ID" : 9
+                    "blending_distance" : 0.25
                 }
             },
             "h_stab" : {
@@ -111,6 +82,9 @@ if __name__=="__main__":
                 },
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
+                "sweep" : 45.0,
+                "twist" : -3.95,
+                "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -137,29 +111,8 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "rudder" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
-                }
-            },
-            "v_stab_outer" : {
-                "ID" : 5,
-                "side" : "right",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 3
-                },
-                "semispan" : 2.0,
-                "dihedral" : 90.0,
-                "airfoil" : "NACA_0010",
+                "sweep" : 45.0,
+                "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -186,7 +139,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
 
-    scene.display_wireframe()
+    #scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

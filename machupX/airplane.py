@@ -349,9 +349,9 @@ class Airplane:
         # Initialize arrays
         # Geometry
         self.c_bar = np.zeros(self.N) # Average chord
-        self.dS = np.zeros(self.N) # Differential planform area
         self.P0_chord = np.zeros(self.N)
         self.P1_chord = np.zeros(self.N)
+        self.dS = np.zeros(self.N) # Differential planform area
 
         # Control points
         self.PC = np.zeros((self.N,3)) # Control point location
@@ -549,16 +549,21 @@ class Airplane:
             c = self.P1_chord[wing_slice]
             self.P1_joint[wing_slice,:] = self.P1[wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
+        # Calculate vectors from control points to vortex node locations
+        self.r_0 = self.PC[:,np.newaxis,:]-self.P0_eff[:,:,:]
+        self.r_1 = self.PC[:,np.newaxis,:]-self.P1_eff[:,:,:]
+        self.r_0_joint = self.PC[:,np.newaxis,:]-self.P0_joint_eff[:,:,:]
+        self.r_1_joint = self.PC[:,np.newaxis,:]-self.P1_joint_eff[:,:,:]
 
-        # Plot
-        fig = plt.figure(figsize=plt.figaspect(1.0))
-        ax = fig.gca(projection='3d')
-        for i in range(self.N):
-            ax.plot(self.P0_eff[i,:,0], self.P0_eff[i,:,1], self.P0_eff[i,:,2], 'r-')
-            ax.plot(self.P0_joint_eff[i,:,0], self.P0_joint_eff[i,:,1], self.P0_joint_eff[i,:,2], color='orange')
-            ax.plot(self.P1_eff[i,:,0], self.P1_eff[i,:,1], self.P1_eff[i,:,2], 'b-')
-            ax.plot(self.P1_joint_eff[i,:,0], self.P1_joint_eff[i,:,1], self.P1_joint_eff[i,:,2], 'g-')
-        plt.show()
+        ## Plot effective LACs
+        #fig = plt.figure(figsize=plt.figaspect(1.0))
+        #ax = fig.gca(projection='3d')
+        #for i in range(self.N):
+        #    ax.plot(self.P0_eff[i,:,0], self.P0_eff[i,:,1], self.P0_eff[i,:,2], 'r-')
+        #    ax.plot(self.P0_joint_eff[i,:,0], self.P0_joint_eff[i,:,1], self.P0_joint_eff[i,:,2], color='orange')
+        #    ax.plot(self.P1_eff[i,:,0], self.P1_eff[i,:,1], self.P1_eff[i,:,2], 'b-')
+        #    ax.plot(self.P1_joint_eff[i,:,0], self.P1_joint_eff[i,:,1], self.P1_joint_eff[i,:,2], 'g-')
+        #plt.show()
 
 
     def _sort_segments_into_wings(self):
