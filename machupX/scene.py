@@ -263,7 +263,7 @@ class Scene:
         self._airplanes[airplane_name] = Airplane(airplane_name, airplane_input, self._unit_sys, self, init_state=state, init_control_state=control_state, v_wind=v_wind)
 
         # Update member variables
-        self._N += self._airplanes[airplane_name].get_num_cps()
+        self._N += self._airplanes[airplane_name].N
         self._num_aircraft += 1
 
         # Update geometry
@@ -298,25 +298,47 @@ class Scene:
     def _initialize_storage_arrays(self):
 
         # Initialize arrays
+
+        # Section geometry
         self._c_bar = np.zeros(self._N) # Average chord
         self._dS = np.zeros(self._N) # Differential planform area
         self._PC = np.zeros((self._N,3)) # Control point location
-        self._P0 = np.zeros((self._N,3)) # Inbound vortex node location
-        self._P1 = np.zeros((self._N,3)) # Outbound vortex node location
-        self._P0_joint = np.zeros((self._N,3)) # Inbound vortex joint node location
-        self._P1_joint = np.zeros((self._N,3)) # Outbound vortex joint node location
-        self._u_a = np.zeros((self._N,3)) # Section unit vectors
+        self._dl = np.zeros((self._N,3)) # Differential LAC elements
+
+        # Node locations
+        self._P0 = np.zeros((self._N,self._N,3)) # Inbound vortex node location; takes into account effective LAC where appropriate
+        self._P0_joint = np.zeros((self._N,self._N,3)) # Inbound vortex joint node location
+        self._P1 = np.zeros((self._N,self._N,3)) # Outbound vortex node location
+        self._P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location
+
+        # Spatial node vectors
+        self._r_0 = np.zeros((self._N,self._N,3))
+        self._r_1 = np.zeros((self._N,self._N,3))
+        self._r_0_joint = np.zeros((self._N,self._N,3))
+        self._r_1_joint = np.zeros((self._N,self._N,3))
+
+        # Section unit vectors
+        self._u_a = np.zeros((self._N,3))
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
+
+        # Control point atmospheric properties
         self._rho = np.zeros(self._N) # Density
         self._nu = np.zeros(self._N) # Viscosity
         self._a = np.ones(self._N) # Speed of sound
+
+        # Airfoil parameters
         self._Re = np.zeros(self._N) # Reynolds number
         self._M = np.zeros(self._N) # Mach number
         self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
+
+        # Veolcities
         self._cp_v_inf = np.zeros((self._N,3)) # Control point freestream vector
         self._cp_V_inf = np.zeros(self._N) # Control point freestream magnitude
         self._v_trans = np.zeros((self._num_aircraft,3))
+
+        # Section coefficients
+        self._CL = np.zeros(self._N) # Lift coefficient
         self._CD = np.zeros(self._N) # Drag coefficient
         self._Cm = np.zeros(self._N) # Moment coefficient
 
@@ -333,48 +355,68 @@ class Scene:
 
         # Loop through airplanes
         for i, (airplane_name, airplane_object) in enumerate(self._airplanes.items()):
+
             # Store airplane and segment names to make sure they are always accessed in the same order
             self._airplane_names.append(airplane_name)
             self._segment_names.append([])
+            q = airplane_object.q
+            p = airplane_object.p_bar
 
-            # Loop through segments
-            for segment_name, segment_object in airplane_object.wing_segments.items():
-                self._segment_names[i].append(segment_name)
-                num_cps = segment_object.N
-                cur_slice = slice(index, index+num_cps)
+            # Section of the arrays belonging to this airplane
+            airplane_N = airplane_object.N
+            airplane_slice = slice(index, index+airplane_N)
 
-                # Geometries
-                self._PC[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, segment_object.control_points)
-                self._c_bar[cur_slice] = segment_object.c_bar_cp
-                self._dS[cur_slice] = segment_object.dS
+            # Get geometries
+            self._PC[airplane_slice,:] = p+quaternion_inverse_transform(q, airplane_object.PC)
+            self._c_bar[airplane_slice] = airplane_object.c_bar
+            self._dS[airplane_slice] = airplane_object.dS
+            self._dl[airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.dl)
 
-                node_points = segment_object.nodes
-                joint_points = segment_object.nodes_prime
-                self._P0[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, node_points[:-1,:])
-                self._P1[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, node_points[1:,:])
-                self._P0_joint[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, joint_points[:-1,:])
-                self._P1_joint[cur_slice,:] = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, joint_points[1:,:])
+            # Get axial vectors
+            self._u_a[airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.u_a)
+            self._u_n[airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.u_n)
+            self._u_s[airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.u_s)
 
-                self._u_a[cur_slice,:] = quaternion_inverse_transform(airplane_object.q, segment_object.u_a_cp)
-                self._u_n[cur_slice,:] = quaternion_inverse_transform(airplane_object.q, segment_object.u_n_cp)
-                self._u_s[cur_slice,:] = quaternion_inverse_transform(airplane_object.q, segment_object.u_s_cp)
+            # Node locations
+            # Note the first index indicates which control point this is the effective LAC for
+            self._P0[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.P0_eff)
+            self._P1[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.P0_eff)
+            self._P0_joint[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.P0_joint_eff)
+            self._P1_joint[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.P1_joint_eff)
 
-                index += num_cps
+            # Get node locations for other aircraft from this aircraft
+            # This does not need to take the effective LAC into account
+            this_ind = range(index, index+airplane_N)
+            other_ind = [i for i in range(self._N) if i not in this_ind] # control point indices for other airplanes
+            self._P0[other_ind,airplane_slice,:] = p+quaternion_inverse_transform(q, airplane_object.P0)
+            self._P1[other_ind,airplane_slice,:] = p+quaternion_inverse_transform(q, airplane_object.P1)
+            self._P0_joint[other_ind,airplane_slice,:] = p+quaternion_inverse_transform(q, airplane_object.P0_joint)
+            self._P1_joint[other_ind,airplane_slice,:] = p+quaternion_inverse_transform(q, airplane_object.P1_joint)
 
-        # Differential length vectors
-        self._dl = self._P1 - self._P0
+            # Spatial node vectors
+            self._r_0[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.r_0)
+            self._r_1[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.r_1)
+            self._r_0_joint[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.r_0_joint)
+            self._r_1_joint[airplane_slice,airplane_slice,:] = quaternion_inverse_transform(q, airplane_object.r_1_joint)
 
-        # Spatial node vectors
-        self._rj0i = self._PC-self._P0[:,np.newaxis]
-        self._rj1i = self._PC-self._P1[:,np.newaxis]
-        self._rj0i_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._rj0i, self._rj0i))
-        self._rj1i_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._rj1i, self._rj1i))
-        self._rj0i_rj1i_mag = self._rj0i_mag*self._rj1i_mag
+            # Update position in the arrays
+            index += airplane_N
+
+        # Fill in spatial node vectors between airplanes
+        self._r_0 = np.where(self._r_0==0, self._PC[:,np.newaxis,:]-self._P0, self._r_0)
+        self._r_1 = np.where(self._r_1==0, self._PC[:,np.newaxis,:]-self._P1, self._r_1)
+        self._r_0_joint = np.where(self._r_0_joint==0, self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
+        self._r_1_joint = np.where(self._r_1_joint==0, self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
+
+        # Calculate spatial node vector magnitudes
+        self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
+        self._r_1_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1, self._r_1))
+        self._r_0_r_1_mag = self._r_0_mag*self._r_1_mag
 
         # Influence of bound vortex segment
         with np.errstate(divide='ignore', invalid='ignore'):
-            numer = ((self._rj0i_mag+self._rj1i_mag)[:,:,np.newaxis]*np.cross(self._rj0i, self._rj1i))
-            denom = self._rj0i_rj1i_mag*(self._rj0i_rj1i_mag+np.einsum('ijk,ijk->ij', self._rj0i, self._rj1i))
+            numer = ((self._r_0_mag+self._r_1_mag)[:,:,np.newaxis]*np.cross(self._r_0, self._r_1))
+            denom = self._r_0_r_1_mag*(self._r_0_r_1_mag+np.einsum('ijk,ijk->ij', self._r_0, self._r_1))
             self._V_ji_due_to_bound = np.true_divide(numer, denom[:,:,np.newaxis])
             diag_ind = np.diag_indices(self._N)
             self._V_ji_due_to_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
@@ -502,12 +544,12 @@ class Scene:
         self._P1_u_inf = P1_v_inf/P1_V_inf[:,np.newaxis]
 
         # Influence of vortex segment 0; ignore if the radius goes to zero
-        denom = (self._rj0i_mag*(self._rj0i_mag-np.einsum('ijk,ijk->ij', self._P0_u_inf[np.newaxis], self._rj0i)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_u_inf, self._rj0i)/denom[:,:,np.newaxis], nan=0.0)
+        denom = (self._r_0_mag*(self._r_0_mag-np.einsum('ijk,ijk->ij', self._P0_u_inf[np.newaxis], self._r_0)))
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_u_inf, self._r_0)/denom[:,:,np.newaxis], nan=0.0)
 
         # Influence of vortex segment 1
-        denom = (self._rj1i_mag*(self._rj1i_mag-np.einsum('ijk,ijk->ij', self._P1_u_inf[np.newaxis], self._rj1i)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_u_inf, self._rj1i)/denom[:,:,np.newaxis], nan=0.0)
+        denom = (self._r_1_mag*(self._r_1_mag-np.einsum('ijk,ijk->ij', self._P1_u_inf[np.newaxis], self._r_1)))
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_u_inf, self._r_1)/denom[:,:,np.newaxis], nan=0.0)
 
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + self._V_ji_due_to_bound + V_ji_due_to_1)
         self._V_ji_trans = self._V_ji.transpose((1,0,2))
