@@ -1033,15 +1033,11 @@ class Scene:
             self._perform_geometry_calculations()
             self._solve_linear()
 
-        index = 0
-
         # Loop through airplanes
         for airplane_name, airplane_object in self._airplanes.items():
 
             # Loop through segments
             for segment_name, segment_object in airplane_object.wing_segments.items():
-                num_cps = segment_object.N
-                cur_slice = slice(index, index+num_cps)
 
                 # Get the outline points and transform to earth-fixed
                 points = airplane_object.p_bar+quaternion_inverse_transform(airplane_object.q, segment_object.get_outline_points())
@@ -1063,19 +1059,25 @@ class Scene:
                     y_lims = [min(y_lims[0], min(points[:,1].flatten())), max(y_lims[1], max(points[:,1].flatten()))]
                     z_lims = [min(z_lims[0], min(points[:,2].flatten())), max(z_lims[1], max(points[:,2].flatten()))]
 
-                index += num_cps
-
             # Add vortices
             if show_vortices:
+
+                # Loop through wings
                 for wing_slice in airplane_object.wing_slices:
-                    N = airplane_object.N
-                    vortex_points = np.zeros((N*6,3))
-                    vortex_points[::6,:] = airplane_object.P0_joint[wing_slice]+self._P0_u_inf[wing_slice]*2*airplane_object.l_ref_lon
-                    vortex_points[1:N*6+1:6,:] = airplane_object.P0_joint[wing_slice]
-                    vortex_points[2:N*6+2:6,:] = airplane_object.P0[wing_slice]
-                    vortex_points[3:N*6+3:6,:] = airplane_object.P1[wing_slice]
-                    vortex_points[4:N*6+4:6,:] = airplane_object.P1_joint[wing_slice]
-                    vortex_points[5:N*6+5:6,:] = airplane_object.P1_joint[wing_slice]+self._P1_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+
+                    # Declare storage
+                    wing_N = wing_slice.stop-wing_slice.start
+                    vortex_points = np.zeros((wing_N*6,3))
+                    
+                    # Gather and arrange node locations
+                    vortex_points[0:wing_N*6+0:6,:] = airplane_object.P0_joint[wing_slice]+self._P0_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[1:wing_N*6+1:6,:] = airplane_object.P0_joint[wing_slice]
+                    vortex_points[2:wing_N*6+2:6,:] = airplane_object.P0[wing_slice]
+                    vortex_points[3:wing_N*6+3:6,:] = airplane_object.P1[wing_slice]
+                    vortex_points[4:wing_N*6+4:6,:] = airplane_object.P1_joint[wing_slice]
+                    vortex_points[5:wing_N*6+5:6,:] = airplane_object.P1_joint[wing_slice]+self._P1_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+
+                    # Add to plot
                     ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
 
         # Add legend
