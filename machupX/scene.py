@@ -1052,17 +1052,6 @@ class Scene:
                 else:
                     ax.plot(points[:,0], points[:,1], points[:,2], 'k-')
 
-                # Add vortices
-                if show_vortices:
-                    vortex_points = np.zeros((num_cps*6,3))
-                    vortex_points[::6,:] = self._P0_joint[cur_slice]+self._P0_u_inf[cur_slice]*2*airplane_object.l_ref_lon
-                    vortex_points[1:num_cps*6+1:6,:] = self._P0_joint[cur_slice]
-                    vortex_points[2:num_cps*6+2:6,:] = self._P0[cur_slice]
-                    vortex_points[3:num_cps*6+3:6,:] = self._P1[cur_slice]
-                    vortex_points[4:num_cps*6+4:6,:] = self._P1_joint[cur_slice]
-                    vortex_points[5:num_cps*6+5:6,:] = self._P1_joint[cur_slice]+self._P1_u_inf[cur_slice]*2*airplane_object.l_ref_lon
-                    ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
-
                 # Figure out if the segment just added increases any needed axis limits
                 if first_segment:
                     x_lims = [min(points[:,0].flatten()), max(points[:,0].flatten())]
@@ -1075,6 +1064,19 @@ class Scene:
                     z_lims = [min(z_lims[0], min(points[:,2].flatten())), max(z_lims[1], max(points[:,2].flatten()))]
 
                 index += num_cps
+
+            # Add vortices
+            if show_vortices:
+                for wing_slice in airplane_object.wing_slices:
+                    N = airplane_object.N
+                    vortex_points = np.zeros((N*6,3))
+                    vortex_points[::6,:] = airplane_object.P0_joint[wing_slice]+self._P0_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[1:N*6+1:6,:] = airplane_object.P0_joint[wing_slice]
+                    vortex_points[2:N*6+2:6,:] = airplane_object.P0[wing_slice]
+                    vortex_points[3:N*6+3:6,:] = airplane_object.P1[wing_slice]
+                    vortex_points[4:N*6+4:6,:] = airplane_object.P1_joint[wing_slice]
+                    vortex_points[5:N*6+5:6,:] = airplane_object.P1_joint[wing_slice]+self._P1_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
 
         # Add legend
         if show_legend:

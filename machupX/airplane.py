@@ -61,7 +61,7 @@ class Airplane:
         
         self.wing_segments = {}
         self._airfoil_database = {}
-        self._N = 0
+        self.N = 0
 
         self._load_params(airplane_input)
         self.set_state(**init_state, v_wind=v_wind)
@@ -324,11 +324,11 @@ class Airplane:
 
         if side == "left" or side == "both":
             self.wing_segments[wing_segment_name+"_left"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_left", input_dict, "left", self._unit_sys, self._airfoil_database)
-            self._N += self.wing_segments[wing_segment_name+"_left"].N
+            self.N += self.wing_segments[wing_segment_name+"_left"].N
 
         if side == "right" or side == "both":
             self.wing_segments[wing_segment_name+"_right"] = self._origin_segment.attach_wing_segment(wing_segment_name+"_right", input_dict, "right", self._unit_sys, self._airfoil_database)
-            self._N += self.wing_segments[wing_segment_name+"_right"].N
+            self.N += self.wing_segments[wing_segment_name+"_right"].N
 
         if recalculate_geometry:
             self._calculate_geometry()
@@ -347,33 +347,48 @@ class Airplane:
         # Figures out which wing segments are contiguous and sets up the lists of control points and vortex nodes
 
         # Initialize arrays
-        self.c_bar = np.zeros(self._N) # Average chord
-        self.dS = np.zeros(self._N) # Differential planform area
-        self.PC = np.zeros((self._N,3)) # Control point location
-        self.PC_span_locs = np.zeros(self._N) # Control point span locations
-        self.P0 = np.zeros((self._N,self._N,3)) # Inbound vortex node location (effective locus of aerodynamic centers)
-        self.P0_span_locs = np.zeros(self._N)
-        self.P0_chord = np.zeros(self._N)
-        self.P0_u_a = np.zeros((self._N,3))
-        self.P0_joint = np.zeros((self._N,self._N,3)) # Inbound vortex joint node location (effective locus of aerodynamic centers)
-        self.P1 = np.zeros((self._N,self._N,3)) # Outbound vortex node location (effective locus of aerodynamic centers)
-        self.P1_span_locs = np.zeros(self._N)
-        self.P1_chord = np.zeros(self._N)
-        self.P1_u_a = np.zeros((self._N,3))
-        self.P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location (effective locus of aerodynamic centers)
-        self.u_a = np.zeros((self._N,3)) # Section unit vectors
-        self.u_n = np.zeros((self._N,3))
-        self.u_s = np.zeros((self._N,3))
-        reid_corr = np.zeros(self._N) # Whether to use Reid corrections
-        sigma_blend = np.zeros(self._N) # Blending distance
-        delta_joint = np.zeros(self._N) # Joint length
+        # Geometry
+        self.c_bar = np.zeros(self.N) # Average chord
+        self.dS = np.zeros(self.N) # Differential planform area
+        self.P0_chord = np.zeros(self.N)
+        self.P1_chord = np.zeros(self.N)
+
+        # Control points
+        self.PC = np.zeros((self.N,3)) # Control point location
+        self.PC_span_locs = np.zeros(self.N) # Control point span locations
+
+        # Inbound nodes
+        self.P0 = np.zeros((self.N,3)) # Inbound vortex node location
+        self.P0_eff = np.zeros((self.N,self.N,3)) # Inbound vortex node location (effective locus of aerodynamic centers)
+        self.P0_span_locs = np.zeros(self.N)
+        self.P0_joint = np.zeros((self.N,3)) # Inbound vortex joint node location
+        self.P0_joint_eff = np.zeros((self.N,self.N,3)) # Inbound vortex joint node location (effective locus of aerodynamic centers)
+
+        # Outbound nodes
+        self.P1 = np.zeros((self.N,3)) # Outbound vortex node location
+        self.P1_eff = np.zeros((self.N,self.N,3)) # Outbound vortex node location (effective locus of aerodynamic centers)
+        self.P1_span_locs = np.zeros(self.N)
+        self.P1_joint = np.zeros((self.N,3)) # Outbound vortex joint node location
+        self.P1_joint_eff = np.zeros((self.N,self.N,3)) # Outbound vortex joint node location (effective locus of aerodynamic centers)
+
+        # Section unit vectors
+        self.u_a = np.zeros((self.N,3))
+        self.u_n = np.zeros((self.N,3))
+        self.u_s = np.zeros((self.N,3))
+        self.P0_u_a = np.zeros((self.N,3))
+        self.P1_u_a = np.zeros((self.N,3))
+
+        # Reid correction parameters
+        reid_corr = np.zeros(self.N) # Whether to use Reid corrections
+        sigma_blend = np.zeros(self.N) # Blending distance
+        delta_joint = np.zeros(self.N) # Joint length
 
         # Group wing segments into wings
         self._sort_segments_into_wings()
 
         # Gather segment data
         self._wing_N = []
-        self._wing_slices = []
+        self.wing_slices = []
         cur_index = 0
         for i in range(self._num_wings):
 
@@ -382,7 +397,7 @@ class Airplane:
             cur_span_from_left_tip = 0.0
 
             # Loop through segments
-            for j,segment in enumerate(self._segments_in_wings[i]):
+            for segment in self._segments_in_wings[i]:
 
                 # Determine slice for this segment
                 N = segment.N
@@ -416,8 +431,10 @@ class Airplane:
                 self.P1_span_locs[cur_slice] = node_spans[1:]
 
                 # Store original node locations, to be updated point by point
-                self.P0[:,cur_slice,:] = segment.nodes[:-1]
-                self.P1[:,cur_slice,:] = segment.nodes[1:]
+                self.P0[cur_slice,:] = segment.nodes[:-1]
+                self.P1[cur_slice,:] = segment.nodes[1:]
+                self.P0_eff[:,cur_slice,:] = segment.nodes[:-1]
+                self.P1_eff[:,cur_slice,:] = segment.nodes[1:]
 
                 # Section direction vectors
                 self.u_a[cur_slice,:] = segment.u_a_cp
@@ -431,25 +448,25 @@ class Airplane:
                 cur_span_from_left_tip += segment.b
 
             # Determine slice for this wing
-            self._wing_slices.append(slice(cur_index-self._wing_N[i], cur_index))
+            self.wing_slices.append(slice(cur_index-self._wing_N[i], cur_index))
 
         # Calculate effective loci of aerodynamic centers
         cur_wing = 0
-        gradient = np.gradient(self.PC[self._wing_slices[cur_wing]], self.PC_span_locs[self._wing_slices[cur_wing]], edge_order=2, axis=0)
-        for i in range(self._N):
+        gradient = np.gradient(self.PC[self.wing_slices[cur_wing]], self.PC_span_locs[self.wing_slices[cur_wing]], edge_order=2, axis=0)
+        for i in range(self.N):
 
             # Check if we've moved beyond the correct wing
-            if i >= self._wing_slices[cur_wing].stop:
+            if i >= self.wing_slices[cur_wing].stop:
                 cur_wing += 1
 
                 # Update gradient
-                gradient = np.gradient(self.PC[self._wing_slices[cur_wing]], self.PC_span_locs[self._wing_slices[cur_wing]], edge_order=2, axis=0)
+                gradient = np.gradient(self.PC[self.wing_slices[cur_wing]], self.PC_span_locs[self.wing_slices[cur_wing]], edge_order=2, axis=0)
 
             # General NLL corrections; if this is skipped, the node locations remain unchanged
             if reid_corr[i]:
 
                 # Get control point of interest
-                wing_slice = self._wing_slices[cur_wing]
+                wing_slice = self.wing_slices[cur_wing]
                 wing_index = i-wing_slice.start # Index of control point within this wing
                 PC = self.PC[i,:]
                 PC_span = self.PC_span_locs[i]
@@ -459,13 +476,13 @@ class Airplane:
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[np.newaxis,:]*ds0[:,np.newaxis]
                 blend = np.exp(-sigma_blend[i]*ds0*ds0)
-                self.P0[i,wing_slice,:] = self.P0[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
+                self.P0_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
 
                 # Blend P1
                 ds1 = self.P1_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[np.newaxis,:]*ds1[:,np.newaxis]
                 blend = np.exp(-sigma_blend[i]*ds1*ds1)
-                self.P1[i,wing_slice,:] = self.P1[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
+                self.P1_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
 
                 # Place vortex joints
                 # These equations ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
@@ -476,7 +493,7 @@ class Airplane:
                 #   u_j = c1*u_a+c2*T
 
                 # P0
-                T0 = np.gradient(self.P0[i,wing_slice,:], self.P0_span_locs[wing_slice], edge_order=2, axis=0)
+                T0 = np.gradient(self.P0_eff[i,wing_slice,:], self.P0_span_locs[wing_slice], edge_order=2, axis=0)
                 T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
                 u_a = self.P0_u_a[wing_slice]
                 k = np.einsum('ij,ij->i', T0, u_a)
@@ -485,10 +502,10 @@ class Airplane:
                 u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                 u_j = u_j/np.linalg.norm(u_j)
                 c = self.P0_chord[wing_slice]
-                self.P0_joint[i,wing_slice,:] = self.P0[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
                 # P1
-                T1 = np.gradient(self.P1[i,wing_slice,:], self.P1_span_locs[wing_slice], edge_order=2, axis=0)
+                T1 = np.gradient(self.P1_eff[i,wing_slice,:], self.P1_span_locs[wing_slice], edge_order=2, axis=0)
                 T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
                 u_a = self.P1_u_a[wing_slice]
                 k = np.einsum('ij,ij->i', T1, u_a)
@@ -497,23 +514,51 @@ class Airplane:
                 u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
                 u_j = u_j/np.linalg.norm(u_j)
                 c = self.P1_chord[wing_slice]
-                self.P1_joint[i,wing_slice,:] = self.P1[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
             else:
 
                 # Copy node locations into joint locations (i.e. no jointing)
-                self.P0_joint = np.copy(self.P0)
-                self.P1_joint = np.copy(self.P1)
+                self.P0_joint_eff = np.copy(self.P0_eff)
+                self.P1_joint_eff = np.copy(self.P1_eff)
 
-        ## Plot
-        #fig = plt.figure(figsize=plt.figaspect(1.0))
-        #ax = fig.gca(projection='3d')
-        #for i in range(self._N):
-        #    ax.plot(self.P0[i,:,0], self.P0[i,:,1], self.P0[i,:,2], 'r-')
-        #    ax.plot(self.P0_joint[i,:,0], self.P0_joint[i,:,1], self.P0_joint[i,:,2], color='orange')
-        #    ax.plot(self.P1[i,:,0], self.P1[i,:,1], self.P1[i,:,2], 'b-')
-        #    ax.plot(self.P1_joint[i,:,0], self.P1_joint[i,:,1], self.P1_joint[i,:,2], 'g-')
-        #plt.show()
+        # Calculate joint locations for actual LAC
+        for wing_slice in self.wing_slices:
+
+            # P0
+            T0 = np.gradient(self.P0[wing_slice,:], self.P0_span_locs[wing_slice], edge_order=2, axis=0)
+            T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
+            u_a = self.P0_u_a[wing_slice]
+            k = np.einsum('ij,ij->i', T0, u_a)
+            c1 = np.sqrt(1/(1-k*k))
+            c2 = -c1*k
+            u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
+            u_j = u_j/np.linalg.norm(u_j)
+            c = self.P0_chord[wing_slice]
+            self.P0_joint[wing_slice,:] = self.P0[wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
+            # P1
+            T1 = np.gradient(self.P1[wing_slice,:], self.P1_span_locs[wing_slice], edge_order=2, axis=0)
+            T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
+            u_a = self.P1_u_a[wing_slice]
+            k = np.einsum('ij,ij->i', T1, u_a)
+            c1 = np.sqrt(1/(1-k*k))
+            c2 = -c1*k
+            u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
+            u_j = u_j/np.linalg.norm(u_j)
+            c = self.P1_chord[wing_slice]
+            self.P1_joint[wing_slice,:] = self.P1[wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
+
+        # Plot
+        fig = plt.figure(figsize=plt.figaspect(1.0))
+        ax = fig.gca(projection='3d')
+        for i in range(self.N):
+            ax.plot(self.P0_eff[i,:,0], self.P0_eff[i,:,1], self.P0_eff[i,:,2], 'r-')
+            ax.plot(self.P0_joint_eff[i,:,0], self.P0_joint_eff[i,:,1], self.P0_joint_eff[i,:,2], color='orange')
+            ax.plot(self.P1_eff[i,:,0], self.P1_eff[i,:,1], self.P1_eff[i,:,2], 'b-')
+            ax.plot(self.P1_joint_eff[i,:,0], self.P1_joint_eff[i,:,1], self.P1_joint_eff[i,:,2], 'g-')
+        plt.show()
 
 
     def _sort_segments_into_wings(self):
@@ -715,7 +760,7 @@ class Airplane:
         int
             Number of control points on the aircraft.
         """
-        return self._N
+        return self.N
 
 
     def set_control_state(self, control_state={}):

@@ -54,18 +54,18 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "sweep" : 45.0,
                 "dihedral" : [[0.0, 0.0],
-                              [1.0, 00.0]],
+                              [1.0, 0.0]],
                 "ac_offset" : "kuchemann",
-                "control_surface" : {
-                    "chord_fraction" : 0.1,
-                    "root_span" : 0.1,
-                    "tip_span" : 0.9,
-                    "control_mixing" : {
-                        "aileron" : 1.0
-                    }
-                },
+                #"control_surface" : {
+                #    "chord_fraction" : 0.1,
+                #    "root_span" : 0.1,
+                #    "tip_span" : 0.9,
+                #    "control_mixing" : {
+                #        "aileron" : 1.0
+                #    }
+                #},
                 "grid" : {
-                    "N" : 5,
+                    "N" : 7,
                     "reid_corrections" : True,
                     "joint_length" : 0.15,
                     "blending_distance" : 0.25,
@@ -186,8 +186,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
 
-    #scene.display_wireframe()
-    #scene.distributions(make_plots=['cpx'], show_plots=True)
+    scene.display_wireframe()
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
