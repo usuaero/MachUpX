@@ -1,4 +1,4 @@
-from .helpers import import_value, quaternion_to_euler, euler_to_quaternion, check_filepath, quaternion_transform, quaternion_inverse_transform
+from .helpers import import_value,  euler_to_quat, check_filepath, quat_trans, quat_inv_trans
 from .wing_segment import WingSegment
 from airfoil_db import Airfoil
 
@@ -135,7 +135,7 @@ class Airplane:
         self.q = import_value("orientation", kwargs, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
 
         if self.q.shape[0] == 3: # Euler angles
-            self.q = euler_to_quaternion(np.radians(self.q))
+            self.q = euler_to_quat(np.radians(self.q))
 
         elif self.q.shape[0] == 4: # Quaternion
             # Check magnitude
@@ -194,7 +194,7 @@ class Airplane:
             Magnitude of the freestream velocity
         """
         # Determine velocity relative to the wind in the body-fixed frame
-        v = quaternion_transform(self.q, self.v-v_wind)
+        v = quat_trans(self.q, self.v-v_wind)
 
         # Calculate values
         alpha = m.degrees(m.atan2(v[2], v[0]))
@@ -248,7 +248,7 @@ class Airplane:
         v_inf_b[2] = velocity*S_a*C_B*denom
 
         # Transform to earth-fixed coordinates
-        self.v = v_wind+quaternion_inverse_transform(self.q, v_inf_b)
+        self.v = v_wind+quat_inv_trans(self.q, v_inf_b)
 
 
     def _initialize_controls(self, init_control_state):

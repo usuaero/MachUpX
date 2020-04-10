@@ -132,14 +132,15 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : [100, "mph"],
-        "alpha" : 2.0
+        "alpha" : 2.0,
+        "orientation" : [30, 30, 30]
     }
 
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
 
-    #scene.display_wireframe()
+    scene.display_wireframe(show_vortices=False)
 
     print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

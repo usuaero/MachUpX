@@ -1,4 +1,4 @@
-from .helpers import check_filepath, import_value, euler_to_quaternion, quaternion_inverse_transform
+from .helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans
 from .dxf import dxf_spline
 
 import json
@@ -1071,12 +1071,12 @@ class WingSegment:
 
         # Transform to body-fixed coordinates
         if self.side == "left":
-            q = euler_to_quaternion(np.array([dihedral, twist, 0.0]))
+            q = euler_to_quat(np.array([dihedral, twist, 0.0]))
         else:
-            q = euler_to_quaternion(np.array([-dihedral, twist, 0.0]))
+            q = euler_to_quat(np.array([-dihedral, twist, 0.0]))
 
         untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
-        coords = self._get_quarter_chord_loc(span)[np.newaxis]+quaternion_inverse_transform(q, untransformed_coords)
+        coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)
 
         # Seal trailing edge
         te = (coords[0]+coords[-1])*0.5

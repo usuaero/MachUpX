@@ -139,61 +139,43 @@ def import_value(key, dict_of_vals, system, default_value):
 vectorized_convert_units = np.vectorize(convert_units)
 
 
-def quaternion_transform(q, v):
+def quat_trans(q, v):
     # Transforms the vector v from the global frame to a frame having an orientation described by q.
-    if len(v.shape) == 1:
-        v = v[np.newaxis]
-        T = np.zeros((1,4))
-        v_trans = np.zeros((1,3))
-        single = True
-    else:
-        T = np.zeros((v.shape[0],4))
-        v_trans = np.zeros((v.shape[0],3))
-        single = False
+    v_T = np.transpose(v)
+    T = np.zeros((4,*v_T.shape[1:]))
+    v_trans = np.zeros_like(v_T)
 
-    T[:,0] = -v[:,0]*q[1] - v[:,1]*q[2] - v[:,2]*q[3]
-    T[:,1] = v[:,0]*q[0] + v[:,1]*q[3] - v[:,2]*q[2]
-    T[:,2] = -v[:,0]*q[3] + v[:,1]*q[0] + v[:,2]*q[1]
-    T[:,3] = v[:,0]*q[2] - v[:,1]*q[1] + v[:,2]*q[0]
+    T[0] = -v[0]*q[1] - v[1]*q[2] - v[2]*q[3]
+    T[1] =  v[0]*q[0] + v[1]*q[3] - v[2]*q[2]
+    T[2] = -v[0]*q[3] + v[1]*q[0] + v[2]*q[1]
+    T[3] =  v[0]*q[2] - v[1]*q[1] + v[2]*q[0]
 
-    v_trans[:,0] = q[0]*T[:,1] - q[1]*T[:,0] - q[2]*T[:,3] + q[3]*T[:,2]
-    v_trans[:,1] = q[0]*T[:,2] + q[1]*T[:,3] - q[2]*T[:,0] - q[3]*T[:,1]
-    v_trans[:,2] = q[0]*T[:,3] - q[1]*T[:,2] + q[2]*T[:,1] - q[3]*T[:,0]
-    
-    if single:
-        v_trans = v_trans.flatten()
+    v_trans[0] = q[0]*T[1] - q[1]*T[0] - q[2]*T[3] + q[3]*T[2]
+    v_trans[1] = q[0]*T[2] + q[1]*T[3] - q[2]*T[0] - q[3]*T[1]
+    v_trans[2] = q[0]*T[3] - q[1]*T[2] + q[2]*T[1] - q[3]*T[0]
 
-    return v_trans
+    return np.transpose(v_trans)
 
 
-def quaternion_inverse_transform(q, v):
+def quat_inv_trans(q, v):
     # Transforms the vector v from a frame having an orientation described by q to the global frame.
-    if len(v.shape) == 1:
-        v = v[np.newaxis]
-        T = np.zeros((1,4))
-        v_trans = np.zeros((1,3))
-        single = True
-    else:
-        T = np.zeros((v.shape[0],4))
-        v_trans = np.zeros((v.shape[0],3))
-        single = False
+    v_T = np.transpose(v)
+    T = np.zeros((4,*v_T.shape[1:]))
+    v_trans = np.zeros_like(v_T)
 
-    T[:,0] = v[:,0]*q[1] + v[:,1]*q[2] + v[:,2]*q[3]
-    T[:,1] = v[:,0]*q[0] - v[:,1]*q[3] + v[:,2]*q[2]
-    T[:,2] = v[:,0]*q[3] + v[:,1]*q[0] - v[:,2]*q[1]
-    T[:,3] = -v[:,0]*q[2] + v[:,1]*q[1] + v[:,2]*q[0]
+    T[0] =  v_T[0]*q[1] + v_T[1]*q[2] + v_T[2]*q[3]
+    T[1] =  v_T[0]*q[0] - v_T[1]*q[3] + v_T[2]*q[2]
+    T[2] =  v_T[0]*q[3] + v_T[1]*q[0] - v_T[2]*q[1]
+    T[3] = -v_T[0]*q[2] + v_T[1]*q[1] + v_T[2]*q[0]
 
-    v_trans[:,0] = q[0]*T[:,1] + q[1]*T[:,0] + q[2]*T[:,3] - q[3]*T[:,2]
-    v_trans[:,1] = q[0]*T[:,2] - q[1]*T[:,3] + q[2]*T[:,0] + q[3]*T[:,1]
-    v_trans[:,2] = q[0]*T[:,3] + q[1]*T[:,2] - q[2]*T[:,1] + q[3]*T[:,0]
-
-    if single:
-        v_trans = v_trans.flatten()
+    v_trans[0] = q[0]*T[1] + q[1]*T[0] + q[2]*T[3] - q[3]*T[2]
+    v_trans[1] = q[0]*T[2] - q[1]*T[3] + q[2]*T[0] + q[3]*T[1]
+    v_trans[2] = q[0]*T[3] + q[1]*T[2] - q[2]*T[1] + q[3]*T[0]
     
-    return v_trans
+    return np.transpose(v_trans)
 
 
-def quat_times(quat0, quat1):
+def quat_mult(quat0, quat1):
     # Multiplies the two quaternions together and returns the resulting quaternion. Can handle being passed a
     # vector
 
@@ -218,7 +200,7 @@ def quat_times(quat0, quat1):
     return q
 
 
-def euler_to_quaternion(E):
+def euler_to_quat(E):
     # Converts the Euler angles phi, theta, psi to an orientation quaternion
     # Phillips Mech. of Flight 11.7.8
     q = np.zeros(4)
@@ -240,7 +222,7 @@ def euler_to_quaternion(E):
     return q
 
 
-def quaternion_to_euler(q):
+def quatn_to_euler(q):
     # Converts an orientation quaternion to Euler angles
     # Phillips Mech. of Flight 11.7.11
     E = np.zeros(3)
