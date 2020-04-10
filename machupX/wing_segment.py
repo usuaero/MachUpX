@@ -843,7 +843,7 @@ class WingSegment:
         CLs = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
-                CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+                CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff, trailing_flap_fraction=self._cp_flap_chord_frac)
             else:
                 CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach)
 
@@ -875,7 +875,7 @@ class WingSegment:
         CDs = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
-                CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff)
+                CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff, trailing_flap_fraction=self._cp_flap_chord_frac)
             else:
                 CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach)
 
@@ -907,7 +907,7 @@ class WingSegment:
         Cms = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
-                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._Cm_delta_flap)
+                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._Cm_delta_flap, trailing_flap_fraction=self._cp_flap_chord_frac)
             else:
                 Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach)
 
@@ -984,8 +984,8 @@ class WingSegment:
         self._delta_flap = np.radians(self._delta_flap)*self._cp_in_control_surface
 
 
-    def get_cp_flap(self):
-        """Returns the effective change in angle of attack due to the flap deflection.
+    def get_cp_flap_eff(self):
+        """Returns flap deflection multiplied by flap efficiency.
         Used for the linear solution to NLL.
         """
         if self._has_control_surface:
