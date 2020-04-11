@@ -323,7 +323,6 @@ class Scene:
         self._u_a = np.zeros((self._N,3))
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
-        self._T_cp = np.zeros((self._N,3))
 
         # Control point atmospheric properties
         self._rho = np.zeros(self._N) # Density
@@ -383,7 +382,6 @@ class Scene:
             self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
             self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n)
             self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s)
-            self._T_cp[airplane_slice,:] = quat_inv_trans(q, airplane_object.T_cp)
 
             # Node locations
             # Note the first index indicates which control point this is the effective LAC for
@@ -428,7 +426,7 @@ class Scene:
         self._r_1_r_1_joint_mag = self._r_1_mag*self._r_1_joint_mag
 
         # Effective freestream projection matrices
-        self._P_eff = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._T_cp[:,:,np.newaxis], self._T_cp[:,np.newaxis,:])
+        self._P_eff = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._u_s[:,:,np.newaxis], self._u_s[:,np.newaxis,:])
 
         # Influence of bound and jointed vortex segments
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -1222,6 +1220,7 @@ class Scene:
 
             # Add vortices
             if show_vortices:
+                q = airplane_object.q
 
                 # Loop through wings
                 for wing_slice in airplane_object.wing_slices:
@@ -1231,12 +1230,12 @@ class Scene:
                     vortex_points = np.zeros((wing_N*6,3))
                     
                     # Gather and arrange node locations
-                    vortex_points[0:wing_N*6+0:6,:] = airplane_object.P0_joint[wing_slice]+self._P0_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
-                    vortex_points[1:wing_N*6+1:6,:] = airplane_object.P0_joint[wing_slice]
-                    vortex_points[2:wing_N*6+2:6,:] = airplane_object.P0[wing_slice]
-                    vortex_points[3:wing_N*6+3:6,:] = airplane_object.P1[wing_slice]
-                    vortex_points[4:wing_N*6+4:6,:] = airplane_object.P1_joint[wing_slice]
-                    vortex_points[5:wing_N*6+5:6,:] = airplane_object.P1_joint[wing_slice]+self._P1_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[0:wing_N*6+0:6,:] = quat_inv_trans(q, airplane_object.P0_joint[wing_slice])+self._P0_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[1:wing_N*6+1:6,:] = quat_inv_trans(q, airplane_object.P0_joint[wing_slice])
+                    vortex_points[2:wing_N*6+2:6,:] = quat_inv_trans(q, airplane_object.P0[wing_slice])
+                    vortex_points[3:wing_N*6+3:6,:] = quat_inv_trans(q, airplane_object.P1[wing_slice])
+                    vortex_points[4:wing_N*6+4:6,:] = quat_inv_trans(q, airplane_object.P1_joint[wing_slice])
+                    vortex_points[5:wing_N*6+5:6,:] = quat_inv_trans(q, airplane_object.P1_joint[wing_slice])+self._P1_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
 
                     # Add to plot
                     ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')

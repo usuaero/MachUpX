@@ -531,31 +531,8 @@ class Airplane:
                 self.P1_joint_eff = np.copy(self.P1_eff)
 
         # Calculate joint locations for actual LAC
-        for wing_slice in self.wing_slices:
-
-            # P0
-            T0 = np.gradient(self.P0[wing_slice,:], self.P0_span_locs[wing_slice], edge_order=2, axis=0)
-            T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
-            u_a = self.P0_u_a[wing_slice]
-            k = np.einsum('ij,ij->i', T0, u_a)
-            c1 = np.sqrt(1/(1-k*k))
-            c2 = -c1*k
-            u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
-            u_j = u_j/np.linalg.norm(u_j)
-            c = self.P0_chord[wing_slice]
-            self.P0_joint[wing_slice,:] = self.P0[wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-
-            # P1
-            T1 = np.gradient(self.P1[wing_slice,:], self.P1_span_locs[wing_slice], edge_order=2, axis=0)
-            T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
-            u_a = self.P1_u_a[wing_slice]
-            k = np.einsum('ij,ij->i', T1, u_a)
-            c1 = np.sqrt(1/(1-k*k))
-            c2 = -c1*k
-            u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
-            u_j = u_j/np.linalg.norm(u_j)
-            c = self.P1_chord[wing_slice]
-            self.P1_joint[wing_slice,:] = self.P1[wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+        self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
+        self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
 
         # Calculate vectors from control points to vortex node locations
         self.r_0 = self.PC[:,np.newaxis,:]-self.P0_eff

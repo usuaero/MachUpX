@@ -202,25 +202,27 @@ class WingSegment:
 
         # Twist
         twist_data = import_value("twist", self._input_dict, self._unit_sys, 0)
-        self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True)
+        self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True) # Side is not specified because this is always positive
 
         # Dihedral
         dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, 0)
-        self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True)
+        self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, side=self.side)
 
         # Sweep
         sweep_data = import_value("sweep", self._input_dict, self._unit_sys, 0)
-        self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True)
+        self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
 
         # Chord
-        chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0)
+        chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0) # Side is not specified because this is always positive
+
         if isinstance(chord_data, tuple): # Elliptic distribution
             self.get_chord = self._build_elliptic_chord_dist(chord_data[1])
+
         else: # Linear distribution
             self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
 
 
-    def _build_getter_linear_f_of_span(self, data, name, angular_data=False):
+    def _build_getter_linear_f_of_span(self, data, name, angular_data=False, side="right"):
         # Defines a getter function for data which is a function of span
 
         if isinstance(data, float): # Constant
@@ -239,7 +241,12 @@ class WingSegment:
                     converted = True
                     span = np.asarray(span)[np.newaxis]
 
-                data = np.full(span.shape, self._getter_data[name])
+                # Sweep and dihedral need to have the signs flipped for the left side
+                if side == "left":
+                    data = -np.full(span.shape, self._getter_data[name])
+                else:
+                    data = np.full(span.shape, self._getter_data[name])
+
                 if converted:
                     span = span.item()
                     return data.item()
@@ -426,7 +433,7 @@ class WingSegment:
                 CLa_root = self._airfoils[0].get_CLa(alpha=0.0)
                 area = integ.quad(lambda s : self.get_chord(s), 0, 1)[0]
                 R_A = 0.5*self.b/area
-                sweep = self.get_sweep(0.0)
+                sweep = abs(self.get_sweep(0.0))
 
                 # Calculate effective global wing sweep
                 sweep_eff = sweep/(1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25
@@ -461,7 +468,6 @@ class WingSegment:
 
         # Store nodes on AC
         self.nodes = self._get_section_ac_loc(self.node_span_locs)
-        self.nodes_prime = self.nodes # TODO: Get rid of this
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
@@ -585,7 +591,7 @@ class WingSegment:
         # Integrate sweep and dihedral along the span to get the location
         ds = np.zeros((span_array.shape[0],3))
         for i, span in enumerate(span_array):
-            ds[i,0] = integ.quad(lambda s : -np.tan(self.get_sweep(s)), 0, span)[0]*self.b
+            ds[i,0] = integ.quad(lambda s : -np.abs(np.tan(self.get_sweep(s))), 0, span)[0]*self.b
             if self.side == "left":
                 ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
             else:
@@ -599,8 +605,8 @@ class WingSegment:
         return qc_loc
 
 
-    def _get_axial_vec(self, span):
-        # Returns the axial vector at the given span locations
+    def _get_unswept_axial_vec(self, span):
+        # Returns the axial vector at the given span locations, not taking sweep into account
         if isinstance(span, float):
             span_array = np.asarray(span)[np.newaxis]
         else:
@@ -614,10 +620,28 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        if self.side == "left":
-            return np.asarray([-C_twist, -S_twist*S_dihedral, S_twist*C_dihedral]).T
+        return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
+
+
+    def _get_axial_vec(self, span):
+        # Returns the axial vector at the given span locations, taking sweep into account
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
         else:
-            return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
+            span_array = np.asarray(span)
+
+        twist = self.get_twist(span_array)
+        dihedral = self.get_dihedral(span_array)
+        sweep = self.get_sweep(span_array)
+        
+        C_twist = np.cos(twist)
+        S_twist = np.sin(twist)
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+        C_sweep = np.cos(sweep)
+        S_sweep = np.sin(sweep)
+
+        return np.asarray([-C_twist*C_sweep, -S_twist*S_dihedral*S_sweep, S_twist*C_dihedral*S_sweep]).T
 
 
     def _get_normal_vec(self, span):
@@ -629,34 +653,34 @@ class WingSegment:
 
         twist = self.get_twist(span_array)
         dihedral = self.get_dihedral(span_array)
+        sweep = self.get_sweep(span_array)
         
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
+        C_sweep = np.cos(sweep)
+        S_sweep = np.sin(sweep)
 
-        if self.side == "left":
-            return np.asarray([-S_twist, C_twist*S_dihedral, -C_twist*C_dihedral]).T
-        else:
-            return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
+        return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
 
 
     def _get_span_vec(self, span):
-        # Returns the normal vector at the given span locations
+        # Returns the spanwise vector at the given span locations
         if isinstance(span, float):
             span_array = np.asarray(span)[np.newaxis]
         else:
             span_array = np.asarray(span)
 
         dihedral = self.get_dihedral(span_array)
+        sweep = self.get_sweep(span_array)
 
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
+        C_sweep = np.cos(sweep)
+        S_sweep = np.sin(sweep)
 
-        if self.side == "left":
-            return np.asarray([np.zeros(span_array.size), -C_dihedral, -S_dihedral]).T
-        else:
-            return np.asarray([np.zeros(span_array.size), -C_dihedral, S_dihedral]).T
+        return np.asarray([-C_dihedral*S_sweep, -C_dihedral*C_sweep, S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):
@@ -669,7 +693,7 @@ class WingSegment:
             span = np.asarray(span)
 
         loc = self._get_quarter_chord_loc(span)
-        loc += (self._get_ac_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_axial_vec(span)
+        loc += (self._get_ac_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_unswept_axial_vec(span)
         if single:
             loc = loc.item()
         return loc
@@ -926,7 +950,7 @@ class WingSegment:
         spans = np.linspace(0, 1, self.N)
         qc_points = self._get_quarter_chord_loc(spans)
         chords = self.get_chord(spans)
-        axial_vecs = self._get_axial_vec(spans)
+        axial_vecs = self._get_unswept_axial_vec(spans)
 
         points = np.zeros((self.N*2+1,3))
 
