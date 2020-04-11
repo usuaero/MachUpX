@@ -638,10 +638,15 @@ class WingSegment:
         S_twist = np.sin(twist)
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
+        C_dihedral_2 = C_dihedral*C_dihedral
+        S_dihedral_2 = S_dihedral*S_dihedral
         C_sweep = np.cos(sweep)
         S_sweep = np.sin(sweep)
+        I_C_sweep = 1-C_sweep
 
-        return np.asarray([-C_twist*C_sweep, -S_twist*S_dihedral*S_sweep, S_twist*C_dihedral*S_sweep]).T
+        return np.asarray([-C_sweep*C_twist+C_dihedral*S_dihedral*S_sweep*S_twist+C_dihedral*S_dihedral*S_twist*S_sweep,
+                           C_dihedral*S_sweep*C_twist+S_dihedral*S_twist*(C_sweep+S_dihedral_2*I_C_sweep)-C_dihedral_2*S_twist*S_dihedral*I_C_sweep,
+                           S_dihedral*S_sweep*C_twist+S_dihedral_2*C_dihedral*S_twist*I_C_sweep+C_dihedral*S_twist*(C_sweep+C_dihedral_2*I_C_sweep)]).T
 
 
     def _get_normal_vec(self, span):
