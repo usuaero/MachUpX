@@ -323,6 +323,7 @@ class Scene:
         self._u_a = np.zeros((self._N,3))
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
+        self._T_cp = np.zeros((self._N,3))
 
         # Control point atmospheric properties
         self._rho = np.zeros(self._N) # Density
@@ -378,10 +379,11 @@ class Scene:
             self._dS[airplane_slice] = airplane_object.dS
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
 
-            # Get axial vectors
+            # Get section vectors
             self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
             self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n)
             self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s)
+            self._T_cp[airplane_slice,:] = quat_inv_trans(q, airplane_object.T_cp)
 
             # Node locations
             # Note the first index indicates which control point this is the effective LAC for
@@ -425,6 +427,9 @@ class Scene:
         self._r_0_r_1_mag = self._r_0_mag*self._r_1_mag
         self._r_1_r_1_joint_mag = self._r_1_mag*self._r_1_joint_mag
 
+        # Effective freestream projection matrices
+        self._P_eff = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._T_cp[:,:,np.newaxis], self._T_cp[:,np.newaxis,:])
+
         # Influence of bound and jointed vortex segments
         with np.errstate(divide='ignore', invalid='ignore'):
 
@@ -454,6 +459,85 @@ class Scene:
         self._nu = self._get_viscosity(self._PC)
 
         self._solved = False
+
+
+    def _calc_invariant_flow_properties(self):
+        # Calculates the invariant flow properties at each control point and node location
+
+        # Velocities at vortex nodes
+        P0_joint_v_inf = np.zeros((self._N,3))
+        P1_joint_v_inf = np.zeros((self._N,3))
+
+        # Get wind velocities at control points and nodes
+        cp_v_wind = self._get_wind(self._PC)
+        P0_joint_v_wind = self._get_wind(self._P0)
+        P1_joint_v_wind = self._get_wind(self._P1)
+
+        index = 0
+
+        # Loop through airplanes
+        for i, airplane_name in enumerate(self._airplane_names):
+            airplane_object = self._airplanes[airplane_name]
+            N = airplane_object.N
+            cur_slice = slice(index, index+N)
+
+            # Determine freestream velocity due to airplane translation
+            self._v_trans[i,:] = -airplane_object.v
+
+            # Freestream velocities
+
+            # Control points
+            cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC))
+            self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind[cur_slice]+cp_v_rot
+            self._cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
+            self._cp_u_inf[cur_slice,:] = self._cp_v_inf[cur_slice]/self._cp_V_inf[cur_slice,np.newaxis]
+
+            # P0 joint
+            P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint))
+            P0_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P0_joint_v_wind[cur_slice]+P0_joint_v_rot
+
+            # P1 joint
+            P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint))
+            P1_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P1_joint_v_wind[cur_slice]+P1_joint_v_rot
+
+            # Calculate airfoil parameters (Re and M are only used in the linear solution)
+            self._alpha_approx[cur_slice] = np.einsum('ij,ij->i', self._cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
+            self._Re[cur_slice] = self._cp_V_inf[cur_slice]*self._c_bar[cur_slice]/self._nu[cur_slice]
+            self._M[cur_slice] = self._cp_V_inf[cur_slice]/self._a[cur_slice]
+
+            # Get lift slopes and zero-lift angles of attack for each segment
+            seg_ind = 0
+            for wing in airplane_object.segments_in_wings:
+                for segment in wing:
+                    seg_N = segment.N
+                    seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
+                    self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_approx[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                    self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
+                    self._esp_f_delta_f[seg_slice] = segment.get_cp_flap_eff()
+
+            index += N
+
+        # Calculate nodal freestream unit vectors
+        P0_joint_V_inf = np.linalg.norm(P0_joint_v_inf, axis=-1)
+        self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/P0_joint_V_inf[:,np.newaxis]
+        P1_joint_V_inf = np.linalg.norm(P1_joint_v_inf, axis=-1)
+        self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/P1_joint_V_inf[:,np.newaxis]
+
+
+    def _calc_V_ji(self):
+        # Calculates the influence of each horseshoe vortex on each control point, divided by the vortex strength
+
+        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
+        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis], nan=0.0)
+
+        # Influence of vortex segment 1 after the joint
+        denom = (self._r_1_mag*(self._r_1_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1)))
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1)/denom[:,:,np.newaxis], nan=0.0)
+
+        # Sum and transpose
+        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
+        self._V_ji_trans = self._V_ji.transpose((1,0,2))
 
 
     def _solve_w_scipy(self, **kwargs):
@@ -510,86 +594,14 @@ class Scene:
     
     def _get_section_lift(self):
         # Calculate magnitude of lift due to section properties divided by density
+
+        # Project velocity into effective airfoil section plane
+        v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+
+        # Calculate airfoil parameters
+
+
         return np.zeros(self._N)
-
-
-    def _calc_invariant_flow_properties(self):
-        # Calculates the invariant flow properties at each control point and node location
-
-        # Velocities at vortex nodes
-        P0_joint_v_inf = np.zeros((self._N,3))
-        P1_joint_v_inf = np.zeros((self._N,3))
-
-        # Get wind velocities at control points and nodes
-        cp_v_wind = self._get_wind(self._PC)
-        P0_joint_v_wind = self._get_wind(self._P0)
-        P1_joint_v_wind = self._get_wind(self._P1)
-
-        index = 0
-
-        # Loop through airplanes
-        for i, airplane_name in enumerate(self._airplane_names):
-            airplane_object = self._airplanes[airplane_name]
-            N = airplane_object.N
-            cur_slice = slice(index, index+N)
-
-            # Determine freestream velocity due to airplane translation
-            self._v_trans[i,:] = -airplane_object.v
-
-            # Freestream velocities
-
-            # Control points
-            cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC))
-            self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind[cur_slice]+cp_v_rot
-            self._cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
-            self._cp_u_inf[cur_slice,:] = self._cp_v_inf[cur_slice]/self._cp_V_inf[cur_slice,np.newaxis]
-
-            # P0 joint
-            P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint))
-            P0_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P0_joint_v_wind[cur_slice]+P0_joint_v_rot
-
-            # P1 joint
-            P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint))
-            P1_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P1_joint_v_wind[cur_slice]+P1_joint_v_rot
-
-            # Calculate airfoil parameters
-            self._alpha_approx[cur_slice] = np.einsum('ij,ij->i', self._cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
-            self._Re[cur_slice] = self._cp_V_inf[cur_slice]*self._c_bar[cur_slice]/self._nu[cur_slice]
-            self._M[cur_slice] = self._cp_V_inf[cur_slice]/self._a[cur_slice]
-
-            # Get lift slopes and zero-lift angles of attack for each segment
-            seg_ind = 0
-            for wing in airplane_object.segments_in_wings:
-                for segment in wing:
-                    seg_N = segment.N
-                    seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
-                    self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_approx[seg_slice], self._Re[seg_slice], self._M[seg_slice])
-                    self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
-                    self._esp_f_delta_f[seg_slice] = segment.get_cp_flap_eff()
-
-            index += N
-
-        # Calculate nodal freestream unit vectors
-        P0_joint_V_inf = np.linalg.norm(P0_joint_v_inf, axis=-1)
-        self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/P0_joint_V_inf[:,np.newaxis]
-        P1_joint_V_inf = np.linalg.norm(P1_joint_v_inf, axis=-1)
-        self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/P1_joint_V_inf[:,np.newaxis]
-
-
-    def _calc_V_ji(self):
-        # Calculates the influence of each horseshoe vortex on each control point, divided by the vortex strength
-
-        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
-        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis], nan=0.0)
-
-        # Influence of vortex segment 1 after the joint
-        denom = (self._r_1_mag*(self._r_1_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1)/denom[:,:,np.newaxis], nan=0.0)
-
-        # Sum and transpose
-        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
-        self._V_ji_trans = self._V_ji.transpose((1,0,2))
 
 
     def _solve_linear(self, **kwargs):

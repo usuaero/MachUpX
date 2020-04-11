@@ -377,6 +377,7 @@ class Airplane:
         self.u_s = np.zeros((self.N,3))
         self.P0_u_a = np.zeros((self.N,3))
         self.P1_u_a = np.zeros((self.N,3))
+        self.T_cp = np.zeros((self.N,3))
 
         # Reid correction parameters
         reid_corr = np.zeros(self.N) # Whether to use Reid corrections
@@ -450,23 +451,30 @@ class Airplane:
             # Determine slice for this wing
             self.wing_slices.append(slice(cur_index-self._wing_N[i], cur_index))
 
-        # Calculate effective loci of aerodynamic centers
+        # Store LAC tangential vectors
         cur_wing = 0
-        gradient = np.gradient(self.PC[self.wing_slices[cur_wing]], self.PC_span_locs[self.wing_slices[cur_wing]], edge_order=2, axis=0)
+        wing_slice = self.wing_slices[cur_wing]
+        gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
+        self.T_cp[wing_slice,:] = gradient/np.linalg.norm(gradient, axis=1)[:,np.newaxis]
+
+        # Calculate effective loci of aerodynamic centers
         for i in range(self.N):
 
             # Check if we've moved beyond the correct wing
             if i >= self.wing_slices[cur_wing].stop:
                 cur_wing += 1
+                wing_slice = self.wing_slices[cur_wing]
 
                 # Update gradient
-                gradient = np.gradient(self.PC[self.wing_slices[cur_wing]], self.PC_span_locs[self.wing_slices[cur_wing]], edge_order=2, axis=0)
+                gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
+
+                # Store LAC tangential vectors
+                self.T_cp[wing_slice,:] = gradient/np.linalg.norm(gradient, axis=1)[:,np.newaxis]
 
             # General NLL corrections; if this is skipped, the node locations remain unchanged
             if reid_corr[i]:
 
                 # Get control point of interest
-                wing_slice = self.wing_slices[cur_wing]
                 wing_index = i-wing_slice.start # Index of control point within this wing
                 PC = self.PC[i,:]
                 PC_span = self.PC_span_locs[i]
