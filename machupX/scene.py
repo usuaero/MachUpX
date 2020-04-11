@@ -342,8 +342,8 @@ class Scene:
         self._cp_V_inf = np.zeros(self._N) # Control point freestream magnitude
         self._cp_u_inf = np.zeros((self._N,3)) # Control point freestream unit vector
         self._v_trans = np.zeros((self._num_aircraft,3))
-        self._P0_u_inf = np.zeros((self._N,3))
-        self._P1_u_inf = np.zeros((self._N,3))
+        self._P0_joint_u_inf = np.zeros((self._N,3))
+        self._P1_joint_u_inf = np.zeros((self._N,3))
 
         # Section coefficients
         self._CL = np.zeros(self._N) # Lift coefficient
@@ -431,19 +431,22 @@ class Scene:
             # Bound
             numer = ((self._r_0_mag+self._r_1_mag)[:,:,np.newaxis]*np.cross(self._r_0, self._r_1))
             denom = self._r_0_r_1_mag*(self._r_0_r_1_mag+np.einsum('ijk,ijk->ij', self._r_0, self._r_1))
-            self._V_ji_bound = np.true_divide(numer, denom[:,:,np.newaxis])
+            V_ji_bound = np.true_divide(numer, denom[:,:,np.newaxis])
             diag_ind = np.diag_indices(self._N)
-            self._V_ji_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
+            V_ji_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
 
             # Jointed 0
             numer = ((self._r_0_joint_mag+self._r_0_mag)[:,:,np.newaxis]*np.cross(self._r_0_joint, self._r_0))
             denom = self._r_0_r_0_joint_mag*(self._r_0_r_0_joint_mag+np.einsum('ijk,ijk->ij', self._r_0_joint, self._r_0))
-            self._V_ji_joint_0 = np.true_divide(numer, denom[:,:,np.newaxis])
+            V_ji_joint_0 = np.true_divide(numer, denom[:,:,np.newaxis])
 
             # Jointed 1
             numer = ((self._r_1_joint_mag+self._r_1_mag)[:,:,np.newaxis]*np.cross(self._r_1, self._r_1_joint))
             denom = self._r_1_r_1_joint_mag*(self._r_1_r_1_joint_mag+np.einsum('ijk,ijk->ij', self._r_1, self._r_1_joint))
-            self._V_ji_joint_0 = np.true_divide(numer, denom[:,:,np.newaxis])
+            V_ji_joint_1 = np.true_divide(numer, denom[:,:,np.newaxis])
+
+            # Sum
+            self._V_ji_const = V_ji_bound+V_ji_joint_0+V_ji_joint_1
 
         # Atmospheric density, speed of sound, and viscosity
         self._rho = self._get_density(self._PC)
@@ -460,14 +463,15 @@ class Scene:
         if verbose: print("Running scipy solver...")
         start_time = time.time()
 
-        # Set up flow
+        # Set up flow for what won't change with changes in vorticity distribution
         self._calc_invariant_flow_properties()
+        self._calc_V_ji()
 
         # Initial guess
         gamma_init = np.zeros(self._N)
 
         # Get solution
-        self._Gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
+        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
 
         # Check for no solution
         if ier != 1:
@@ -487,33 +491,39 @@ class Scene:
 
     def _lifting_line_residual(self, gamma):
         # Returns the residual to nonlinear lifting-line equation
-        self._Gamma = gamma
-        L_vortex = np.linalg.norm(self._get_vortex_lift(), axis=-1)
+
+        # Set vorticity
+        self._gamma = gamma
+
+        # Calculate control point velocities
+        self._v_i = self._cp_v_inf+np.einsum('ijk,i->ik', self._V_ji, self._gamma)
+
+        # Get vortex lift
+        L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl)*self._gamma[:,np.newaxis], axis=-1)
+        
+        # Get section lift
         L_section = self._get_section_lift()
+
+        # Return difference
         return L_vortex-L_section
-
-
-    def _get_vortex_lift(self):
-        # Calculates the lift vectors due to circulation at each control point divided by density
-        return np.zeros(self._N)
 
     
     def _get_section_lift(self):
         # Calculate magnitude of lift due to section properties divided by density
-        return np.ones(self._N)
+        return np.zeros(self._N)
 
 
     def _calc_invariant_flow_properties(self):
         # Calculates the invariant flow properties at each control point and node location
 
         # Velocities at vortex nodes
-        P0_v_inf = np.zeros((self._N,3))
-        P1_v_inf = np.zeros((self._N,3))
+        P0_joint_v_inf = np.zeros((self._N,3))
+        P1_joint_v_inf = np.zeros((self._N,3))
 
         # Get wind velocities at control points and nodes
         cp_v_wind = self._get_wind(self._PC)
-        P0_v_wind = self._get_wind(self._P0)
-        P1_v_wind = self._get_wind(self._P1)
+        P0_joint_v_wind = self._get_wind(self._P0)
+        P1_joint_v_wind = self._get_wind(self._P1)
 
         index = 0
 
@@ -534,13 +544,13 @@ class Scene:
             self._cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
             self._cp_u_inf[cur_slice,:] = self._cp_v_inf[cur_slice]/self._cp_V_inf[cur_slice,np.newaxis]
 
-            # P0
-            P0_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0))
-            P0_v_inf[cur_slice,:] = self._v_trans[i,:]+P0_v_wind[cur_slice]+P0_v_rot
+            # P0 joint
+            P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint))
+            P0_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P0_joint_v_wind[cur_slice]+P0_joint_v_rot
 
-            # P1
-            P1_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1))
-            P1_v_inf[cur_slice,:] = self._v_trans[i,:]+P1_v_wind[cur_slice]+P1_v_rot
+            # P1 joint
+            P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint))
+            P1_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P1_joint_v_wind[cur_slice]+P1_joint_v_rot
 
             # Calculate airfoil parameters
             self._alpha_approx[cur_slice] = np.einsum('ij,ij->i', self._cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
@@ -560,10 +570,26 @@ class Scene:
             index += N
 
         # Calculate nodal freestream unit vectors
-        P0_V_inf = np.linalg.norm(P0_v_inf, axis=-1)
-        self._P0_u_inf[cur_slice,:] = P0_v_inf/P0_V_inf[:,np.newaxis]
-        P1_V_inf = np.linalg.norm(P1_v_inf, axis=-1)
-        self._P1_u_inf[cur_slice,:] = P1_v_inf/P1_V_inf[:,np.newaxis]
+        P0_joint_V_inf = np.linalg.norm(P0_joint_v_inf, axis=-1)
+        self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/P0_joint_V_inf[:,np.newaxis]
+        P1_joint_V_inf = np.linalg.norm(P1_joint_v_inf, axis=-1)
+        self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/P1_joint_V_inf[:,np.newaxis]
+
+
+    def _calc_V_ji(self):
+        # Calculates the influence of each horseshoe vortex on each control point, divided by the vortex strength
+
+        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
+        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis], nan=0.0)
+
+        # Influence of vortex segment 1 after the joint
+        denom = (self._r_1_mag*(self._r_1_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1)))
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1)/denom[:,:,np.newaxis], nan=0.0)
+
+        # Sum and transpose
+        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
+        self._V_ji_trans = self._V_ji.transpose((1,0,2))
 
 
     def _solve_linear(self, **kwargs):
@@ -576,16 +602,8 @@ class Scene:
         # Calculate invariant properties
         self._calc_invariant_flow_properties()
 
-        # Influence of vortex segment 0; ignore if the radius goes to zero
-        denom = (self._r_0_mag*(self._r_0_mag-np.einsum('ijk,ijk->ij', self._P0_u_inf[np.newaxis], self._r_0)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_u_inf, self._r_0)/denom[:,:,np.newaxis], nan=0.0)
-
-        # Influence of vortex segment 1
-        denom = (self._r_1_mag*(self._r_1_mag-np.einsum('ijk,ijk->ij', self._P1_u_inf[np.newaxis], self._r_1)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_u_inf, self._r_1)/denom[:,:,np.newaxis], nan=0.0)
-
-        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0 + self._V_ji_bound + V_ji_due_to_1)
-        self._V_ji_trans = self._V_ji.transpose((1,0,2))
+        # Calculate V_ji
+        self._calc_V_ji()
 
         # A matrix
         A = np.zeros((self._N,self._N))
@@ -599,7 +617,7 @@ class Scene:
         b = self._cp_V_inf*self._CLa*self._dS*(self._alpha_approx-self._aL0+self._esp_f_delta_f)
 
         # Solve
-        self._Gamma = np.linalg.solve(A, b)
+        self._gamma = np.linalg.solve(A, b)
 
         end_time = time.time()
         return end_time-start_time
@@ -613,6 +631,7 @@ class Scene:
             print("    Relaxation: {0}".format(self._solver_relaxation))
             print("    Convergence: {0}".format(self._solver_convergence))
             print("{0:<20}{1:<20}".format("Iteration", "Error"))
+            print("".join(['-']*40))
         start_time = time.time()
 
         # This parameter, if set to true, will revert the nonlinear solution to a dimensional version of Phillips' original Jacobian.
@@ -638,8 +657,7 @@ class Scene:
             iteration += 1
 
             # Calculate residual
-            np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0, out=v_i)
-            v_i += self._cp_v_inf
+            v_i = self._cp_v_inf+np.einsum('ijk,i->ik', self._V_ji, self._gamma)
             np.einsum('ij,ij->i', v_i, self._u_n, out=v_ni)
             np.einsum('ij,ij->i', v_i, self._u_a, out=v_ai)
             V_i = np.sqrt(np.einsum('ij,ij->i', v_i, v_i))
@@ -676,14 +694,14 @@ class Scene:
 
             # Residual vector
             if phillips:
-                R = 2*w_i_mag*self._Gamma-self._cp_V_inf*self._cp_V_inf*C_L*self._dS # Phillips' way
+                R = 2*w_i_mag*self._gamma-self._cp_V_inf*self._cp_V_inf*C_L*self._dS # Phillips' way
             else:
-                R = 2*w_i_mag*self._Gamma-V_i*V_i*C_L*self._dS # My way
+                R = 2*w_i_mag*self._gamma-V_i*V_i*C_L*self._dS # My way
 
             error = np.linalg.norm(R)
 
             # Caclulate Jacobian
-            J[:,:] = (2*self._Gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
+            J[:,:] = (2*self._gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
 
             if not phillips:
                 J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
@@ -704,7 +722,7 @@ class Scene:
             dGamma = np.linalg.solve(J, -R)
 
             # Update gammas
-            self._Gamma = self._Gamma+self._solver_relaxation*dGamma
+            self._gamma = self._gamma+self._solver_relaxation*dGamma
 
             # Output progress
             if verbose: print("{0:<20}{1:<20}".format(iteration, error))
@@ -730,10 +748,10 @@ class Scene:
         dimensional = kwargs.get("dimensional", True)
 
         # Calculate force differential elements
-        induced_vels = self._Gamma[:,np.newaxis,np.newaxis]*self._V_ji
+        induced_vels = self._gamma[:,np.newaxis,np.newaxis]*self._V_ji
         v = self._cp_v_inf+np.sum(induced_vels, axis=0)
-        dF_inv = (self._rho*self._Gamma)[:,np.newaxis]*np.cross(v, self._dl)
-        self._dL = np.linalg.norm(dF_inv, axis=1)*np.sign(self._Gamma)
+        dF_inv = (self._rho*self._gamma)[:,np.newaxis]*np.cross(v, self._dl)
+        self._dL = np.linalg.norm(dF_inv, axis=1)*np.sign(self._gamma)
 
         # Calculate conditions for determining viscid contributions
         V = np.sqrt(np.einsum('ij,ij->i', v, v))
@@ -1201,12 +1219,12 @@ class Scene:
                     vortex_points = np.zeros((wing_N*6,3))
                     
                     # Gather and arrange node locations
-                    vortex_points[0:wing_N*6+0:6,:] = airplane_object.P0_joint[wing_slice]+self._P0_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[0:wing_N*6+0:6,:] = airplane_object.P0_joint[wing_slice]+self._P0_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
                     vortex_points[1:wing_N*6+1:6,:] = airplane_object.P0_joint[wing_slice]
                     vortex_points[2:wing_N*6+2:6,:] = airplane_object.P0[wing_slice]
                     vortex_points[3:wing_N*6+3:6,:] = airplane_object.P1[wing_slice]
                     vortex_points[4:wing_N*6+4:6,:] = airplane_object.P1_joint[wing_slice]
-                    vortex_points[5:wing_N*6+5:6,:] = airplane_object.P1_joint[wing_slice]+self._P1_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[5:wing_N*6+5:6,:] = airplane_object.P1_joint[wing_slice]+self._P1_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
 
                     # Add to plot
                     ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
@@ -1862,7 +1880,7 @@ class Scene:
             self.solve_forces()
 
         # Make sure alpha has been calculated.
-        v_i = np.sum(self._V_ji*self._Gamma[:,np.newaxis,np.newaxis], axis=0)
+        v_i = np.sum(self._V_ji*self._gamma[:,np.newaxis,np.newaxis], axis=0)
         v_i += self._cp_v_inf
         v_ni = np.einsum('ij,ij->i', v_i, self._u_n)
         v_ai = np.einsum('ij,ij->i', v_i, self._u_a)

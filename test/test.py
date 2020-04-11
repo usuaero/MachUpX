@@ -142,7 +142,7 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=False)
 
-    print("Original state")
+    #print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
