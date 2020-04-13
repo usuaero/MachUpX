@@ -278,6 +278,10 @@ class WingSegment:
                     data = np.interp(span, self._getter_data[name][:,0], np.radians(self._getter_data[name][:,1]))
                 else:
                     data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
+
+                if side=="left":
+                    data = -data
+
                 if converted:
                     span = span.item()
                     return data.item()
@@ -594,9 +598,10 @@ class WingSegment:
             ds[i,0] = integ.quad(lambda s : -np.abs(np.tan(self.get_sweep(s))), 0, span)[0]*self.b
             if self.side == "left":
                 ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
+                ds[i,2] = integ.quad(lambda s : np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
             else:
                 ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
-            ds[i,2] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
+                ds[i,2] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
 
         qc_loc = self.get_root_loc()+ds
         if converted:
@@ -632,12 +637,14 @@ class WingSegment:
 
         twist = self.get_twist(span_array)
         dihedral = self.get_dihedral(span_array)
+        print(dihedral)
         sweep = self.get_sweep(span_array)
         
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
+        print(S_dihedral)
         C_dihedral_2 = C_dihedral*C_dihedral
         S_dihedral_2 = S_dihedral*S_dihedral
         C_sweep = np.cos(sweep)
@@ -645,7 +652,7 @@ class WingSegment:
         I_C_sweep = 1-C_sweep
 
         return np.asarray([-C_sweep*C_twist+C_dihedral*S_dihedral*S_sweep*S_twist+C_dihedral*S_dihedral*S_twist*S_sweep,
-                           C_dihedral*S_sweep*C_twist+S_dihedral*S_twist*(C_sweep+S_dihedral_2*I_C_sweep)-C_dihedral_2*S_twist*S_dihedral*I_C_sweep,
+                           -C_dihedral*S_sweep*C_twist+S_dihedral*S_twist*(C_sweep+S_dihedral_2*I_C_sweep)-C_dihedral_2*S_twist*S_dihedral*I_C_sweep,
                            S_dihedral*S_sweep*C_twist+S_dihedral_2*C_dihedral*S_twist*I_C_sweep+C_dihedral*S_twist*(C_sweep+C_dihedral_2*I_C_sweep)]).T
 
 

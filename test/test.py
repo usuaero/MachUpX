@@ -54,7 +54,7 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "sweep" : 45.0,
                 "dihedral" : [[0.0, 0.0],
-                              [1.0, 0.0]],
+                              [1.0, 30.0]],
                 "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
@@ -67,7 +67,7 @@ if __name__=="__main__":
                 "grid" : {
                     "N" : 10,
                     "reid_corrections" : True,
-                    "joint_length" : 2.15,
+                    "joint_length" : 0.15,
                     "blending_distance" : 0.25
                 }
             },
@@ -132,8 +132,8 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : [100, "mph"],
-        "alpha" : 10.0,
-        "orientation" : [30, 30, 30]
+        #"orientation" : [30, 30, 30],
+        "alpha" : 10.0
     }
 
     # Load scene
