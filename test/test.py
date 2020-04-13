@@ -67,7 +67,7 @@ if __name__=="__main__":
                 "grid" : {
                     "N" : 10,
                     "reid_corrections" : True,
-                    "joint_length" : 0.15,
+                    "joint_length" : 1.15,
                     "blending_distance" : 0.25
                 }
             },

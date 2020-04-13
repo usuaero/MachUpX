@@ -598,10 +598,9 @@ class WingSegment:
             ds[i,0] = integ.quad(lambda s : -np.abs(np.tan(self.get_sweep(s))), 0, span)[0]*self.b
             if self.side == "left":
                 ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
-                ds[i,2] = integ.quad(lambda s : np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
             else:
                 ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
-                ds[i,2] = integ.quad(lambda s : -np.sin(self.get_dihedral(s)), 0, span)[0]*self.b
+            ds[i,2] = integ.quad(lambda s : -np.abs(np.sin(self.get_dihedral(s))), 0, span)[0]*self.b
 
         qc_loc = self.get_root_loc()+ds
         if converted:
@@ -637,14 +636,12 @@ class WingSegment:
 
         twist = self.get_twist(span_array)
         dihedral = self.get_dihedral(span_array)
-        print(dihedral)
         sweep = self.get_sweep(span_array)
         
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
-        print(S_dihedral)
         C_dihedral_2 = C_dihedral*C_dihedral
         S_dihedral_2 = S_dihedral*S_dihedral
         C_sweep = np.cos(sweep)
@@ -673,8 +670,11 @@ class WingSegment:
         S_dihedral = np.sin(dihedral)
         C_sweep = np.cos(sweep)
         S_sweep = np.sin(sweep)
+        I_C_sweep = 1-C_sweep
 
-        return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
+        return np.asarray([-C_sweep*S_twist+C_dihedral*S_dihedral*S_sweep*C_twist-S_dihedral*C_dihedral*S_sweep*C_twist,
+                           -S_twist*C_dihedral*S_sweep-S_dihedral*C_twist*(C_sweep+S_dihedral*S_dihedral*I_C_sweep)-C_dihedral*C_dihedral*S_dihedral*C_twist*I_C_sweep,
+                           S_twist*S_dihedral*S_sweep-S_dihedral*S_dihedral*C_twist*C_dihedral*I_C_sweep-C_dihedral*C_twist*(C_sweep+S_dihedral*S_dihedral*I_C_sweep)]).T
 
 
     def _get_span_vec(self, span):

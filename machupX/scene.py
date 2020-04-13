@@ -414,6 +414,10 @@ class Scene:
         self._r_0_joint = np.where(self._r_0_joint==0, self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
         self._r_1_joint = np.where(self._r_1_joint==0, self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
 
+        print(np.einsum('ij,ij->i', self._u_n, self._u_a))
+        print(np.einsum('ij,ij->i', self._u_n, self._u_s))
+        print(np.einsum('ij,ij->i', self._u_s, self._u_a))
+
         # Calculate spatial node vector magnitudes
         self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
         self._r_0_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0_joint, self._r_0_joint))
@@ -512,6 +516,7 @@ class Scene:
                     self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_approx[seg_slice], self._Re[seg_slice], self._M[seg_slice])
                     self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
                     self._esp_f_delta_f[seg_slice] = segment.get_cp_flap_eff()
+                    seg_ind += seg_N
 
             index += N
 
@@ -555,17 +560,17 @@ class Scene:
         # Get solution
         self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
 
+        # Output fsolve info
+        if verbose:
+            print("   Number of function calls: {0}".format(info["nfev"]))
+            print("   Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
+
         # Check for no solution
         if ier != 1:
             print("Scipy.optimize.fsolve was unable to find a solution.")
             print("Error message: {0}".format(mesg))
             warnings.warn("Scipy solver failed. Reverting to nonlinear solution...")
             return -1
-
-        # Output fsolve info
-        if verbose:
-            print("   Number of function calls: {0}".format(info["nfev"]))
-            print("   Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
 
         end_time = time.time()
         return end_time-start_time
@@ -595,11 +600,34 @@ class Scene:
 
         # Project velocity into effective airfoil section plane
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+        V_i_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
 
         # Calculate airfoil parameters
+        v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
+        v_n = np.einsum('ij,ij->i', v_i_eff, self._u_n)
+        alpha = np.arctan2(v_n, v_a)
 
+        # Calculate lift
+        C_L = np.zeros(self._N)
+        index = 0
 
-        return np.zeros(self._N)
+        # Loop through airplanes
+        for i, airplane_name in enumerate(self._airplane_names):
+            airplane_object = self._airplanes[airplane_name]
+            N = airplane_object.N
+            seg_ind = 0
+
+            # Loop through segments
+            for wing in airplane_object.segments_in_wings:
+                for segment in wing:
+                    seg_N = segment.N
+                    seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
+                    C_L[seg_slice] = segment.get_cp_CL(alpha[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                    seg_ind += seg_N
+
+            index += N
+
+        return 0.5*V_i_eff_2*C_L
 
 
     def _solve_linear(self, **kwargs):
