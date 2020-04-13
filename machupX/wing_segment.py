@@ -635,22 +635,19 @@ class WingSegment:
             span_array = np.asarray(span)
 
         twist = self.get_twist(span_array)
-        dihedral = self.get_dihedral(span_array)
+        dihedral = -self.get_dihedral(span_array)
         sweep = self.get_sweep(span_array)
         
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
-        C_dihedral_2 = C_dihedral*C_dihedral
-        S_dihedral_2 = S_dihedral*S_dihedral
         C_sweep = np.cos(sweep)
         S_sweep = np.sin(sweep)
-        I_C_sweep = 1-C_sweep
 
-        return np.asarray([-C_sweep*C_twist+C_dihedral*S_dihedral*S_sweep*S_twist+C_dihedral*S_dihedral*S_twist*S_sweep,
-                           -C_dihedral*S_sweep*C_twist+S_dihedral*S_twist*(C_sweep+S_dihedral_2*I_C_sweep)-C_dihedral_2*S_twist*S_dihedral*I_C_sweep,
-                           S_dihedral*S_sweep*C_twist+S_dihedral_2*C_dihedral*S_twist*I_C_sweep+C_dihedral*S_twist*(C_sweep+C_dihedral_2*I_C_sweep)]).T
+        return np.asarray([-C_twist*C_sweep,
+                           S_sweep*C_dihedral+S_twist*C_sweep*S_dihedral,
+                           -S_sweep*S_dihedral-S_twist*C_sweep*C_dihedral]).T
 
 
     def _get_normal_vec(self, span):
@@ -662,19 +659,15 @@ class WingSegment:
 
         twist = self.get_twist(span_array)
         dihedral = self.get_dihedral(span_array)
-        sweep = self.get_sweep(span_array)
         
         C_twist = np.cos(twist)
         S_twist = np.sin(twist)
-        C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
-        C_sweep = np.cos(sweep)
-        S_sweep = np.sin(sweep)
-        I_C_sweep = 1-C_sweep
+        C_dihedral = np.cos(dihedral)
 
-        return np.asarray([-C_sweep*S_twist+C_dihedral*S_dihedral*S_sweep*C_twist-S_dihedral*C_dihedral*S_sweep*C_twist,
-                           -S_twist*C_dihedral*S_sweep-S_dihedral*C_twist*(C_sweep+S_dihedral*S_dihedral*I_C_sweep)-C_dihedral*C_dihedral*S_dihedral*C_twist*I_C_sweep,
-                           S_twist*S_dihedral*S_sweep-S_dihedral*S_dihedral*C_twist*C_dihedral*I_C_sweep-C_dihedral*C_twist*(C_sweep+S_dihedral*S_dihedral*I_C_sweep)]).T
+        return np.asarray([-S_twist,
+                           -S_dihedral*C_twist,
+                           -C_dihedral*C_twist]).T
 
 
     def _get_span_vec(self, span):
@@ -692,7 +685,9 @@ class WingSegment:
         C_sweep = np.cos(sweep)
         S_sweep = np.sin(sweep)
 
-        return np.asarray([-C_dihedral*S_sweep, -C_dihedral*C_sweep, S_dihedral]).T
+        return np.asarray([-C_dihedral*S_sweep,
+                           -C_dihedral*C_sweep,
+                           S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):

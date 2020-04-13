@@ -55,6 +55,8 @@ if __name__=="__main__":
                 "sweep" : 45.0,
                 "dihedral" : [[0.0, 0.0],
                               [1.0, 30.0]],
+                "twist" : [[0.0, 0.0],
+                           [1.0, 30.0]],
                 "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
