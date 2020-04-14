@@ -26,7 +26,7 @@ if __name__=="__main__":
     # Specify airplane
     airplane_dict = {
         "CG" : [0,0,0],
-        "weight" : 100.0,
+        "weight" : 10.0,
         "reference" : {
             "area" : 8.0,
             "longitudinal_length" : 1.0,
@@ -52,12 +52,12 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "chord" : 1.0,
                 "airfoil" : "NACA_0010",
-                "sweep" : 45.0,
-                "dihedral" : [[0.0, 0.0],
-                              [1.0, 30.0]],
-                "twist" : [[0.0, 0.0],
-                           [1.0, 30.0]],
-                "ac_offset" : "kuchemann",
+                #"sweep" : 45.0,
+                #"dihedral" : [[0.0, 0.0],
+                #              [1.0, 30.0]],
+                #"twist" : [[0.0, 0.0],
+                #           [1.0, 30.0]],
+                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.1,
@@ -69,7 +69,7 @@ if __name__=="__main__":
                 "grid" : {
                     "N" : 10,
                     "reid_corrections" : True,
-                    "joint_length" : 1.15,
+                    "joint_length" : 0.15,
                     "blending_distance" : 0.25
                 }
             },
@@ -84,9 +84,9 @@ if __name__=="__main__":
                 },
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
-                "sweep" : 45.0,
+                #"sweep" : 45.0,
                 "twist" : -3.95,
-                "ac_offset" : "kuchemann",
+                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -113,8 +113,8 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
-                "sweep" : 45.0,
-                "ac_offset" : "kuchemann",
+                #"sweep" : 45.0,
+                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -133,7 +133,7 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "velocity" : [100, "mph"],
+        "velocity" : [10, "mph"],
         #"orientation" : [30, 30, 30],
         "alpha" : 10.0
     }
@@ -142,7 +142,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
 
-    scene.display_wireframe(show_vortices=True)
+    #scene.display_wireframe(show_vortices=True)
 
     #print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

@@ -517,10 +517,8 @@ class Scene:
             index += N
 
         # Calculate nodal freestream unit vectors
-        P0_joint_V_inf = np.linalg.norm(P0_joint_v_inf, axis=-1)
-        self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/P0_joint_V_inf[:,np.newaxis]
-        P1_joint_V_inf = np.linalg.norm(P1_joint_v_inf, axis=-1)
-        self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/P1_joint_V_inf[:,np.newaxis]
+        self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/np.linalg.norm(P0_joint_v_inf, axis=-1, keepdims=True)
+        self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
 
 
     def _calc_V_ji(self):
@@ -551,7 +549,7 @@ class Scene:
         self._calc_V_ji()
 
         # Initial guess
-        gamma_init = np.zeros(self._N)
+        gamma_init = np.ones(self._N)
 
         # Get solution
         self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
@@ -582,7 +580,8 @@ class Scene:
         self._v_i = self._cp_v_inf+np.einsum('ijk,i->ik', self._V_ji, self._gamma)
 
         # Get vortex lift
-        L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl)*self._gamma[:,np.newaxis], axis=-1)
+        L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl), axis=-1)*self._gamma
+        print(L_vortex)
         
         # Get section lift
         L_section = self._get_section_lift()
@@ -608,7 +607,7 @@ class Scene:
         index = 0
 
         # Loop through airplanes
-        for i, airplane_name in enumerate(self._airplane_names):
+        for airplane_name in self._airplane_names:
             airplane_object = self._airplanes[airplane_name]
             N = airplane_object.N
             seg_ind = 0
@@ -622,8 +621,9 @@ class Scene:
                     seg_ind += seg_N
 
             index += N
+        raise RuntimeError
 
-        return 0.5*V_i_eff_2*C_L
+        return 0.5*V_i_eff_2*C_L*self._dS
 
 
     def _solve_linear(self, **kwargs):

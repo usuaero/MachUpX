@@ -306,10 +306,15 @@ class WingSegment:
 
         # Span location distributions
         self._unit_vec_span_locs = np.linspace(0.0, 1.0, 100)
+        if self.side == "left":
+            self._unit_vec_span_locs = self._unit_vec_span_locs[::-1]
 
         # Unit spanwise vector
         ac_loc = self._get_section_ac_loc(self._unit_vec_span_locs)
-        gradient = np.gradient(ac_loc, self._unit_vec_span_locs, edge_order=2, axis=0)
+        if self.side == "left":
+            gradient = np.gradient(ac_loc, -self._unit_vec_span_locs, edge_order=2, axis=0)
+        else:
+            gradient = np.gradient(ac_loc, self._unit_vec_span_locs, edge_order=2, axis=0)
         self._u_s_dist = gradient/np.linalg.norm(gradient, axis=1, keepdims=True)
         self._get_span_vec = interp.interp1d(self._unit_vec_span_locs, self._u_s_dist, axis=0)
 
