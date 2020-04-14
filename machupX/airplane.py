@@ -352,6 +352,9 @@ class Airplane:
         self.P0_chord = np.zeros(self.N)
         self.P1_chord = np.zeros(self.N)
         self.dS = np.zeros(self.N) # Differential planform area
+        self.max_camber = np.zeros(self.N)
+        self.max_thickness = np.zeros(self.N)
+        self.cp_sweep = np.zeros(self.N)
 
         # Control points
         self.PC = np.zeros((self.N,3)) # Control point location
@@ -411,6 +414,9 @@ class Airplane:
                 self.dS[cur_slice] = segment.dS
                 self.P0_chord[cur_slice] = segment.c_node[:-1]
                 self.P1_chord[cur_slice] = segment.c_node[1:]
+                self.max_camber[cur_slice] = segment.max_camber_cp
+                self.max_thickness[cur_slice] = segment.max_thickness_cp
+                self.cp_sweep[cur_slice] = segment.sweep_cp
 
                 # General NLL parameters
                 reid_corr[cur_slice] = segment.reid_corr

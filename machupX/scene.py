@@ -298,7 +298,6 @@ class Scene:
 
 
     def _initialize_storage_arrays(self):
-
         # Initialize arrays
 
         # Section geometry
@@ -306,6 +305,10 @@ class Scene:
         self._dS = np.zeros(self._N) # Differential planform area
         self._PC = np.zeros((self._N,3)) # Control point location
         self._dl = np.zeros((self._N,3)) # Differential LAC elements
+        self._sweep_cp = np.zeros(self._N)
+        self._max_thickness = np.zeros(self._N)
+        self._max_camber = np.zeros(self._N)
+        self._section_sweep = np.zeros(self._N)
 
         # Node locations
         self._P0 = np.zeros((self._N,self._N,3)) # Inbound vortex node location; takes into account effective LAC where appropriate
@@ -377,6 +380,9 @@ class Scene:
             self._c_bar[airplane_slice] = airplane_object.c_bar
             self._dS[airplane_slice] = airplane_object.dS
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
+            self._max_camber[airplane_slice] = airplane_object.max_camber
+            self._max_thickness[airplane_slice] = airplane_object.max_thickness
+            self._section_sweep[airplane_slice] = airplane_object.cp_sweep
 
             # Get section vectors
             self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
@@ -455,6 +461,12 @@ class Scene:
         self._rho = self._get_density(self._PC)
         self._a = self._get_sos(self._PC)
         self._nu = self._get_viscosity(self._PC)
+
+        # Swept section corrections
+        sweep2 = self._section_sweep**2
+        sweep4 = self._section_sweep**4
+        self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
+        self._R_CL_a = 1.0/(1.0-0.2955*self._max_thickness**0.96*sweep2-0.1335*self._max_thickness**0.68*sweep4)
 
         self._solved = False
 
@@ -621,6 +633,7 @@ class Scene:
 
             index += N
 
+        self._correct_CL_for_sweep()
 
         return 0.5*V_i_eff_2*self._CL*self._dS
 
@@ -628,12 +641,11 @@ class Scene:
     def _correct_CL_for_sweep(self):
         # Applies Jackson's corrections for swept section lift
 
-        # Get change in aL0
-
         # Estimate lift slope
         CL_a_est = self._CL/(self._alpha-self._aL0)
 
-        pass
+        # Get new estimate
+        self._CL = self._R_CL_a*CL_a_est*(self._alpha-self._aL0-self._delta_a_L0)
 
 
     def _solve_linear(self, **kwargs):
