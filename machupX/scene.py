@@ -529,8 +529,8 @@ class Scene:
         V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis], nan=0.0)
 
         # Influence of vortex segment 1 after the joint
-        denom = (self._r_1_mag*(self._r_1_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1)/denom[:,:,np.newaxis], nan=0.0)
+        denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis], nan=0.0)
 
         # Sum and transpose
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
@@ -581,7 +581,6 @@ class Scene:
 
         # Get vortex lift
         L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl), axis=-1)*self._gamma
-        print(L_vortex)
         
         # Get section lift
         L_section = self._get_section_lift()
@@ -600,10 +599,10 @@ class Scene:
         # Calculate airfoil parameters
         v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
         v_n = np.einsum('ij,ij->i', v_i_eff, self._u_n)
-        alpha = np.arctan2(v_n, v_a)
+        self._alpha = np.arctan2(v_n, v_a)
 
         # Calculate lift
-        C_L = np.zeros(self._N)
+        self._CL = np.zeros(self._N)
         index = 0
 
         # Loop through airplanes
@@ -617,13 +616,24 @@ class Scene:
                 for segment in wing:
                     seg_N = segment.N
                     seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
-                    C_L[seg_slice] = segment.get_cp_CL(alpha[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                    self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice], self._M[seg_slice])
                     seg_ind += seg_N
 
             index += N
-        raise RuntimeError
 
-        return 0.5*V_i_eff_2*C_L*self._dS
+
+        return 0.5*V_i_eff_2*self._CL*self._dS
+
+
+    def _correct_CL_for_sweep(self):
+        # Applies Jackson's corrections for swept section lift
+
+        # Get change in aL0
+
+        # Estimate lift slope
+        CL_a_est = self._CL/(self._alpha-self._aL0)
+
+        pass
 
 
     def _solve_linear(self, **kwargs):
