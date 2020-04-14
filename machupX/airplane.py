@@ -455,7 +455,10 @@ class Airplane:
         cur_wing = 0
         wing_slice = self.wing_slices[cur_wing]
         gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
-        self.T_cp[wing_slice,:] = gradient/np.linalg.norm(gradient, axis=1)[:,np.newaxis]
+
+        # Calculate joint locations for actual LAC
+        self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
+        self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
 
         # Calculate effective loci of aerodynamic centers
         for i in range(self.N):
@@ -467,9 +470,6 @@ class Airplane:
 
                 # Update gradient
                 gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
-
-                # Store LAC tangential vectors
-                self.T_cp[wing_slice,:] = gradient/np.linalg.norm(gradient, axis=1)[:,np.newaxis]
 
             # General NLL corrections; if this is skipped, the node locations remain unchanged
             if reid_corr[i]:
@@ -529,10 +529,6 @@ class Airplane:
                 # Copy node locations into joint locations (i.e. no jointing)
                 self.P0_joint_eff = np.copy(self.P0_eff)
                 self.P1_joint_eff = np.copy(self.P1_eff)
-
-        # Calculate joint locations for actual LAC
-        self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
-        self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
 
         # Calculate vectors from control points to vortex node locations
         self.r_0 = self.PC[:,np.newaxis,:]-self.P0_eff

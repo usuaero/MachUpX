@@ -63,14 +63,14 @@ class WingSegment:
             self._initialize_params()
             self._initialize_airfoils(airfoil_dict)
             self._initialize_getters()
+            self._initialize_ac_locus()
+            self._initialize_unit_vector_dists()
             self._setup_control_surface(self._input_dict.get("control_surface", None))
 
             # These make repeated calls for geometry information faster. Should be called again if geometry changes.
             self._setup_cp_data()
             self._setup_node_data()
 
-            # Aerodynamic center offset
-            self._initialize_ac_locus()
 
     
     def _initialize_params(self):
@@ -299,6 +299,32 @@ class WingSegment:
             return self._root_chord*np.sqrt(1-span_frac*span_frac)
 
         return getter
+
+
+    def _initialize_unit_vector_dists(self):
+        # Initializes distributions of unit normal, spanwise, and axial vectors for quick access later
+
+        # Span location distributions
+        self._unit_vec_span_locs = np.linspace(0.0, 1.0, 100)
+
+        # Unit spanwise vector
+        ac_loc = self._get_section_ac_loc(self._unit_vec_span_locs)
+        gradient = np.gradient(ac_loc, self._unit_vec_span_locs, edge_order=2, axis=0)
+        self._u_s_dist = gradient/np.linalg.norm(gradient, axis=1, keepdims=True)
+        self._get_span_vec = interp.interp1d(self._unit_vec_span_locs, self._u_s_dist, axis=0)
+
+        # Unit axial vector
+        u_a_unswept = self._get_unswept_axial_vec(self._unit_vec_span_locs)
+        k = np.einsum('ij,ij->i', self._u_s_dist, u_a_unswept)
+        c1 = np.sqrt(1/(1-k*k))
+        c2 = -c1*k
+        u_a = c1[:,np.newaxis]*u_a_unswept+c2[:,np.newaxis]*self._u_s_dist
+        self._u_a_dist = u_a/np.linalg.norm(u_a, axis=1, keepdims=True)
+        self._get_axial_vec = interp.interp1d(self._unit_vec_span_locs, self._u_a_dist, axis=0)
+        
+        # Unit normal vector
+        self._u_n_dist = np.cross(self._u_a_dist, self._u_s_dist)
+        self._get_normal_vec = interp.interp1d(self._unit_vec_span_locs, self._u_n_dist, axis=0)
 
 
     def _initialize_airfoils(self, airfoil_dict):
@@ -627,67 +653,67 @@ class WingSegment:
         return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
 
 
-    def _get_axial_vec(self, span):
-        # Returns the axial vector at the given span locations, taking sweep into account
-        if isinstance(span, float):
-            span_array = np.asarray(span)[np.newaxis]
-        else:
-            span_array = np.asarray(span)
+    #def _get_axial_vec(self, span):
+    #    # Returns the axial vector at the given span locations, taking sweep into account
+    #    if isinstance(span, float):
+    #        span_array = np.asarray(span)[np.newaxis]
+    #    else:
+    #        span_array = np.asarray(span)
 
-        twist = self.get_twist(span_array)
-        dihedral = -self.get_dihedral(span_array)
-        sweep = self.get_sweep(span_array)
-        
-        C_twist = np.cos(twist)
-        S_twist = np.sin(twist)
-        C_dihedral = np.cos(dihedral)
-        S_dihedral = np.sin(dihedral)
-        C_sweep = np.cos(sweep)
-        S_sweep = np.sin(sweep)
+    #    twist = self.get_twist(span_array)
+    #    dihedral = -self.get_dihedral(span_array)
+    #    sweep = self.get_sweep(span_array)
+    #    
+    #    C_twist = np.cos(twist)
+    #    S_twist = np.sin(twist)
+    #    C_dihedral = np.cos(dihedral)
+    #    S_dihedral = np.sin(dihedral)
+    #    C_sweep = np.cos(sweep)
+    #    S_sweep = np.sin(sweep)
 
-        return np.asarray([-C_twist*C_sweep,
-                           S_sweep*C_dihedral+S_twist*C_sweep*S_dihedral,
-                           -S_sweep*S_dihedral-S_twist*C_sweep*C_dihedral]).T
-
-
-    def _get_normal_vec(self, span):
-        # Returns the normal vector at the given span locations
-        if isinstance(span, float):
-            span_array = np.asarray(span)[np.newaxis]
-        else:
-            span_array = np.asarray(span)
-
-        twist = self.get_twist(span_array)
-        dihedral = self.get_dihedral(span_array)
-        
-        C_twist = np.cos(twist)
-        S_twist = np.sin(twist)
-        S_dihedral = np.sin(dihedral)
-        C_dihedral = np.cos(dihedral)
-
-        return np.asarray([-S_twist,
-                           -S_dihedral*C_twist,
-                           -C_dihedral*C_twist]).T
+    #    return np.asarray([-C_twist*C_sweep,
+    #                       S_sweep*C_dihedral+S_twist*C_sweep*S_dihedral,
+    #                       -S_sweep*S_dihedral-S_twist*C_sweep*C_dihedral]).T
 
 
-    def _get_span_vec(self, span):
-        # Returns the spanwise vector at the given span locations
-        if isinstance(span, float):
-            span_array = np.asarray(span)[np.newaxis]
-        else:
-            span_array = np.asarray(span)
+    #def _get_normal_vec(self, span):
+    #    # Returns the normal vector at the given span locations
+    #    if isinstance(span, float):
+    #        span_array = np.asarray(span)[np.newaxis]
+    #    else:
+    #        span_array = np.asarray(span)
 
-        dihedral = self.get_dihedral(span_array)
-        sweep = self.get_sweep(span_array)
+    #    twist = self.get_twist(span_array)
+    #    dihedral = self.get_dihedral(span_array)
+    #    
+    #    C_twist = np.cos(twist)
+    #    S_twist = np.sin(twist)
+    #    S_dihedral = np.sin(dihedral)
+    #    C_dihedral = np.cos(dihedral)
 
-        C_dihedral = np.cos(dihedral)
-        S_dihedral = np.sin(dihedral)
-        C_sweep = np.cos(sweep)
-        S_sweep = np.sin(sweep)
+    #    return np.asarray([-S_twist,
+    #                       -S_dihedral*C_twist,
+    #                       -C_dihedral*C_twist]).T
 
-        return np.asarray([-C_dihedral*S_sweep,
-                           -C_dihedral*C_sweep,
-                           S_dihedral]).T
+
+    #def _get_span_vec(self, span):
+    #    # Returns the spanwise vector at the given span locations
+    #    if isinstance(span, float):
+    #        span_array = np.asarray(span)[np.newaxis]
+    #    else:
+    #        span_array = np.asarray(span)
+
+    #    dihedral = self.get_dihedral(span_array)
+    #    sweep = self.get_sweep(span_array)
+
+    #    C_dihedral = np.cos(dihedral)
+    #    S_dihedral = np.sin(dihedral)
+    #    C_sweep = np.cos(sweep)
+    #    S_sweep = np.sin(sweep)
+
+    #    return np.asarray([-C_dihedral*S_sweep,
+    #                       -C_dihedral*C_sweep,
+    #                       S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):

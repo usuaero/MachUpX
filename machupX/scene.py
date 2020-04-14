@@ -354,8 +354,8 @@ class Scene:
     def _perform_geometry_and_atmos_calcs(self):
         # Performs calculations necessary for solving NLL which are only dependent on geometry.
         # This speeds up repeated calls to _solve(). This method should be called any time the 
-        # geometry is updated, an aircraft is added to the scene, or the state of an aircraft 
-        # changes. Note that all calculations occur in the Earth-fixed frame.
+        # geometry is updated, an aircraft is added to the scene, or the position or orientation
+        # of an aircraft changes. Note that all calculations occur in the Earth-fixed frame.
 
         index = 0
         self._airplane_names = []
@@ -413,10 +413,6 @@ class Scene:
         self._r_1 = np.where(self._r_1==0, self._PC[:,np.newaxis,:]-self._P1, self._r_1)
         self._r_0_joint = np.where(self._r_0_joint==0, self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
         self._r_1_joint = np.where(self._r_1_joint==0, self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
-
-        print(np.einsum('ij,ij->i', self._u_n, self._u_a))
-        print(np.einsum('ij,ij->i', self._u_n, self._u_s))
-        print(np.einsum('ij,ij->i', self._u_s, self._u_a))
 
         # Calculate spatial node vector magnitudes
         self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
@@ -1151,10 +1147,12 @@ class Scene:
 
         # Set state and update precalcs for NLL
         old_position = self._airplanes[aircraft_name].p_bar
+        old_orient = self._airplanes[aircraft_name].q
         self._airplanes[aircraft_name].set_state(**state, v_wind=v_wind)
+        aircraft_orient = self._airplanes[aircraft_name].q
 
         # If the position has changed, then we need to update the geometry
-        if not np.allclose(old_position, aircraft_position):
+        if not np.allclose(old_position, aircraft_position) or not np.allclose(old_orient, aircraft_orient):
             self._perform_geometry_and_atmos_calcs()
 
 
