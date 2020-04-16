@@ -304,32 +304,29 @@ class WingSegment:
     def _initialize_unit_vector_dists(self):
         # Initializes distributions of unit normal, spanwise, and axial vectors for quick access later
 
-        # Span location distributions
-        self._unit_vec_span_locs = np.linspace(0.0, 1.0, 100)
-        if self.side == "left":
-            self._unit_vec_span_locs = self._unit_vec_span_locs[::-1]
+        # Determine cumulative length along the LAC
+        ac_loc = self._get_section_ac_loc(self.node_span_locs)
+        d_ac_loc = np.diff(ac_loc, axis=0)
+        ds = np.zeros(self.N+1)
+        ds[1:] = np.cumsum(np.linalg.norm(d_ac_loc, axis=1))
 
-        # Unit spanwise vector
-        ac_loc = self._get_section_ac_loc(self._unit_vec_span_locs)
-        if self.side == "left":
-            gradient = np.gradient(ac_loc, -self._unit_vec_span_locs, edge_order=2, axis=0)
-        else:
-            gradient = np.gradient(ac_loc, self._unit_vec_span_locs, edge_order=2, axis=0)
+        # Calculate unit spanwise vector
+        gradient = np.gradient(ac_loc, ds, edge_order=2, axis=0)
         self._u_s_dist = gradient/np.linalg.norm(gradient, axis=1, keepdims=True)
-        self._get_span_vec = interp.interp1d(self._unit_vec_span_locs, self._u_s_dist, axis=0)
+        self._get_span_vec = interp.interp1d(self.node_span_locs, self._u_s_dist, axis=0)
 
         # Unit axial vector
-        u_a_unswept = self._get_unswept_axial_vec(self._unit_vec_span_locs)
+        u_a_unswept = self._get_unswept_axial_vec(self.node_span_locs)
         k = np.einsum('ij,ij->i', self._u_s_dist, u_a_unswept)
         c1 = np.sqrt(1/(1-k*k))
         c2 = -c1*k
         u_a = c1[:,np.newaxis]*u_a_unswept+c2[:,np.newaxis]*self._u_s_dist
         self._u_a_dist = u_a/np.linalg.norm(u_a, axis=1, keepdims=True)
-        self._get_axial_vec = interp.interp1d(self._unit_vec_span_locs, self._u_a_dist, axis=0)
+        self._get_axial_vec = interp.interp1d(self.node_span_locs, self._u_a_dist, axis=0)
         
         # Unit normal vector
         self._u_n_dist = np.cross(self._u_a_dist, self._u_s_dist)
-        self._get_normal_vec = interp.interp1d(self._unit_vec_span_locs, self._u_n_dist, axis=0)
+        self._get_normal_vec = interp.interp1d(self.node_span_locs, self._u_n_dist, axis=0)
 
 
     def _initialize_airfoils(self, airfoil_dict):

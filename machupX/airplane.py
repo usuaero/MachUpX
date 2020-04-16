@@ -289,6 +289,9 @@ class Airplane:
         input_dict : dict
             Dictionary describing the wing segment. Same as specified for input files.
 
+        recalculate_geometry : boolean, optional
+            Defaults to True. SHOULD NOT BE SET TO FALSE. This is required for internal functionality.
+
         Returns
         -------
 
@@ -459,6 +462,8 @@ class Airplane:
         wing_slice = self.wing_slices[cur_wing]
         gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
 
+        print()
+
         # Calculate joint locations for actual LAC
         self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
         self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
@@ -481,7 +486,7 @@ class Airplane:
                 wing_index = i-wing_slice.start # Index of control point within this wing
                 PC = self.PC[i,:]
                 PC_span = self.PC_span_locs[i]
-                PC_deriv = gradient[wing_index,:]
+                PC_deriv = self.u_s[wing_index,:]
 
                 # Blend P0
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
