@@ -308,7 +308,6 @@ class Scene:
         self._sweep_cp = np.zeros(self._N)
         self._max_thickness = np.zeros(self._N)
         self._max_camber = np.zeros(self._N)
-        self._section_sweep = np.zeros(self._N)
 
         # Node locations
         self._P0 = np.zeros((self._N,self._N,3)) # Inbound vortex node location; takes into account effective LAC where appropriate
@@ -382,7 +381,6 @@ class Scene:
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
             self._max_camber[airplane_slice] = airplane_object.max_camber
             self._max_thickness[airplane_slice] = airplane_object.max_thickness
-            self._section_sweep[airplane_slice] = airplane_object.cp_sweep
 
             # Get section vectors
             self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
@@ -419,6 +417,9 @@ class Scene:
         self._r_1 = np.where(self._r_1==0, self._PC[:,np.newaxis,:]-self._P1, self._r_1)
         self._r_0_joint = np.where(self._r_0_joint==0, self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
         self._r_1_joint = np.where(self._r_1_joint==0, self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
+
+        # Get effective sweep of wing sections
+        self._section_sweep = np.arccos(self._u_s[:,0])-0.5*np.pi
 
         # Calculate spatial node vector magnitudes
         self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
