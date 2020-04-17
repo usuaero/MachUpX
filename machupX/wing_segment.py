@@ -481,10 +481,12 @@ class WingSegment:
                 sweep = abs(self.get_sweep(0.0))
 
                 # Calculate effective global wing sweep
-                sweep_eff = sweep/(1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25
+                A = 1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2
+                sweep_eff = sweep/(A**0.25)
                 tan_k = m.tan(sweep_eff)
                 sweep_div = tan_k/sweep_eff
-                K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**(m.pi/(4.0*(m.pi+2.0*abs(sweep_eff))))
+                exp = m.pi/(4.0*(m.pi+2.0*abs(sweep_eff)))
+                K = A**exp
 
                 # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
                 if self.side == "left":

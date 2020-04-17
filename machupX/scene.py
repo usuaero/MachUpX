@@ -293,8 +293,9 @@ class Scene:
         self._num_aircraft -= 1
 
         # Reinitialize arrays
-        self._initialize_storage_arrays()
-        self._perform_geometry_and_atmos_calcs()
+        if self._num_aircraft != 0:
+            self._initialize_storage_arrays()
+            self._perform_geometry_and_atmos_calcs()
 
 
     def _initialize_storage_arrays(self):
@@ -618,6 +619,7 @@ class Scene:
         # Project velocity into effective airfoil section plane
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
         V_i_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
+        V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
 
         # Calculate swept airfoil parameters
         v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
@@ -1115,6 +1117,10 @@ class Scene:
         dict:
             Dictionary of forces and moments acting on each wing segment.
         """
+
+        # Check for aircraft
+        if self._num_aircraft == 0:
+            raise RuntimeError("There are no aircraft in this scene. No calculations can be performed.")
 
         # Solve for gamma distribution
         fsolve_time = 0.0
