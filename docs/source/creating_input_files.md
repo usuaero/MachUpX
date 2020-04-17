@@ -99,7 +99,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>Gives the distribution of various parameters across each lifting surface.
 >>>
 >>>**"filename" : string, optional**
->>>>File to store the results in. Defaults to the input filename + "_derivatives".
+>>>>File to store the results in. Defaults to the input filename + "_distributions".
 >>>
 >>>**"make_plots" : list, optional**
 >>>>List of parameters to make plots of. A plot of the parameter as a function of span fraction for each wing segment will then be generated and saved. The following params can be listed for making plots: "cpx", "cpy", "cpz", "chord", "twist", "dihedral", "sweep", "area", "alpha", "Re", "M", "section_CL", "section_Cm", "section_parasitic_CD", and "section_aL0".
