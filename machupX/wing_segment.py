@@ -477,7 +477,7 @@ class WingSegment:
                 # Get constants
                 CLa_root = self._airfoils[0].get_CLa(alpha=0.0)
                 area = integ.quad(lambda s : self.get_chord(s), 0, 1)[0]
-                R_A = 0.5*self.b/area
+                R_A = 2.0*self.b/area
                 sweep = abs(self.get_sweep(0.0))
 
                 # Calculate effective global wing sweep

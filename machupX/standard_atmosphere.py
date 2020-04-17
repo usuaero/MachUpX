@@ -2,7 +2,6 @@
 
 import numpy as np
 import copy
-import pandas
 
 class StandardAtmosphere:
     """Defines a standard atmosphere according to the 1976 US Standard Atmosphere.
