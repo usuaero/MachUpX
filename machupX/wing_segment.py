@@ -428,6 +428,9 @@ class WingSegment:
         self.u_a_cp = self._get_axial_vec(self.cp_span_locs)
         self.u_n_cp = self._get_normal_vec(self.cp_span_locs)
         self.u_s_cp = self._get_span_vec(self.cp_span_locs)
+        self.u_a_cp_unswept = self._get_unswept_axial_vec(self.cp_span_locs)
+        self.u_n_cp_unswept = self._get_unswept_normal_vec(self.cp_span_locs)
+        self.u_s_cp_unswept = self._get_unswept_span_vec(self.cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
         self.twist_cp = self.get_twist(self.cp_span_locs)
         self.dihedral_cp = self.get_dihedral(self.cp_span_locs)
@@ -663,6 +666,39 @@ class WingSegment:
         S_dihedral = np.sin(dihedral)
 
         return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
+
+
+    def _get_unswept_normal_vec(self, span):
+        # Returns the normal vector at the given span locations
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
+        else:
+            span_array = np.asarray(span)
+
+        twist = self.get_twist(span_array)
+        dihedral = self.get_dihedral(span_array)
+        
+        C_twist = np.cos(twist)
+        S_twist = np.sin(twist)
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+
+        return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
+
+
+    def _get_unswept_span_vec(self, span):
+        # Returns the normal vector at the given span locations
+        if isinstance(span, float):
+            span_array = np.asarray(span)[np.newaxis]
+        else:
+            span_array = np.asarray(span)
+
+        dihedral = self.get_dihedral(span_array)
+
+        C_dihedral = np.cos(dihedral)
+        S_dihedral = np.sin(dihedral)
+
+        return np.asarray([np.zeros(span_array.size), -C_dihedral, S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):

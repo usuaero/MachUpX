@@ -63,7 +63,7 @@ if __name__=="__main__":
     plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
 
     # Loop through grid resolutions
-    grids = [10, 20, 40, 80, 160, 320]
+    grids = [5, 20, 80]
 
     for grid in grids:
 

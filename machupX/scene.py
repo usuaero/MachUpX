@@ -325,6 +325,9 @@ class Scene:
         self._u_a = np.zeros((self._N,3))
         self._u_n = np.zeros((self._N,3))
         self._u_s = np.zeros((self._N,3))
+        self._u_a_unswept = np.zeros((self._N,3))
+        self._u_n_unswept = np.zeros((self._N,3))
+        self._u_s_unswept = np.zeros((self._N,3))
 
         # Control point atmospheric properties
         self._rho = np.zeros(self._N) # Density
@@ -386,6 +389,9 @@ class Scene:
             self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
             self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n)
             self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s)
+            self._u_a_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a_unswept)
+            self._u_n_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n_unswept)
+            self._u_s_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s_unswept)
 
             # Node locations
             # Note the first index indicates which control point this is the effective LAC for
@@ -591,6 +597,7 @@ class Scene:
 
         # Calculate control point velocities
         self._v_i = self._cp_v_inf+np.einsum('ijk,i->ik', self._V_ji, self._gamma)
+        self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
 
         # Get vortex lift
         L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl), axis=-1)*self._gamma
@@ -609,10 +616,12 @@ class Scene:
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
         V_i_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
 
-        # Calculate airfoil parameters
+        # Calculate swept airfoil parameters
         v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
         v_n = np.einsum('ij,ij->i', v_i_eff, self._u_n)
-        self._alpha = np.arctan2(v_n, v_a)
+        v_s = np.einsum('ij,ij->i', self._v_i-v_i_eff, self._u_s)
+        self._alpha_swept = np.arctan2(v_n, v_a)
+        self._beta_swept = np.arctan2(v_s, v_a)
 
         # Calculate lift
         self._CL = np.zeros(self._N)
@@ -629,24 +638,34 @@ class Scene:
                 for segment in wing:
                     seg_N = segment.N
                     seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
-                    self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                    self._CL[seg_slice] = segment.get_cp_CL(self._alpha_swept[seg_slice], self._Re[seg_slice], self._M[seg_slice])
                     seg_ind += seg_N
 
             index += N
 
+        # Correct swept section lift
         self._correct_CL_for_sweep()
 
-        return 0.5*V_i_eff_2*self._CL*self._dS
+        # Determine Jackson's dimensionalization correction factors
+        v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+        v_n_unswept = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+        v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
+        alpha = np.arctan2(v_n_unswept, v_a_unswept)
+        beta = np.arctan2(v_s_unswept, v_a_unswept)
+        R_i_inv = np.sqrt((1-np.sin(alpha)**2*np.sin(beta)**2)/(np.cos(alpha)**2*np.cos(self._section_sweep-beta)**2+np.sin(alpha)**2*np.cos(beta)**2))
+        R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
+
+        return 0.5*V_i_eff_2*R_i_lambda*R_i_inv*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):
         # Applies Jackson's corrections for swept section lift
 
         # Estimate lift slope
-        CL_a_est = self._CL/(self._alpha-self._aL0)
+        CL_a_est = self._CL/(self._alpha_swept-self._aL0)
 
         # Get new estimate
-        self._CL = self._R_CL_a*CL_a_est*(self._alpha-self._aL0-self._delta_a_L0)
+        self._CL = self._R_CL_a*CL_a_est*(self._alpha_swept-self._aL0-self._delta_a_L0)
 
 
     def _solve_linear(self, **kwargs):

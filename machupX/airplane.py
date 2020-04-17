@@ -380,6 +380,9 @@ class Airplane:
         self.u_a = np.zeros((self.N,3))
         self.u_n = np.zeros((self.N,3))
         self.u_s = np.zeros((self.N,3))
+        self.u_a_unswept = np.zeros((self.N,3))
+        self.u_n_unswept = np.zeros((self.N,3))
+        self.u_s_unswept = np.zeros((self.N,3))
         self.P0_u_a = np.zeros((self.N,3))
         self.P1_u_a = np.zeros((self.N,3))
 
@@ -447,6 +450,9 @@ class Airplane:
                 self.u_a[cur_slice,:] = segment.u_a_cp
                 self.u_n[cur_slice,:] = segment.u_n_cp
                 self.u_s[cur_slice,:] = segment.u_s_cp
+                self.u_a_unswept[cur_slice,:] = segment.u_a_cp_unswept
+                self.u_n_unswept[cur_slice,:] = segment.u_n_cp_unswept
+                self.u_s_unswept[cur_slice,:] = segment.u_s_cp_unswept
                 self.P0_u_a[cur_slice,:] = segment.u_a_node[:-1]
                 self.P1_u_a[cur_slice,:] = segment.u_a_node[1:]
 
@@ -460,9 +466,6 @@ class Airplane:
         # Store LAC tangential vectors
         cur_wing = 0
         wing_slice = self.wing_slices[cur_wing]
-        gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
-
-        print()
 
         # Calculate joint locations for actual LAC
         self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
@@ -475,9 +478,6 @@ class Airplane:
             if i >= self.wing_slices[cur_wing].stop:
                 cur_wing += 1
                 wing_slice = self.wing_slices[cur_wing]
-
-                # Update gradient
-                gradient = np.gradient(self.PC[wing_slice], self.PC_span_locs[wing_slice], edge_order=2, axis=0)
 
             # General NLL corrections; if this is skipped, the node locations remain unchanged
             if reid_corr[i]:
