@@ -483,10 +483,10 @@ class Airplane:
             if reid_corr[i]:
 
                 # Get control point of interest
-                wing_index = i-wing_slice.start # Index of control point within this wing
                 PC = self.PC[i,:]
                 PC_span = self.PC_span_locs[i]
-                PC_deriv = self.u_s[wing_index,:]
+                u_s = self.u_s[i,:]
+                PC_deriv = u_s/np.sqrt(u_s[1]*u_s[1]+u_s[2]*u_s[2])
 
                 # Blend P0
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
@@ -508,7 +508,7 @@ class Airplane:
                 #   < u_j, u_a > > 0
                 #   u_j = c1*u_a+c2*T
 
-                # P0
+                # P0 joint
                 d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
                 ds = np.zeros(wing_slice.stop-wing_slice.start)
                 ds[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
@@ -523,7 +523,7 @@ class Airplane:
                 c = self.P0_chord[wing_slice]
                 self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
-                # P1
+                # P1 joint
                 d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
                 ds = np.zeros(wing_slice.stop-wing_slice.start)
                 ds[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))

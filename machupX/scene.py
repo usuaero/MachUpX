@@ -427,9 +427,6 @@ class Scene:
 
         # Get effective sweep of wing sections
         self._section_sweep = np.arccos(self._u_s[:,0])-0.5*np.pi
-        plt.figure()
-        plt.plot(self._PC[:,1],np.degrees(self._section_sweep))
-        plt.show()
 
         # Calculate spatial node vector magnitudes
         self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
@@ -619,7 +616,7 @@ class Scene:
         # Project velocity into effective airfoil section plane
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
         V_i_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
-        V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
+        V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
 
         # Calculate swept airfoil parameters
         v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
@@ -657,10 +654,10 @@ class Scene:
         v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
         alpha = np.arctan2(v_n_unswept, v_a_unswept)
         beta = np.arctan2(v_s_unswept, v_a_unswept)
-        R_i_inv = np.sqrt((1-np.sin(alpha)**2*np.sin(beta)**2)/(np.cos(alpha)**2*np.cos(self._section_sweep-beta)**2+np.sin(alpha)**2*np.cos(beta)**2))
+        R_i = np.sqrt((np.cos(alpha)**2*np.cos(self._section_sweep-beta)**2+np.sin(alpha)**2*np.cos(beta)**2)/(1-np.sin(alpha)**2*np.sin(beta)**2))
         R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
 
-        return 0.5*V_i_eff_2*R_i_lambda*R_i_inv*self._CL*self._dS
+        return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):

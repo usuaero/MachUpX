@@ -481,12 +481,13 @@ class WingSegment:
                 sweep = abs(self.get_sweep(0.0))
 
                 # Calculate effective global wing sweep
-                A = 1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2
-                sweep_eff = sweep/(A**0.25)
+                sweep_eff = sweep/((1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25)
+
+                # Calculate constants
                 tan_k = m.tan(sweep_eff)
                 sweep_div = tan_k/sweep_eff
                 exp = m.pi/(4.0*(m.pi+2.0*abs(sweep_eff)))
-                K = A**exp
+                K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**exp
 
                 # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
                 if self.side == "left":
@@ -495,11 +496,14 @@ class WingSegment:
                     locs = np.copy(self.node_span_locs)
                 z = locs*self.b
                 c = self.get_chord(locs)
-                center_inf = z/c
+                cen_inf = z/c
                 tip_inf = (self.b-z)/c
 
                 # Get hyperbolic interpolation
-                l = np.sqrt(1+(2.0*m.pi*sweep_div*center_inf)**2)-2*m.pi*sweep_div*center_inf-np.sqrt(1+(2.0*m.pi*sweep_div*tip_inf)**2)+2*m.pi*sweep_div*tip_inf
+                two_pi = 2.0*m.pi
+                l_cen = np.sqrt(1+(two_pi*sweep_div*cen_inf)**2)-two_pi*sweep_div*cen_inf
+                l_tip = np.sqrt(1+(two_pi*sweep_div*tip_inf)**2)-two_pi*sweep_div*tip_inf
+                l = l_cen-l_tip
 
                 # Calculate offset
                 ac_offset = -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))

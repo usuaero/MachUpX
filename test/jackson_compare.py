@@ -58,7 +58,7 @@ if __name__=="__main__":
     scene = MUX.Scene(input_dict)
     scene.add_aircraft("jackson_wing", airplane_dict, state=state)
 
-    scene.display_wireframe(show_vortices=True)
+    #scene.display_wireframe(show_vortices=True)
 
     scene._solve_w_scipy(verbose=True)
 
