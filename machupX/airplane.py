@@ -696,7 +696,7 @@ class Airplane:
         if self.l_ref_lat == -1:
             self.l_ref_lat = 0.0
             for (_, wing_segment) in self.wing_segments.items():
-                if wing_segment.is_main and wing_segment._side == "right":
+                if wing_segment.is_main and wing_segment.side == "right":
                     self.l_ref_lat += wing_segment.b
 
         # Longitudinal reference length

@@ -427,9 +427,9 @@ class Scene:
 
         # Get effective sweep of wing sections
         self._section_sweep = np.arccos(self._u_s[:,0])-0.5*np.pi
-        #plt.figure()
-        #plt.plot(self._PC[:,1],np.degrees(self._section_sweep))
-        #plt.show()
+        plt.figure()
+        plt.plot(self._PC[:,1],np.degrees(self._section_sweep))
+        plt.show()
 
         # Calculate spatial node vector magnitudes
         self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))

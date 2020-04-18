@@ -22,11 +22,6 @@ if __name__=="__main__":
     airplane_dict = {
         "CG" : [0,0,0],
         "weight" : 10.0,
-        "reference" : {
-            "area" : 8.0,
-            "longitudinal_length" : 1.0,
-            "lateral_length" : 4.0
-        },
         "airfoils" : {
             "NACA_0012" : {
                 "CL,a" : 6.907213339669221,
