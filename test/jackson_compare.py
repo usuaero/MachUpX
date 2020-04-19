@@ -54,18 +54,38 @@ if __name__=="__main__":
         "alpha" : 4.2
     }
 
-    # Initialize
-    scene = MUX.Scene(input_dict)
-    scene.add_aircraft("jackson_wing", airplane_dict, state=state)
+    not_grid = 1
+    if not_grid:
 
-    #scene.display_wireframe(show_vortices=True)
+        # Initialize
+        scene = MUX.Scene(input_dict)
+        scene.add_aircraft("jackson_wing", airplane_dict, state=state)
 
-    scene._solve_w_scipy(verbose=True)
+        #scene.display_wireframe(show_vortices=True)
 
-    plt.figure()
-    plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
-    plt.plot(scene._PC[:,1], scene._gamma, label='MUX')
-    plt.legend()
-    plt.xlabel("Span Location")
-    plt.ylabel("Circulation")
-    plt.show()
+        scene._solve_w_scipy(verbose=True)
+
+        plt.figure()
+        plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
+        plt.plot(scene._PC[:,1], scene._gamma, label='MUX')
+        plt.legend()
+        plt.xlabel("Span Location")
+        plt.ylabel("Circulation")
+        plt.show()
+
+    else:
+
+        grids = [10, 20, 40, 80, 160]
+
+        plt.figure()
+        plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
+        for grid in grids:
+            airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
+            scene = MUX.Scene(input_dict)
+            scene.add_aircraft("jackson_wing", airplane_dict, state=state)
+            scene._solve_w_scipy(verbose=True)
+            plt.plot(scene._PC[:,1], scene._gamma, label='MUX {0}'.format(grid))
+        plt.legend()
+        plt.xlabel("Span Location")
+        plt.ylabel("Circulation")
+        plt.show()

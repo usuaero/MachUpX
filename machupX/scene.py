@@ -367,7 +367,7 @@ class Scene:
         self._airplane_names = []
 
         # Loop through airplanes
-        for i, (airplane_name, airplane_object) in enumerate(self._airplanes.items()):
+        for airplane_name, airplane_object in self._airplanes.items():
 
             # Store airplane and segment names to make sure they are always accessed in the same order
             self._airplane_names.append(airplane_name)
@@ -396,10 +396,10 @@ class Scene:
 
             # Node locations
             # Note the first index indicates which control point this is the effective LAC for
-            self._P0[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.P0_eff)
-            self._P1[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.P0_eff)
-            self._P0_joint[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.P0_joint_eff)
-            self._P1_joint[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.P1_joint_eff)
+            self._P0[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_eff)
+            self._P1[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_eff)
+            self._P0_joint[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_joint_eff)
+            self._P1_joint[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1_joint_eff)
 
             # Get node locations for other aircraft from this aircraft
             # This does not need to take the effective LAC into account
@@ -449,8 +449,7 @@ class Scene:
             numer = ((self._r_0_mag+self._r_1_mag)[:,:,np.newaxis]*np.cross(self._r_0, self._r_1))
             denom = self._r_0_r_1_mag*(self._r_0_r_1_mag+np.einsum('ijk,ijk->ij', self._r_0, self._r_1))
             V_ji_bound = np.true_divide(numer, denom[:,:,np.newaxis])
-            diag_ind = np.diag_indices(self._N)
-            V_ji_bound[diag_ind] = 0.0 # Ensure this actually comes out to be zero
+            V_ji_bound[np.diag_indices(self._N)] = 0.0 # Ensure this actually comes out to be zero
 
             # Jointed 0
             numer = ((self._r_0_joint_mag+self._r_0_mag)[:,:,np.newaxis]*np.cross(self._r_0_joint, self._r_0))
@@ -540,6 +539,8 @@ class Scene:
         self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/np.linalg.norm(P0_joint_v_inf, axis=-1, keepdims=True)
         self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
 
+        self._solved = False
+
 
     def _calc_V_ji(self):
         # Calculates the influence of each horseshoe vortex on each control point, divided by the vortex strength
@@ -569,7 +570,7 @@ class Scene:
         self._calc_V_ji()
 
         # Initial guess
-        gamma_init = np.ones(self._N)
+        gamma_init = np.zeros(self._N)
 
         # Get solution
         self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
@@ -598,7 +599,6 @@ class Scene:
 
         # Calculate control point velocities
         self._v_i = self._cp_v_inf+np.einsum('ijk,i->ik', self._V_ji, self._gamma)
-        self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
 
         # Get vortex lift
         L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl), axis=-1)*self._gamma
@@ -615,7 +615,6 @@ class Scene:
 
         # Project velocity into effective airfoil section plane
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-        V_i_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
         V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
 
         # Calculate swept airfoil parameters

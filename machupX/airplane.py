@@ -471,7 +471,7 @@ class Airplane:
         self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
         self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
 
-        # Calculate control point derivatives with respect to span
+        # Calculate control point derivative with respect to span, rather than distance along the LAC
         PC_deriv = self.u_s/np.sqrt(self.u_s[:,1]*self.u_s[:,1]+self.u_s[:,2]*self.u_s[:,2])[:,np.newaxis]
 
         # Calculate effective loci of aerodynamic centers
@@ -523,6 +523,12 @@ class Airplane:
                 u_j = u_j/np.linalg.norm(u_j)
                 c = self.P0_chord[wing_slice]
                 self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
+                # Make sure 2nd derivative goes to zero
+                sec_deriv = np.gradient(T0, ds, axis=0, edge_order=2)
+                plt.figure()
+                plt.plot(ds, np.linalg.norm(sec_deriv, axis=1))
+                plt.show()
 
                 # P1 joint
                 d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
