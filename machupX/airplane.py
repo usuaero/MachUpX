@@ -471,6 +471,9 @@ class Airplane:
         self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
         self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
 
+        # Calculate control point derivatives with respect to span
+        PC_deriv = self.u_s/np.sqrt(self.u_s[:,1]*self.u_s[:,1]+self.u_s[:,2]*self.u_s[:,2])[:,np.newaxis]
+
         # Calculate effective loci of aerodynamic centers
         for i in range(self.N):
 
@@ -485,18 +488,16 @@ class Airplane:
                 # Get control point of interest
                 PC = self.PC[i,:]
                 PC_span = self.PC_span_locs[i]
-                u_s = self.u_s[i,:]
-                PC_deriv = u_s/np.sqrt(u_s[1]*u_s[1]+u_s[2]*u_s[2])
 
                 # Blend P0
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
-                straight_ac = PC+PC_deriv[np.newaxis,:]*ds0[:,np.newaxis]
+                straight_ac = PC+PC_deriv[i,:]*ds0[:,np.newaxis]
                 blend = np.exp(-sigma_blend[i]*ds0*ds0)
                 self.P0_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
 
                 # Blend P1
                 ds1 = self.P1_span_locs[wing_slice]-PC_span
-                straight_ac = PC+PC_deriv[np.newaxis,:]*ds1[:,np.newaxis]
+                straight_ac = PC+PC_deriv[i,:]*ds1[:,np.newaxis]
                 blend = np.exp(-sigma_blend[i]*ds1*ds1)
                 self.P1_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
 
