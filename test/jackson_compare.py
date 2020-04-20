@@ -2,11 +2,19 @@ import machupX as MUX
 import numpy as np
 import matplotlib.pyplot as plt
 
+np.set_printoptions(linewidth=np.inf)
+
 if __name__=="__main__":
 
     # Load Jackson's distribution
     with open("test/test_circ_dist.txt", 'r') as jackson_file:
         gamma_jackson = np.genfromtxt(jackson_file)
+
+    with open("test/velocities.dat", 'r') as jackson_file:
+        vel_jackson = np.genfromtxt(jackson_file)
+
+    with open("test/aero_props.dat", 'r') as jackson_file:
+        section_jackson = np.genfromtxt(jackson_file)
 
     # Parameters
     input_dict = {
@@ -24,7 +32,7 @@ if __name__=="__main__":
         "weight" : 10.0,
         "airfoils" : {
             "NACA_0012" : {
-                "CL,a" : 6.907213339669221,
+                "CLa" : 6.907213339669221,
                 "geometry" : {
                     "NACA" : "0012"
                 }
@@ -64,6 +72,20 @@ if __name__=="__main__":
         #scene.display_wireframe(show_vortices=True)
 
         scene._solve_w_scipy(verbose=True)
+
+        plt.figure()
+        plt.title("Zero-Lift Angle of Attack")
+        plt.plot(scene._PC[:,1], scene._aL0, label='MUX')
+        plt.plot(section_jackson[:,0], section_jackson[:,2], label='Jackson')
+        plt.legend()
+        plt.show()
+
+        plt.figure()
+        plt.title("Section Lift Slope")
+        plt.plot(scene._PC[:,1], scene._CLa, label='MUX')
+        plt.plot(section_jackson[:,0], section_jackson[:,1], label='Jackson')
+        plt.legend()
+        plt.show()
 
         plt.figure()
         plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')

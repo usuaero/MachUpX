@@ -426,16 +426,12 @@ class Airplane:
                 sigma_blend[cur_slice] = (np.cos(segment.sweep_cp)/(segment.b*segment.blend_dist))**2
                 delta_joint[cur_slice] = segment.delta_joint
 
-                # Store control point span locations
+                # Store control point and node span locations
                 if segment.side == "left":
                     self.PC_span_locs[cur_slice] = cur_span_from_left_tip+(1.0-segment.cp_span_locs)*segment.b
-                else:
-                    self.PC_span_locs[cur_slice] = cur_span_from_left_tip+segment.cp_span_locs*segment.b
-                
-                # Store node span locations
-                if segment.side == "left":
                     node_spans = cur_span_from_left_tip+(1.0-segment.node_span_locs)*segment.b
                 else:
+                    self.PC_span_locs[cur_slice] = cur_span_from_left_tip+segment.cp_span_locs*segment.b
                     node_spans = cur_span_from_left_tip+segment.node_span_locs*segment.b
                 self.P0_span_locs[cur_slice] = node_spans[:-1]
                 self.P1_span_locs[cur_slice] = node_spans[1:]
@@ -493,13 +489,13 @@ class Airplane:
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[i,:]*ds0[:,np.newaxis]
                 blend = np.exp(-sigma_blend[i]*ds0*ds0)
-                self.P0_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
+                self.P0_eff[i,wing_slice,:] = straight_ac*blend[:,np.newaxis]+self.P0_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])
 
                 # Blend P1
                 ds1 = self.P1_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[i,:]*ds1[:,np.newaxis]
                 blend = np.exp(-sigma_blend[i]*ds1*ds1)
-                self.P1_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])+straight_ac*blend[:,np.newaxis]
+                self.P1_eff[i,wing_slice,:] = straight_ac*blend[:,np.newaxis]+self.P1_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])
 
                 # Place vortex joints
                 # These equations ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
@@ -523,12 +519,6 @@ class Airplane:
                 u_j = u_j/np.linalg.norm(u_j)
                 c = self.P0_chord[wing_slice]
                 self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-
-                # Make sure 2nd derivative goes to zero
-                sec_deriv = np.gradient(T0, ds, axis=0, edge_order=2)
-                plt.figure()
-                plt.plot(ds, np.linalg.norm(sec_deriv, axis=1))
-                plt.show()
 
                 # P1 joint
                 d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
@@ -560,7 +550,7 @@ class Airplane:
         # Calculate differential length vectors
         self.dl = self.P1-self.P0
 
-        ## Plot effective LACs
+        # Plot effective LACs
         #fig = plt.figure(figsize=plt.figaspect(1.0))
         #ax = fig.gca(projection='3d')
         #for i in range(self.N):

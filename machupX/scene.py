@@ -616,6 +616,7 @@ class Scene:
         # Project velocity into effective airfoil section plane
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
         V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
+        V_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
 
         # Calculate swept airfoil parameters
         v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
@@ -657,6 +658,7 @@ class Scene:
         R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
 
         return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS
+        #return 0.5*V_eff_2*self._CL*self._dS # This really produces the same result as Jackson's, at least without sideslip
 
 
     def _correct_CL_for_sweep(self):
@@ -666,7 +668,10 @@ class Scene:
         CL_a_est = self._CL/(self._alpha_swept-self._aL0)
 
         # Get new estimate
-        self._CL = self._R_CL_a*CL_a_est*(self._alpha_swept-self._aL0-self._delta_a_L0)
+        self._CLa = self._R_CL_a*CL_a_est
+        self._aL0 = self._aL0+self._delta_a_L0
+        self._CL = self._CLa*(self._alpha_swept-self._aL0)
+
 
 
     def _solve_linear(self, **kwargs):
