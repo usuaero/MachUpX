@@ -73,17 +73,26 @@ if __name__=="__main__":
 
         scene._solve_w_scipy(verbose=True)
 
+        V_i = np.sqrt(np.einsum('ij,ij->i', scene._v_i, scene._v_i))
+
         plt.figure()
-        plt.title("Zero-Lift Angle of Attack")
-        plt.plot(scene._PC[:,1], scene._aL0, label='MUX')
-        plt.plot(section_jackson[:,0], section_jackson[:,2], label='Jackson')
+        plt.title("x Velocity")
+        plt.plot(scene._PC[:,1], -scene._v_i[:,0]/V_i, label='MUX')
+        plt.plot(vel_jackson[:,0], vel_jackson[:,1], label='Jackson')
         plt.legend()
         plt.show()
 
         plt.figure()
-        plt.title("Section Lift Slope")
-        plt.plot(scene._PC[:,1], scene._CLa, label='MUX')
-        plt.plot(section_jackson[:,0], section_jackson[:,1], label='Jackson')
+        plt.title("y Velocity")
+        plt.plot(scene._PC[:,1], scene._v_i[:,1]/V_i, label='MUX')
+        plt.plot(vel_jackson[:,0], vel_jackson[:,3], label='Jackson')
+        plt.legend()
+        plt.show()
+
+        plt.figure()
+        plt.title("z Velocity")
+        plt.plot(scene._PC[:,1], -scene._v_i[:,2]/V_i, label='MUX')
+        plt.plot(vel_jackson[:,0], vel_jackson[:,2], label='Jackson')
         plt.legend()
         plt.show()
 
