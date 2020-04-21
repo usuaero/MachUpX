@@ -1,6 +1,7 @@
 import machupX as MUX
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 np.set_printoptions(linewidth=np.inf)
 
@@ -71,27 +72,26 @@ if __name__=="__main__":
 
         #scene.display_wireframe(show_vortices=True)
 
-        scene._solve_w_scipy(verbose=True)
-
-        V_i = np.sqrt(np.einsum('ij,ij->i', scene._v_i, scene._v_i))
+        FM = scene.solve_forces(verbose=True, report_by_segment=True, non_dimensional=False)
+        print(json.dumps(FM, indent=4))
 
         plt.figure()
         plt.title("x Velocity")
-        plt.plot(scene._PC[:,1], -scene._v_i[:,0]/V_i, label='MUX')
+        plt.plot(scene._PC[:,1], -scene._v_i[:,0], label='MUX')
         plt.plot(vel_jackson[:,0], vel_jackson[:,1], label='Jackson')
         plt.legend()
         plt.show()
 
         plt.figure()
         plt.title("y Velocity")
-        plt.plot(scene._PC[:,1], scene._v_i[:,1]/V_i, label='MUX')
+        plt.plot(scene._PC[:,1], scene._v_i[:,1], label='MUX')
         plt.plot(vel_jackson[:,0], vel_jackson[:,3], label='Jackson')
         plt.legend()
         plt.show()
 
         plt.figure()
         plt.title("z Velocity")
-        plt.plot(scene._PC[:,1], -scene._v_i[:,2]/V_i, label='MUX')
+        plt.plot(scene._PC[:,1], -scene._v_i[:,2], label='MUX')
         plt.plot(vel_jackson[:,0], vel_jackson[:,2], label='Jackson')
         plt.legend()
         plt.show()

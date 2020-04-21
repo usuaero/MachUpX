@@ -405,7 +405,7 @@ class Airplane:
             cur_span_from_left_tip = 0.0
 
             # Loop through segments
-            for segment in self.segments_in_wings[i]:
+            for segment in self._segments_in_wings[i]:
 
                 # Determine slice for this segment
                 N = segment.N
@@ -576,12 +576,12 @@ class Airplane:
 
         # Assign IDs and group
         curr_ID = 0
-        self.segments_in_wings = []
+        self._segments_in_wings = []
         finished = False
         while not finished or curr_ID <= max(wing_IDs):
 
             # Create storage
-            self.segments_in_wings.append([])
+            self._segments_in_wings.append([])
 
             # Check if the user has called for the current ID
             if curr_ID in wing_IDs:
@@ -589,7 +589,7 @@ class Airplane:
                 # Gather segments with that ID
                 for segment in self.wing_segments.values():
                     if segment.wing_ID == curr_ID:
-                        self.segments_in_wings[curr_ID].append(segment)
+                        self._segments_in_wings[curr_ID].append(segment)
 
             else:
                 
@@ -599,14 +599,14 @@ class Airplane:
                     # Look for segment with no ID
                     if segment.wing_ID is None:
                         segment.wing_ID = curr_ID
-                        self.segments_in_wings[curr_ID].append(segment)
+                        self._segments_in_wings[curr_ID].append(segment)
 
                         # Look for matching half
                         segment_root_name = segment.name.replace("_right", "").replace("_left", "")
                         for partner_segment in self.wing_segments.values():
                             if segment_root_name in partner_segment.name and partner_segment.wing_ID is None:
                                 partner_segment.wing_ID = curr_ID
-                                self.segments_in_wings[curr_ID].append(partner_segment)
+                                self._segments_in_wings[curr_ID].append(partner_segment)
                                 break
 
                         break
@@ -623,15 +623,15 @@ class Airplane:
         # Delete empty wings
         empty = []
         for i in range(self._num_wings):
-            if len(self.segments_in_wings[i]) == 0:
+            if len(self._segments_in_wings[i]) == 0:
                 empty.append(i)
                 self._num_wings -= 1
         for index in empty[::-1]:
-            del self.segments_in_wings[index]
+            del self._segments_in_wings[index]
 
         # Reassign IDs
         for i in range(self._num_wings):
-            for segment in self.segments_in_wings[i]:
+            for segment in self._segments_in_wings[i]:
                 segment.wing_ID = i
 
         # Sort segments along wingspan from left to right
@@ -642,7 +642,7 @@ class Airplane:
             while True:
                 next_segment = None
                 norm_to_beat = 0.0
-                for segment in self.segments_in_wings[i]:
+                for segment in self._segments_in_wings[i]:
                     if "_left" in segment.name:
                         tip = segment.get_tip_loc()
                         norm = m.sqrt(tip[1]*tip[1]+tip[2]*tip[2])
@@ -661,7 +661,7 @@ class Airplane:
             while True:
                 next_segment = None
                 norm_to_beat = np.inf
-                for segment in self.segments_in_wings[i]:
+                for segment in self._segments_in_wings[i]:
                     if "_right" in segment.name:
                         tip = segment.get_tip_loc()
                         norm = m.sqrt(tip[1]*tip[1]+tip[2]*tip[2])
@@ -676,7 +676,13 @@ class Airplane:
                 # Add segment to list
                 sorted_segments.append(next_segment)
 
-            self.segments_in_wings[i] = sorted_segments
+            self._segments_in_wings[i] = sorted_segments
+
+        # Store segments in single list without separating into wings
+        self.segments = []
+        for wing in self._segments_in_wings:
+            for segment in wing:
+                self.segments.append(segment)
 
 
     def _check_reference_params(self):
