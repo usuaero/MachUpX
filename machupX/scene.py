@@ -318,10 +318,14 @@ class Scene:
         self._P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location
 
         # Spatial node vectors
-        self._r_0 = np.zeros((self._N,self._N,3))
-        self._r_1 = np.zeros((self._N,self._N,3))
-        self._r_0_joint = np.zeros((self._N,self._N,3))
-        self._r_1_joint = np.zeros((self._N,self._N,3))
+        self._r_0 = np.empty((self._N,self._N,3))
+        self._r_1 = np.empty((self._N,self._N,3))
+        self._r_0_joint = np.empty((self._N,self._N,3))
+        self._r_1_joint = np.empty((self._N,self._N,3))
+        self._r_0[:] = np.nan
+        self._r_1[:] = np.nan
+        self._r_0_joint[:] = np.nan
+        self._r_1_joint[:] = np.nan
 
         # Section unit vectors
         self._u_a = np.zeros((self._N,3))
@@ -423,10 +427,10 @@ class Scene:
             index += airplane_N
 
         # Fill in spatial node vectors between airplanes
-        self._r_0 = np.where(self._r_0==0, self._PC[:,np.newaxis,:]-self._P0, self._r_0)
-        self._r_1 = np.where(self._r_1==0, self._PC[:,np.newaxis,:]-self._P1, self._r_1)
-        self._r_0_joint = np.where(self._r_0_joint==0, self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
-        self._r_1_joint = np.where(self._r_1_joint==0, self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
+        self._r_0 = np.where(np.isnan(self._r_0), self._PC[:,np.newaxis,:]-self._P0, self._r_0)
+        self._r_1 = np.where(np.isnan(self._r_1), self._PC[:,np.newaxis,:]-self._P1, self._r_1)
+        self._r_0_joint = np.where(np.isnan(self._r_0_joint), self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
+        self._r_1_joint = np.where(np.isnan(self._r_1_joint), self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
 
         # Get effective sweep of wing sections
         self._section_sweep = np.arccos(self._u_s[:,0])-0.5*np.pi
@@ -455,12 +459,12 @@ class Scene:
             V_ji_bound[np.diag_indices(self._N)] = 0.0 # Ensure this actually comes out to be zero
 
             # Jointed 0
-            numer = ((self._r_0_joint_mag+self._r_0_mag)[:,:,np.newaxis]*np.cross(self._r_0_joint, self._r_0))
+            numer = (self._r_0_joint_mag+self._r_0_mag)[:,:,np.newaxis]*np.cross(self._r_0_joint, self._r_0)
             denom = self._r_0_r_0_joint_mag*(self._r_0_r_0_joint_mag+np.einsum('ijk,ijk->ij', self._r_0_joint, self._r_0))
             V_ji_joint_0 = np.true_divide(numer, denom[:,:,np.newaxis])
 
             # Jointed 1
-            numer = ((self._r_1_joint_mag+self._r_1_mag)[:,:,np.newaxis]*np.cross(self._r_1, self._r_1_joint))
+            numer = (self._r_1_joint_mag+self._r_1_mag)[:,:,np.newaxis]*np.cross(self._r_1, self._r_1_joint)
             denom = self._r_1_r_1_joint_mag*(self._r_1_r_1_joint_mag+np.einsum('ijk,ijk->ij', self._r_1, self._r_1_joint))
             V_ji_joint_1 = np.true_divide(numer, denom[:,:,np.newaxis])
 
@@ -541,6 +545,10 @@ class Scene:
         self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/np.linalg.norm(P0_joint_v_inf, axis=-1, keepdims=True)
         self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
 
+        # Correct lift slope and zero-lift angle of attack for sweep
+        self._CLa *= self._R_CL_a
+        self._aL0 += self._delta_a_L0
+
         self._solved = False
 
 
@@ -570,6 +578,26 @@ class Scene:
         # Set up flow for what won't change with changes in vorticity distribution
         self._calc_invariant_flow_properties()
         self._calc_V_ji()
+
+        #v_i_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
+        #V_eff = np.sqrt(np.einsum('ij,ij->i', v_i_eff, v_i_eff))
+        #v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
+        #v_n = np.einsum('ij,ij->i', v_i_eff, self._u_n)
+        #self._alpha_swept = np.arctan2(v_n, v_a)
+
+        #v_a_unswept = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a_unswept)
+        #v_n_unswept = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n_unswept)
+        #v_s_unswept = np.einsum('ij,ij->i', self._cp_v_inf, self._u_s_unswept)
+        #beta = np.arctan2(v_s_unswept, v_a_unswept)
+        #alpha = np.arctan2(v_n_unswept, v_a_unswept)
+        #self._beta_swept = beta-self._section_sweep #np.arctan2(v_s, v_a)
+
+        #R_i = np.sqrt((np.cos(alpha)**2*np.cos(self._section_sweep-beta)**2+np.sin(alpha)**2*np.cos(beta)**2)/(1-np.sin(alpha)**2*np.sin(beta)**2))
+        #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
+
+        #print(R_i)
+        #print(R_i_lambda)
+        #print(R_i-R_i_lambda)
 
         # Initial guess
         gamma_init = np.zeros(self._N)
@@ -632,7 +660,6 @@ class Scene:
         v_n = np.einsum('ij,ij->i', v_i_eff, self._u_n)
         v_s = np.einsum('ij,ij->i', self._v_i-v_i_eff, self._u_s)
         self._alpha_swept = np.arctan2(v_n, v_a)
-        self._beta_swept = np.arctan2(v_s, v_a)
 
         # Calculate lift
         self._CL = np.zeros(self._N)
@@ -656,23 +683,25 @@ class Scene:
         # Correct swept section lift
         self._correct_CL_for_sweep()
 
-        # Determine Jackson's dimensionalization correction factors
+        # Get upswept aerodynamic angles
         v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
         v_n_unswept = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
         v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
-        alpha = np.arctan2(v_n_unswept, v_a_unswept)
         beta = np.arctan2(v_s_unswept, v_a_unswept)
-        R_i = np.sqrt((np.cos(alpha)**2*np.cos(self._section_sweep-beta)**2+np.sin(alpha)**2*np.cos(beta)**2)/(1-np.sin(alpha)**2*np.sin(beta)**2))
+        self._beta_swept = beta-self._section_sweep #np.arctan2(v_s, v_a)
+
+        # Determine Jackson's dimensionalization correction factors
+        R_i = np.sqrt(V_eff_2/V_inf_2)
         R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
 
         return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS
-        #return 0.5*V_eff_2*self._CL*self._dS # This really produces the same result as Jackson's, at least without sideslip
+        #return 0.5*V_eff_2*R_i_lambda*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):
         # Applies Jackson's corrections for swept section lift
 
-        # Estimate lift slope
+        ## Estimate lift slope
         CL_a_est = self._CL/(self._alpha_swept-self._aL0)
 
         # Get new estimate

@@ -50,7 +50,7 @@ if __name__=="__main__":
                 "sweep" : 45.0,
                 "ac_offset" : "kuchemann",
                 "grid" : {
-                    "N" : 320,
+                    "N" : 80,
                     "reid_corrections" : True,
                     "joint_length" : 0.15,
                     "blending_distance" : 0.25
