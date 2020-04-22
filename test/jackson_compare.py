@@ -50,7 +50,7 @@ if __name__=="__main__":
                 "sweep" : 45.0,
                 "ac_offset" : "kuchemann",
                 "grid" : {
-                    "N" : 80,
+                    "N" : 320,
                     "reid_corrections" : True,
                     "joint_length" : 0.15,
                     "blending_distance" : 0.25
@@ -73,28 +73,28 @@ if __name__=="__main__":
         #scene.display_wireframe(show_vortices=True)
 
         FM = scene.solve_forces(verbose=True, report_by_segment=True, non_dimensional=False)
-        print(json.dumps(FM, indent=4))
+        print(json.dumps(FM["jackson_wing"]["total"], indent=4))
 
-        plt.figure()
-        plt.title("x Velocity")
-        plt.plot(scene._PC[:,1], -scene._v_i[:,0], label='MUX')
-        plt.plot(vel_jackson[:,0], vel_jackson[:,1], label='Jackson')
-        plt.legend()
-        plt.show()
+        #plt.figure()
+        #plt.title("x Velocity")
+        #plt.plot(scene._PC[:,1], -scene._v_i[:,0], label='MUX')
+        #plt.plot(vel_jackson[:,0], vel_jackson[:,1], label='Jackson')
+        #plt.legend()
+        #plt.show()
 
-        plt.figure()
-        plt.title("y Velocity")
-        plt.plot(scene._PC[:,1], scene._v_i[:,1], label='MUX')
-        plt.plot(vel_jackson[:,0], vel_jackson[:,3], label='Jackson')
-        plt.legend()
-        plt.show()
+        #plt.figure()
+        #plt.title("y Velocity")
+        #plt.plot(scene._PC[:,1], scene._v_i[:,1], label='MUX')
+        #plt.plot(vel_jackson[:,0], vel_jackson[:,3], label='Jackson')
+        #plt.legend()
+        #plt.show()
 
-        plt.figure()
-        plt.title("z Velocity")
-        plt.plot(scene._PC[:,1], -scene._v_i[:,2], label='MUX')
-        plt.plot(vel_jackson[:,0], vel_jackson[:,2], label='Jackson')
-        plt.legend()
-        plt.show()
+        #plt.figure()
+        #plt.title("z Velocity")
+        #plt.plot(scene._PC[:,1], -scene._v_i[:,2], label='MUX')
+        #plt.plot(vel_jackson[:,0], vel_jackson[:,2], label='Jackson')
+        #plt.legend()
+        #plt.show()
 
         plt.figure()
         plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
@@ -106,7 +106,7 @@ if __name__=="__main__":
 
     else:
 
-        grids = [10, 20, 40, 80, 160]
+        grids = [10, 20, 40, 80, 160, 320, 640]
 
         plt.figure()
         plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')

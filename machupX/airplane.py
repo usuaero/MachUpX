@@ -352,6 +352,7 @@ class Airplane:
         # Initialize arrays
         # Geometry
         self.c_bar = np.zeros(self.N) # Average chord
+        self.b_seg = np.zeros(self.N) # Segment semispan
         self.P0_chord = np.zeros(self.N)
         self.P1_chord = np.zeros(self.N)
         self.dS = np.zeros(self.N) # Differential planform area
@@ -414,6 +415,7 @@ class Airplane:
 
                 # Store section geometry
                 self.c_bar[cur_slice] = segment.c_bar_cp
+                self.b_seg[cur_slice] = segment.b
                 self.PC[cur_slice,:] = segment.control_points
                 self.dS[cur_slice] = segment.dS
                 self.P0_chord[cur_slice] = segment.c_node[:-1]
@@ -488,13 +490,13 @@ class Airplane:
                 # Blend P0
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[i,:]*ds0[:,np.newaxis]
-                blend = np.exp(-sigma_blend[i]*ds0*ds0)
+                blend = np.exp(-sigma_blend[i]*ds0*ds0*self.b_seg[i]*self.b_seg[i])
                 self.P0_eff[i,wing_slice,:] = straight_ac*blend[:,np.newaxis]+self.P0_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])
 
                 # Blend P1
                 ds1 = self.P1_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[i,:]*ds1[:,np.newaxis]
-                blend = np.exp(-sigma_blend[i]*ds1*ds1)
+                blend = np.exp(-sigma_blend[i]*ds1*ds1*self.b_seg[i]*self.b_seg[i])
                 self.P1_eff[i,wing_slice,:] = straight_ac*blend[:,np.newaxis]+self.P1_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])
 
                 # Place vortex joints
@@ -516,7 +518,7 @@ class Airplane:
                 c1 = np.sqrt(1/(1-k*k))
                 c2 = -c1*k
                 u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
-                u_j = u_j/np.linalg.norm(u_j)
+                u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
                 c = self.P0_chord[wing_slice]
                 self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
@@ -531,7 +533,7 @@ class Airplane:
                 c1 = np.sqrt(1/(1-k*k))
                 c2 = -c1*k
                 u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
-                u_j = u_j/np.linalg.norm(u_j)
+                u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
                 c = self.P1_chord[wing_slice]
                 self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
