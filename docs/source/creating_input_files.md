@@ -298,13 +298,19 @@ Describes an aircraft. Stored as a .json file
 >>>**"is_symmetric" : bool**
 >>>>Specifies whether this control causes symmetric or asymmetric control surface deflections (e.g. for a typical aircraft, the elevator control causes symmetric deflections whereas the aileron causes asymmetric deflections).
 >
->**"airfoils" : dict**
->>Defines the airfoil section parameters for all airfoils used on the aircraft. Any number of airfoils can be defined for the aircraft. MachUp pulls from these airfoil definitions as needed, depending on which airfoils are specified for the wings. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed above are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results. A dictionary defining an airfoil has the following structure:
+>**"airfoils" : dict or str**
+>>Defines the airfoils used on the aircraft. Any number of airfoils can be defined for the aircraft and MachUpX will pull from these airfoil definitions as needed, depending on which airfoils are specified for each wing segment. If no airfoils are listed here MachUp will automatically generate a default airfoil and use it on all lifting surfaces. The default values listed are for a flat plate as predicted by thin airfoil theory. Do not expect these to give you accurate results.
+>>
+>>This may also be the path to a JSON object containing the airfoils.
+>>
+>>MachUpX uses the AirfoilDatabase package ([link](https://www.github.com/usuaero/AirfoilDatabase)) to calculate section properties. This package allows for generating nonlinear coefficient databases for a given airfoil. It's full capabilities are explained in [the documentation](https://airfoildatabase.readthedocs.io/en/latest/). Please note that MachUpX does not have the capability to generate these databases. It can only read in a previously generated database.
+>>
+>>The input for a single airfoil has the following structure:
 >
 >>**"<AIRFOIL_NAME>" : dict**
 >>
 >>>**"type" : string**
->>>>The type of information describing the airfoil. Can be "linear" and the following keys must be defined, either here or in a JSON object pointed to by "path". UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE.
+>>>>The type of data used to calculate section properties for the airfoil. Can be "linear", "database", or "poly_fit". For a "database" or "poly_fit" airfoil, "input_file" must be specified. A "linear" airfoil assumes linear lift and moment curves and a quadratic drag polar. In this case, the following keys must be defined. UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE.
 >>>
 >>>**"aL0" : float, optional**
 >>>>The zero-lift angle of attack in radians. Defaults to 0.0.
@@ -334,17 +340,23 @@ Describes an aircraft. Stored as a .json file
 >>>**"CL_max" : float, optional**
 >>>>Maximum lift coefficient. Defaults to infinity.
 >>>
+>>>**"input_file" : str, optional**
+>>>>File containing the coefficient database or polynomial fit information for the airfoil. Required if "type" is "database" or "poly_fit".
+>>>
 >>>**"geometry" : dict, optional**
 >>>>Describes the geometry of the airfoil.
 >>>>
 >>>>**"outline_points" : str or array, optional**
->>>>>Path to a file containing airfoil outline points or array of outline points. The first column contains x-coordinates and the second column contains y-coordinates, where x originates at the leading edge and points back along the chord line and y points up. If a file, it should be comma-delimited. The trailing edge should be sealed. The geometry specified here will only be used in generating 3D models and will not affect the aerodynamics. Cannot be specified along with "outline_points".
+>>>>>Path to a file containing airfoil outline points or array of outline points. The first column contains x-coordinates and the second column contains y-coordinates, where x originates at the leading edge and points back along the chord line and y points up. If a file, it should be comma-delimited. The trailing edge should be sealed. The geometry specified here will only be used in generating 3D models and will not affect the aerodynamics. Cannot be specified along with "NACA".
 >>>>
 >>>>**"NACA" : str, optional**
 >>>>>NACA designation for the airfoil. If given, MachUpX will automatically generate outline points using the NACA equations. Can only be NACA 4-digit series. Cannot be specified along with "outline_points". Will not affect aerodynamics.
->>>
->>>**"path" : string, optional**
->>>>Path to file containing a JSON object describing the airfoil using the above keys.
+>>>>
+>>>>**"max_camber" : float, optional**
+>>>>>Maximum camber of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. Required for making corrections to section properties based on sweep. Defaults to 0.0.
+>>>>
+>>>>**"max_thickness" : float, optional**
+>>>>>Maximum thickness of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. Required for making corrections to section properties based on sweep. Defaults to 0.0.
 >
 >**"wings" : dict**
 >>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the examples/ directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface, therefore, a wing with multiple control surfaces must be created from multiple wing segments.
