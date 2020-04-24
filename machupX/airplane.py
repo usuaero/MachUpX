@@ -358,6 +358,7 @@ class Airplane:
         self.dS = np.zeros(self.N) # Differential planform area
         self.max_camber = np.zeros(self.N)
         self.max_thickness = np.zeros(self.N)
+        self.sweep = np.zeros(self.N)
 
         # Control points
         self.PC = np.zeros((self.N,3)) # Control point location
@@ -422,6 +423,7 @@ class Airplane:
                 self.P1_chord[cur_slice] = segment.c_node[1:]
                 self.max_camber[cur_slice] = segment.max_camber_cp
                 self.max_thickness[cur_slice] = segment.max_thickness_cp
+                self.sweep[cur_slice] = segment.sweep_cp
 
                 # General NLL parameters
                 reid_corr[cur_slice] = segment.reid_corr
@@ -470,7 +472,12 @@ class Airplane:
         self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
 
         # Calculate control point derivative with respect to span, rather than distance along the LAC
-        PC_deriv = self.u_s/np.sqrt(self.u_s[:,1]*self.u_s[:,1]+self.u_s[:,2]*self.u_s[:,2])[:,np.newaxis]
+        #PC_deriv = self.u_s/np.sqrt(self.u_s[:,1]*self.u_s[:,1]+self.u_s[:,2]*self.u_s[:,2])[:,np.newaxis]
+        z = self.PC[:,1]
+        PC_deriv = np.zeros((self.N,3))
+        PC_deriv[:,1] = 1.0
+        PC_deriv[:,0] = self._calc_f_prime_of_z(z)
+        self.section_sweep = -np.arctan(PC_deriv[:,0])
 
         # Calculate effective loci of aerodynamic centers
         for i in range(self.N):
@@ -490,14 +497,14 @@ class Airplane:
                 # Blend P0
                 ds0 = self.P0_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[i,:]*ds0[:,np.newaxis]
-                blend = np.exp(-sigma_blend[i]*ds0*ds0*self.b_seg[i]*self.b_seg[i])
-                self.P0_eff[i,wing_slice,:] = straight_ac*blend[:,np.newaxis]+self.P0_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])
+                blend_0 = np.exp(-sigma_blend[i]*ds0*ds0)
+                self.P0_eff[i,wing_slice,:] = straight_ac*blend_0[:,np.newaxis]+self.P0_eff[i,wing_slice,:]*(1-blend_0[:,np.newaxis])
 
                 # Blend P1
                 ds1 = self.P1_span_locs[wing_slice]-PC_span
                 straight_ac = PC+PC_deriv[i,:]*ds1[:,np.newaxis]
-                blend = np.exp(-sigma_blend[i]*ds1*ds1*self.b_seg[i]*self.b_seg[i])
-                self.P1_eff[i,wing_slice,:] = straight_ac*blend[:,np.newaxis]+self.P1_eff[i,wing_slice,:]*(1-blend[:,np.newaxis])
+                blend_1 = np.exp(-sigma_blend[i]*ds1*ds1)
+                self.P1_eff[i,wing_slice,:] = straight_ac*blend_1[:,np.newaxis]+self.P1_eff[i,wing_slice,:]*(1-blend_1[:,np.newaxis])
 
                 # Place vortex joints
                 # These equations ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
@@ -507,35 +514,49 @@ class Airplane:
                 #   < u_j, u_a > > 0
                 #   u_j = c1*u_a+c2*T
 
-                # P0 joint
-                d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
-                ds = np.zeros(wing_slice.stop-wing_slice.start)
-                ds[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
-                T0 = np.gradient(self.P0_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
-                T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
-                u_a = self.P0_u_a[wing_slice]
-                k = np.einsum('ij,ij->i', T0, u_a)
-                c1 = np.sqrt(1/(1-k*k))
-                c2 = -c1*k
-                u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
-                u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                c = self.P0_chord[wing_slice]
-                self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                ## P0 joint
+                #d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
+                #ds = np.zeros(wing_slice.stop-wing_slice.start)
+                #ds[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
+                #T0 = np.gradient(self.P0_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
+                #T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
+                #u_a = self.P0_u_a[wing_slice]
+                #k = np.einsum('ij,ij->i', T0, u_a)
+                #c1 = np.sqrt(1/(1-k*k))
+                #c2 = -c1*k
+                #u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
+                #u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
+                #c = self.P0_chord[wing_slice]
+                #self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
-                # P1 joint
-                d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
-                ds = np.zeros(wing_slice.stop-wing_slice.start)
-                ds[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
-                T1 = np.gradient(self.P1_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
-                T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
-                u_a = self.P1_u_a[wing_slice]
-                k = np.einsum('ij,ij->i', T1, u_a)
-                c1 = np.sqrt(1/(1-k*k))
-                c2 = -c1*k
-                u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
-                u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                c = self.P1_chord[wing_slice]
-                self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                ## P1 joint
+                #d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
+                #ds = np.zeros(wing_slice.stop-wing_slice.start)
+                #ds[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
+                #T1 = np.gradient(self.P1_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
+                #T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
+                #u_a = self.P1_u_a[wing_slice]
+                #k = np.einsum('ij,ij->i', T1, u_a)
+                #c1 = np.sqrt(1/(1-k*k))
+                #c2 = -c1*k
+                #u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
+                #u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
+                #c = self.P1_chord[wing_slice]
+                #self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
+                z_P0 = self.P0_eff[i,wing_slice,1]
+                f_prime_0 = self._calc_f_prime_of_z(z_P0)
+                f_eff_prime_0 = f_prime_0+blend_0*(PC_deriv[i,0]-f_prime_0-2*sigma_blend[i]*ds0*ds0*(PC_deriv[i,0]+(PC[0]-self.P0[wing_slice,0])/ds0))
+                length = delta_joint[i]/np.sqrt(1+f_eff_prime_0**2)
+                self.P0_joint_eff[i,wing_slice,0] = self.P0_eff[i,wing_slice,0]-length
+                self.P0_joint_eff[i,wing_slice,1] = self.P0_eff[i,wing_slice,1]+f_eff_prime_0*length
+
+                z_P1 = self.P1_eff[i,wing_slice,1]
+                f_prime_1 = self._calc_f_prime_of_z(z_P1)
+                f_eff_prime_1 = f_prime_1+blend_1*(PC_deriv[i,0]-f_prime_1-2*sigma_blend[i]*ds1*ds1*(PC_deriv[i,0]+(PC[0]-self.P1[wing_slice,0])/ds1))
+                length = delta_joint[i]/np.sqrt(1+f_eff_prime_1**2)
+                self.P1_joint_eff[i,wing_slice,0] = self.P1_eff[i,wing_slice,0]-length
+                self.P1_joint_eff[i,wing_slice,1] = self.P1_eff[i,wing_slice,1]+f_eff_prime_1*length
 
             else:
 
@@ -552,7 +573,7 @@ class Airplane:
         # Calculate differential length vectors
         self.dl = self.P1-self.P0
 
-        # Plot effective LACs
+        ## Plot effective LACs
         #fig = plt.figure(figsize=plt.figaspect(1.0))
         #ax = fig.gca(projection='3d')
         #for i in range(self.N):
@@ -561,6 +582,23 @@ class Airplane:
         #    ax.plot(self.P1_eff[i,:,0], self.P1_eff[i,:,1], self.P1_eff[i,:,2], 'b-')
         #    ax.plot(self.P1_joint_eff[i,:,0], self.P1_joint_eff[i,:,1], self.P1_joint_eff[i,:,2], 'g-')
         #plt.show()
+
+
+    def _calc_f_prime_of_z(self, z):
+        CLa = 6.907213339669221
+        sweep = np.radians(45)
+        lambda_k = sweep/(1+((CLa*np.cos(sweep))/(np.pi*5.0))**2)**0.25
+        exp = np.pi/(4.0*(np.pi+2*np.abs(lambda_k)))
+        K = (1+((CLa*np.cos(lambda_k))/(np.pi*5.0))**2)**exp
+        sweep_div = np.tan(lambda_k)/lambda_k
+        pi2 = 2.0*np.pi
+        cen_inf = z
+        tip_inf = 2.5-np.abs(z)
+        hyp_int = np.sqrt(1+(pi2*sweep_div*cen_inf)**2)-pi2*sweep_div*np.abs(z)
+        hyp_int -= np.sqrt(1+(pi2*sweep_div*tip_inf)**2)-pi2*sweep_div*tip_inf
+        hyp_int_prime = pi2**2*sweep_div**2*z/np.sqrt(1+(pi2*sweep_div*cen_inf)**2)-pi2*sweep_div*np.sign(z)
+        hyp_int_prime += pi2**2*sweep_div**2*np.sign(z)*(2.5-np.abs(z))/np.sqrt(1+(pi2*sweep_div*tip_inf)**2)-pi2*sweep_div*np.sign(z)
+        return -np.sign(z)*np.tan(sweep)-hyp_int_prime*lambda_k/(pi2*K)
 
 
     def _sort_segments_into_wings(self):

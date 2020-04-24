@@ -307,7 +307,7 @@ class Scene:
         self._PC = np.zeros((self._N,3)) # Control point location
         self._r_CG = np.zeros((self._N,3)) # Radii from airplane CG to control points
         self._dl = np.zeros((self._N,3)) # Differential LAC elements
-        self._sweep_cp = np.zeros(self._N)
+        self._section_sweep = np.zeros(self._N)
         self._max_thickness = np.zeros(self._N)
         self._max_camber = np.zeros(self._N)
 
@@ -392,6 +392,7 @@ class Scene:
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
             self._max_camber[airplane_slice] = airplane_object.max_camber
             self._max_thickness[airplane_slice] = airplane_object.max_thickness
+            self._section_sweep[airplane_slice] = airplane_object.section_sweep
 
             # Get section vectors
             self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
@@ -431,9 +432,6 @@ class Scene:
         self._r_1 = np.where(np.isnan(self._r_1), self._PC[:,np.newaxis,:]-self._P1, self._r_1)
         self._r_0_joint = np.where(np.isnan(self._r_0_joint), self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
         self._r_1_joint = np.where(np.isnan(self._r_1_joint), self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
-
-        # Get effective sweep of wing sections
-        self._section_sweep = np.arccos(self._u_s[:,0])-0.5*np.pi
 
         # Calculate spatial node vector magnitudes
         self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
@@ -477,6 +475,7 @@ class Scene:
         self._nu = self._get_viscosity(self._PC)
 
         # Swept section corrections
+        print(self._section_sweep)
         sweep2 = self._section_sweep**2
         sweep4 = self._section_sweep**4
         self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
@@ -546,8 +545,8 @@ class Scene:
         self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
 
         # Correct lift slope and zero-lift angle of attack for sweep
-        self._CLa *= self._R_CL_a
-        self._aL0 += self._delta_a_L0
+        self._CLa_swept = self._CLa*self._R_CL_a
+        self._aL0_swept = self._aL0+self._delta_a_L0
 
         self._solved = False
 
@@ -578,26 +577,6 @@ class Scene:
         # Set up flow for what won't change with changes in vorticity distribution
         self._calc_invariant_flow_properties()
         self._calc_V_ji()
-
-        #v_i_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
-        #V_eff = np.sqrt(np.einsum('ij,ij->i', v_i_eff, v_i_eff))
-        #v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
-        #v_n = np.einsum('ij,ij->i', v_i_eff, self._u_n)
-        #self._alpha_swept = np.arctan2(v_n, v_a)
-
-        #v_a_unswept = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a_unswept)
-        #v_n_unswept = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n_unswept)
-        #v_s_unswept = np.einsum('ij,ij->i', self._cp_v_inf, self._u_s_unswept)
-        #beta = np.arctan2(v_s_unswept, v_a_unswept)
-        #alpha = np.arctan2(v_n_unswept, v_a_unswept)
-        #self._beta_swept = beta-self._section_sweep #np.arctan2(v_s, v_a)
-
-        #R_i = np.sqrt((np.cos(alpha)**2*np.cos(self._section_sweep-beta)**2+np.sin(alpha)**2*np.cos(beta)**2)/(1-np.sin(alpha)**2*np.sin(beta)**2))
-        #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
-
-        #print(R_i)
-        #print(R_i_lambda)
-        #print(R_i-R_i_lambda)
 
         # Initial guess
         gamma_init = np.zeros(self._N)
@@ -632,6 +611,8 @@ class Scene:
 
         # Get vortex lift
         L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl), axis=-1)*self._gamma
+        #self._d_zeta = self._dl/self._dS[:,np.newaxis]
+        #L_vortex = 2*np.linalg.norm(np.cross(self._u_i, self._d_zeta), axis=-1)*self._gamma
         
         # Get section lift
         L_section = self._get_section_lift()
@@ -645,6 +626,7 @@ class Scene:
         self._v_i = self._cp_v_inf+(self._V_ji.transpose((2,0,1))@self._gamma).T
         self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
         self._V_i = np.sqrt(self._V_i_2)
+        self._u_i = self._v_i/np.sqrt(np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf))[:,np.newaxis]
 
     
     def _get_section_lift(self):
@@ -654,6 +636,7 @@ class Scene:
         v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
         V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
         V_eff_2 = np.einsum('ij,ij->i', v_i_eff, v_i_eff)
+        V_eff = np.sqrt(V_eff_2)
 
         # Calculate swept airfoil parameters
         v_a = np.einsum('ij,ij->i', v_i_eff, self._u_a)
@@ -661,27 +644,28 @@ class Scene:
         v_s = np.einsum('ij,ij->i', self._v_i-v_i_eff, self._u_s)
         self._alpha_swept = np.arctan2(v_n, v_a)
 
-        # Calculate lift
-        self._CL = np.zeros(self._N)
-        index = 0
+        ## Calculate lift
+        #self._CL = np.zeros(self._N)
+        #index = 0
 
-        # Loop through airplanes
-        for airplane_name in self._airplane_names:
-            airplane_object = self._airplanes[airplane_name]
-            N = airplane_object.N
-            seg_ind = 0
+        ## Loop through airplanes
+        #for airplane_name in self._airplane_names:
+        #    airplane_object = self._airplanes[airplane_name]
+        #    N = airplane_object.N
+        #    seg_ind = 0
 
-            # Loop through segments
-            for segment in airplane_object.segments:
-                seg_N = segment.N
-                seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
-                self._CL[seg_slice] = segment.get_cp_CL(self._alpha_swept[seg_slice], self._Re[seg_slice], self._M[seg_slice])
-                seg_ind += seg_N
+        #    # Loop through segments
+        #    for segment in airplane_object.segments:
+        #        seg_N = segment.N
+        #        seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
+        #        self._CL[seg_slice] = segment.get_cp_CL(self._alpha_swept[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+        #        seg_ind += seg_N
 
-            index += N
+        #    index += N
 
-        # Correct swept section lift
-        self._correct_CL_for_sweep()
+        ## Correct swept section lift
+        #self._correct_CL_for_sweep()
+        self._CL = self._R_CL_a*self._CLa*(self._alpha_swept-self._aL0-self._delta_a_L0)
 
         # Get upswept aerodynamic angles
         v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
@@ -695,7 +679,8 @@ class Scene:
         R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
 
         return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS
-        #return 0.5*V_eff_2*R_i_lambda*self._CL*self._dS
+        #return 0.5*V_eff_2*self._CL*self._dS
+        #return 0.5*V_inf_2*V_eff*R_i_lambda*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):

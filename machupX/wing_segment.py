@@ -452,6 +452,39 @@ class WingSegment:
         self.u_a_node = self._get_axial_vec(self.node_span_locs)
         self.c_node = self.get_chord(self.node_span_locs)
 
+    
+    def _get_ac_offset(self, span):
+
+        # Get constants
+        CLa_root = self._airfoils[0].get_CLa(alpha=0.0)
+        area = integ.quad(lambda s : self.get_chord(s), 0, 1)[0]
+        R_A = 2.0*self.b/area
+        sweep = abs(self.get_sweep(0.0))
+
+        # Calculate effective global wing sweep
+        sweep_eff = sweep/((1+(CLa_root*m.cos(sweep)/(m.pi*R_A))**2)**0.25)
+
+        # Calculate constants
+        tan_k = m.tan(sweep_eff)
+        sweep_div = tan_k/sweep_eff
+        exp = m.pi/(4.0*(m.pi+2.0*abs(sweep_eff)))
+        K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**exp
+
+        # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
+        z = span*self.b
+        c = self.get_chord(span)
+        cen_inf = z/c
+        tip_inf = (self.b-z)/c
+
+        # Get hyperbolic interpolation
+        two_pi = 2.0*m.pi
+        l_cen = np.sqrt(1+(two_pi*sweep_div*cen_inf)**2)-two_pi*sweep_div*cen_inf
+        l_tip = np.sqrt(1+(two_pi*sweep_div*tip_inf)**2)-two_pi*sweep_div*tip_inf
+        l = l_cen-l_tip
+
+        # Calculate offset
+        return -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))
+
 
     def _initialize_ac_locus(self):
         # Sets up the locus of aerodynamic centers for this wing segment.
@@ -512,7 +545,7 @@ class WingSegment:
                 ac_offset_data = np.concatenate((locs[:,np.newaxis], ac_offset[:,np.newaxis]), axis=1)
 
         # Create getter
-        self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
+        #self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
         # Store control points
         self.control_points = self._get_section_ac_loc(self.cp_span_locs)
