@@ -63,7 +63,7 @@ if __name__=="__main__":
         "alpha" : 4.2
     }
 
-    not_grid = 1
+    not_grid = 0
     if not_grid:
 
         # Initialize
@@ -75,27 +75,6 @@ if __name__=="__main__":
         FM = scene.solve_forces(verbose=True, report_by_segment=True, non_dimensional=False)
         print(json.dumps(FM["jackson_wing"]["total"], indent=4))
 
-        #plt.figure()
-        #plt.title("x Velocity")
-        #plt.plot(scene._PC[:,1], -scene._v_i[:,0], label='MUX')
-        #plt.plot(vel_jackson[:,0], vel_jackson[:,1], label='Jackson')
-        #plt.legend()
-        #plt.show()
-
-        #plt.figure()
-        #plt.title("y Velocity")
-        #plt.plot(scene._PC[:,1], scene._v_i[:,1], label='MUX')
-        #plt.plot(vel_jackson[:,0], vel_jackson[:,3], label='Jackson')
-        #plt.legend()
-        #plt.show()
-
-        #plt.figure()
-        #plt.title("z Velocity")
-        #plt.plot(scene._PC[:,1], -scene._v_i[:,2], label='MUX')
-        #plt.plot(vel_jackson[:,0], vel_jackson[:,2], label='Jackson')
-        #plt.legend()
-        #plt.show()
-
         plt.figure()
         plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
         plt.plot(scene._PC[:,1], scene._gamma, label='MUX')
@@ -106,7 +85,7 @@ if __name__=="__main__":
 
     else:
 
-        grids = [10, 20, 40, 80, 160, 320, 640]
+        grids = [10, 20, 40, 80, 160]
 
         plt.figure()
         plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
@@ -114,7 +93,7 @@ if __name__=="__main__":
             airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
             scene = MUX.Scene(input_dict)
             scene.add_aircraft("jackson_wing", airplane_dict, state=state)
-            scene._solve_w_scipy(verbose=True)
+            scene.solve_forces(verbose=True)
             plt.plot(scene._PC[:,1], scene._gamma, label='MUX {0}'.format(grid))
         plt.legend()
         plt.xlabel("Span Location")
