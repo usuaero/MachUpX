@@ -7,18 +7,10 @@ np.set_printoptions(linewidth=np.inf)
 
 if __name__=="__main__":
 
-    # Load Jackson's distribution
-    with open("test/test_circ_dist.txt", 'r') as jackson_file:
-        gamma_jackson_no_sideslip = np.genfromtxt(jackson_file)
-
-    with open("test/circ.dat", 'r') as jackson_file:
-        gamma_jackson_sideslip = np.genfromtxt(jackson_file)
-
     # Parameters
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve",
-            "convergence" : 1e-1
+            "type" : "scipy_fsolve"
         },
         "units" : "English",
         "scene" : {}
@@ -53,19 +45,31 @@ if __name__=="__main__":
             }
         }
     }
-    include_sideslip = 1
-    if include_sideslip:
-        gamma_jackson = gamma_jackson_sideslip
+
+    # Select comparison case
+    case_no = 0
+    if case_no == 0:
+        with open("test/10_a_10_b_circ.dat", 'r') as jackson_file:
+            gamma_jackson = np.genfromtxt(jackson_file)
         state = {
             "velocity" : 1.0,
             "alpha" : 10.0,
             "beta" : 10.0
         }
-    else:
-        gamma_jackson = gamma_jackson_no_sideslip
+    elif case_no == 1:
+        with open("test/4.2_a_0_b_circ.dat", 'r') as jackson_file:
+            gamma_jackson = np.genfromtxt(jackson_file)
         state = {
             "velocity" : 1.0,
             "alpha" : 4.2,
+            "beta" : 0.0
+        }
+    elif case_no == 2:
+        with open("test/10_a_0_b_circ.dat", 'r') as jackson_file:
+            gamma_jackson = np.genfromtxt(jackson_file)
+        state = {
+            "velocity" : 1.0,
+            "alpha" : 10,
             "beta" : 0.0
         }
 
@@ -82,7 +86,7 @@ if __name__=="__main__":
         print(json.dumps(FM["jackson_wing"]["total"], indent=4))
 
         plt.figure()
-        plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
+        plt.plot(gamma_jackson[::-1,0], gamma_jackson[:,1], label='Jackson')
         plt.plot(scene._PC[:,1], scene._gamma, label='MUX')
         plt.legend()
         plt.xlabel("Span Location")
@@ -94,7 +98,7 @@ if __name__=="__main__":
         grids = [10, 20, 40, 80, 160]
 
         plt.figure()
-        plt.plot(gamma_jackson[:,0], gamma_jackson[:,1], label='Jackson')
+        plt.plot(gamma_jackson[::-1,0], gamma_jackson[:,1], label='Jackson')
         for grid in grids:
             airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
             scene = MUX.Scene(input_dict)

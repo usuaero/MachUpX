@@ -581,10 +581,11 @@ class Scene:
         gamma_init = np.zeros(self._N)
 
         # Get solution
-        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose, xtol=self._solver_convergence)
+        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=True, xtol=self._solver_convergence)
 
         # Output fsolve info
         if verbose:
+            print("Complete!")
             print("   Number of function calls: {0}".format(info["nfev"]))
             print("   Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
 
@@ -628,16 +629,16 @@ class Scene:
 
         # Project velocity into effective airfoil section plane
         self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-        V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
-        V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
+        #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
+        #V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
         V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
 
         # Calculate swept airfoil parameters
         v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
         v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-        v_s = np.einsum('ij,ij->i', self._v_i-self._v_i_eff, self._u_s)
+        #v_s = np.einsum('ij,ij->i', self._v_i-self._v_i_eff, self._u_s)
         self._alpha_swept = np.arctan2(v_n, v_a)
-        self._beta_swept = np.arctan2(v_s, v_a)
+        #self._beta_swept = np.arctan2(v_s, v_a)
 
         # Calculate lift
         self._CL = np.zeros(self._N)
@@ -662,19 +663,20 @@ class Scene:
         self._correct_CL_for_sweep()
 
         # Calculate unswept beta
-        v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
-        v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
-        beta = np.arctan2(v_s_unswept, v_a_unswept)
-        self._beta_swept = beta-self._section_sweep
+        #v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+        #v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
+        #beta = np.arctan2(v_s_unswept, v_a_unswept)
+        #self._beta_swept = beta-self._section_sweep
 
         # Determine Jackson's dimensionalization correction factors
-        R_i = np.sqrt(V_eff_2/V_i_2)
-        R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
+        #R_i = np.sqrt(V_eff_2/V_i_2)
+        #S_a = np.sin(self._alpha_swept)
+        #S_B = np.sin(self._beta_swept)
+        #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-S_a*S_a*S_B*S_B)
 
         # TODO: Make this better
-        #return 0.5*V_i_2*R_i_lambda*R_i*self._CL*self._dS
-        return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS
-        #return 0.5*V_eff_2*self._CL*self._dS
+        #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
+        return 0.5*V_eff_2*self._CL*self._dS # Mine, which is so much cleaner...
 
 
     def _correct_CL_for_sweep(self):
