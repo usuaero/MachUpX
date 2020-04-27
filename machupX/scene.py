@@ -36,7 +36,6 @@ class Scene:
         # Initialize basic storage objects
         self._airplanes = {}
         self._airplane_names = []
-        self._segment_names = []
         self._N = 0
         self._num_aircraft = 0
 
@@ -134,7 +133,7 @@ class Scene:
                 self._density_field_interpolator = sinterp.LinearNDInterpolator(self._density_data[:,:3],self._density_data[:,3])
 
                 def density_getter(position):
-                    return self._density_field_interpolator(position).item()
+                    return self._density_field_interpolator(position)
 
         # Improper specification
         else:
@@ -156,7 +155,7 @@ class Scene:
                 self._constant_wind = V_wind
 
                 def wind_getter(position):
-                    return self._constant_wind
+                    return self._constant_wind*np.ones(position.shape)
 
             else: # Array
                 self._wind_data = V_wind
@@ -262,7 +261,7 @@ class Scene:
         """
 
         # Determine the local wind vector for setting the state of the aircraft
-        aircraft_position = state.get("position", [0.0, 0.0, 0.0])
+        aircraft_position = np.array(state.get("position", [0.0, 0.0, 0.0]))
         v_wind = self._get_wind(aircraft_position)
 
         # Create and store the aircraft object
@@ -496,12 +495,9 @@ class Scene:
 
         # Get wind velocities at control points and nodes
         cp_v_wind = self._get_wind(self._PC)
-        P0_joint_v_wind = self._get_wind(self._P0)
-        P1_joint_v_wind = self._get_wind(self._P1)
-
-        index = 0
 
         # Loop through airplanes
+        index = 0
         for i, airplane_name in enumerate(self._airplane_names):
             airplane_object = self._airplanes[airplane_name]
             N = airplane_object.N
@@ -513,8 +509,6 @@ class Scene:
             # Freestream velocities
 
             # Control points
-            print(cp_v_wind)
-            print(cur_slice)
             cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC))
             self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind[cur_slice]+cp_v_rot
             self._cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
@@ -522,11 +516,11 @@ class Scene:
 
             # P0 joint
             P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint))
-            P0_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P0_joint_v_wind[cur_slice]+P0_joint_v_rot
+            P0_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind[cur_slice]+P0_joint_v_rot
 
             # P1 joint
             P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint))
-            P1_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+P1_joint_v_wind[cur_slice]+P1_joint_v_rot
+            P1_joint_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind[cur_slice]+P1_joint_v_rot
 
             # Calculate airfoil parameters (Re and M are only used in the linear solution)
             self._alpha_approx[cur_slice] = np.einsum('ij,ij->i', self._cp_u_inf[cur_slice,:], self._u_n[cur_slice,:])
@@ -546,8 +540,8 @@ class Scene:
             index += N
 
         # Calculate nodal freestream unit vectors
-        self._P0_joint_u_inf[cur_slice,:] = P0_joint_v_inf/np.linalg.norm(P0_joint_v_inf, axis=-1, keepdims=True)
-        self._P1_joint_u_inf[cur_slice,:] = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
+        self._P0_joint_u_inf = P0_joint_v_inf/np.linalg.norm(P0_joint_v_inf, axis=-1, keepdims=True)
+        self._P1_joint_u_inf = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
 
         self._solved = False
 
@@ -766,12 +760,11 @@ class Scene:
             index = 0
 
             # Loop through airplanes
-            for i, airplane_name in enumerate(self._airplane_names):
+            for airplane_name in self._airplane_names:
                 airplane_object = self._airplanes[airplane_name]
 
                 # Loop through segments
-                for segment_name in self._segment_names[i]:
-                    segment_object = airplane_object.wing_segments[segment_name]
+                for segment_object in airplane_object.segments:
                     num_cps = segment_object.N
                     cur_slice = slice(index, index+num_cps)
 
@@ -852,6 +845,7 @@ class Scene:
 
         # Calculate vortex force differential elements
         dF_inv = (self._rho*self._gamma)[:,np.newaxis]*np.cross(self._v_i, self._dl)
+        self._dL = np.linalg.norm(dF_inv, axis=-1)
 
         # Calculate conditions for determining viscid contributions
         alpha = np.arctan2(np.einsum('ij,ij->i', self._u_i, self._u_n), np.einsum('ij,ij->i', self._u_i, self._u_a))
@@ -2011,13 +2005,13 @@ class Scene:
 
 
         # Loop through airplanes
-        for i, airplane_name in enumerate(self._airplane_names):
+        for airplane_name in self._airplane_names:
             airplane_object = self._airplanes[airplane_name]
             dist[airplane_name] = {}
 
             # Loop through segments
-            for segment_name in self._segment_names[i]:
-                segment_object = airplane_object.wing_segments[segment_name]
+            for segment_object in airplane_object.segments:
+                segment_name = segment_object.name
                 num_cps = segment_object.N
                 cur_slice = slice(index, index+num_cps)
                 dist[airplane_name][segment_name] = {}
