@@ -9,24 +9,19 @@ if __name__=="__main__":
 
     # Load Jackson's distribution
     with open("test/test_circ_dist.txt", 'r') as jackson_file:
-        gamma_jackson = np.genfromtxt(jackson_file)
+        gamma_jackson_no_sideslip = np.genfromtxt(jackson_file)
 
-    with open("test/velocities.dat", 'r') as jackson_file:
-        vel_jackson = np.genfromtxt(jackson_file)
-
-    with open("test/aero_props.dat", 'r') as jackson_file:
-        section_jackson = np.genfromtxt(jackson_file)
+    with open("test/circ.dat", 'r') as jackson_file:
+        gamma_jackson_sideslip = np.genfromtxt(jackson_file)
 
     # Parameters
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve"
+            "type" : "scipy_fsolve",
+            "convergence" : 1e-1
         },
         "units" : "English",
-        "scene" : {
-            "atmosphere" : {},
-            "aircraft" : {}
-        }
+        "scene" : {}
     }
     airplane_dict = {
         "CG" : [0,0,0],
@@ -58,12 +53,23 @@ if __name__=="__main__":
             }
         }
     }
-    state = {
-        "velocity" : 1.0,
-        "alpha" : 4.2
-    }
+    include_sideslip = 1
+    if include_sideslip:
+        gamma_jackson = gamma_jackson_sideslip
+        state = {
+            "velocity" : 1.0,
+            "alpha" : 10.0,
+            "beta" : 10.0
+        }
+    else:
+        gamma_jackson = gamma_jackson_no_sideslip
+        state = {
+            "velocity" : 1.0,
+            "alpha" : 4.2,
+            "beta" : 0.0
+        }
 
-    not_grid = 0
+    not_grid = 1
     if not_grid:
 
         # Initialize

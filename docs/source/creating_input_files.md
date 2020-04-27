@@ -192,13 +192,13 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>Can be "linear" or "nonlinear". The lifing-line equations are solved first by solving a linear approximation and then improving the result using the full nonlinear equations and Newton's method. The linear approximation is reasonably accurate for high aspect ratio lifting surfaces at low angles of attack. Defaults to "linear".
 >>
 >>**"convergence" : float, optional**
->>>Threshold for convergence of the nonlinear solution. The nonlinear solver is considered complete once the norm of the residuals falls below this threshold. Defaults to 1e-10. Has no effect on the linear solver.
+>>>Threshold for convergence of the nonlinear solution. The nonlinear solver is considered complete once the norm of the residuals falls below this threshold. Defaults to 1e-10. Has no effect on the linear solver. Can also be used to specify the 'xtol' argument for scipy.optimize.fsolve, if that is the selected solver. Note, this is not the same behavior between the nolinear solver and the scipy solver.
 >>
 >>**"relaxation" : float, optional**
->>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 1.0. Has no effect on the linear solver.
+>>>Relaxation factor for applying the calculated correction at each iteration of the nonlinear solver. A value of 1.0 applies the full correction. Defaults to 1.0. Has no effect on the linear solver or the scipy solver.
 >>
 >>**"max_iterations" : int, optional**
->>>Maximum number of iterations for the nonlinear solver (the NLL algorithm is not known to have solver convergence issues). Defaults to 100. Has no effect on the linear solver.
+>>>Maximum number of iterations for the nonlinear solver (the NLL algorithm is not known to have solver convergence issues). Defaults to 100. Has no effect on the linear solver or the scipy solver.
 >
 >**"units" : string, optional**
 >>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. All outputs will be given in this unit system. Defaults to "English".

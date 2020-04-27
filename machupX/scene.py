@@ -67,7 +67,10 @@ class Scene:
 
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
-        self._solver_type = solver_params.get("type", "linear")
+        self._solver_type = solver_params.get("type", "scipy_fsolve")
+        if self._solver_type != "scipy_fsolve":
+            warnings.warn("Only the 'scipy_fsolve' solver option is available in MachUpX 2.0.0. Reverting to Scipy solver...")
+            self._solver_type = "scipy_fsolve"
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
@@ -84,15 +87,16 @@ class Scene:
         self._get_sos = self._initialize_sos_getter(**atmos_dict)
 
         # Initialize aircraft geometries
-        for i, airplane_name in enumerate(self._input_dict["scene"]["aircraft"]):
+        aircraft_dict = self._input_dict["scene"].get("aircraft", {})
+        for key in aircraft_dict:
 
             # Get inputs
-            airplane_file = self._input_dict["scene"]["aircraft"][airplane_name]["file"]
-            state = self._input_dict["scene"]["aircraft"][airplane_name].get("state",{})
-            control_state = self._input_dict["scene"]["aircraft"][airplane_name].get("control_state",{})
+            airplane_file = self._input_dict["scene"]["aircraft"][key]["file"]
+            state = self._input_dict["scene"]["aircraft"][key].get("state",{})
+            control_state = self._input_dict["scene"]["aircraft"][key].get("control_state",{})
 
             # Instantiate
-            self.add_aircraft(airplane_name, airplane_file, state=state, control_state=control_state)
+            self.add_aircraft(key, airplane_file, state=state, control_state=control_state)
 
 
     def _initialize_density_getter(self, **kwargs):
@@ -577,7 +581,7 @@ class Scene:
         gamma_init = np.zeros(self._N)
 
         # Get solution
-        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose)
+        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=verbose, xtol=self._solver_convergence)
 
         # Output fsolve info
         if verbose:
@@ -625,6 +629,7 @@ class Scene:
         # Project velocity into effective airfoil section plane
         self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
         V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
+        V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
         V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
 
         # Calculate swept airfoil parameters
@@ -656,11 +661,18 @@ class Scene:
         # Correct swept section lift
         self._correct_CL_for_sweep()
 
+        # Calculate unswept beta
+        v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+        v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
+        beta = np.arctan2(v_s_unswept, v_a_unswept)
+        self._beta_swept = beta-self._section_sweep
+
         # Determine Jackson's dimensionalization correction factors
-        R_i = np.sqrt(V_eff_2/V_inf_2)
+        R_i = np.sqrt(V_eff_2/V_i_2)
         R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-np.sin(self._alpha_swept)**2*np.sin(self._beta_swept)**2)
 
         # TODO: Make this better
+        #return 0.5*V_i_2*R_i_lambda*R_i*self._CL*self._dS
         return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS
         #return 0.5*V_eff_2*self._CL*self._dS
 
@@ -1262,9 +1274,9 @@ class Scene:
         show_legend = kwargs.get("show_legend", False)
         filename = kwargs.get("filename", None)
 
-        # If the user wants the vortices displayed, make sure the linear NLL equation has been solved first
+        # If the user wants the vortices displayed, make sure we've set the flow properties
         if show_vortices and not self._solved:
-            self._solve_linear()
+            self._calc_invariant_flow_properties()
 
         # Loop through airplanes
         for airplane_name, airplane_object in self._airplanes.items():

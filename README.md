@@ -12,6 +12,10 @@ Classic Lifting-Line Theory", Journal of Aircraft, Vol. 37, No. 4
 W. F. Phillips, "Flow over Multiple Lifting Surfaces," Mechanics of
 Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
+This version of MachUpX optionally incorporates changes to Phillips' algorithm to ensure grid convergence in the case of swept wings and wings in sideslip. More on this can be found in the following sources:
+
+J. T. Reid and D. F. Hunsaker, "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," AIAA SciTech Forum, Orlando, 2020.
+
 ## Documentation
 Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Please refer to the documentation for instructions on installation, etc. Specific help with package functions can also be found in the docstrings. Please read the documentation thoroughly before contacting the development team.
 
