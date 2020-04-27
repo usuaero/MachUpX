@@ -513,6 +513,8 @@ class Scene:
             # Freestream velocities
 
             # Control points
+            print(cp_v_wind)
+            print(cur_slice)
             cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC))
             self._cp_v_inf[cur_slice,:] = self._v_trans[i,:]+cp_v_wind[cur_slice]+cp_v_rot
             self._cp_V_inf[cur_slice] = np.linalg.norm(self._cp_v_inf[cur_slice,:], axis=1)
@@ -629,8 +631,6 @@ class Scene:
 
         # Project velocity into effective airfoil section plane
         self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-        #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
-        #V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
         V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
 
         # Calculate swept airfoil parameters
@@ -662,20 +662,16 @@ class Scene:
         # Correct swept section lift
         self._correct_CL_for_sweep()
 
-        # Calculate unswept beta
-        #v_a_unswept = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
-        #v_s_unswept = np.einsum('ij,ij->i', self._v_i, self._u_s_unswept)
-        #beta = np.arctan2(v_s_unswept, v_a_unswept)
-        #self._beta_swept = beta-self._section_sweep
-
         # Determine Jackson's dimensionalization correction factors
+        #V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
         #R_i = np.sqrt(V_eff_2/V_i_2)
         #S_a = np.sin(self._alpha_swept)
         #S_B = np.sin(self._beta_swept)
         #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-S_a*S_a*S_B*S_B)
 
-        # TODO: Make this better
+        #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
         #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
+
         return 0.5*V_eff_2*self._CL*self._dS # Mine, which is so much cleaner...
 
 

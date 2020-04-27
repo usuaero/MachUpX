@@ -47,7 +47,7 @@ if __name__=="__main__":
     }
 
     # Select comparison case
-    case_no = 0
+    case_no = 3
     if case_no == 0:
         with open("test/10_a_10_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)
@@ -71,6 +71,14 @@ if __name__=="__main__":
             "velocity" : 1.0,
             "alpha" : 10,
             "beta" : 0.0
+        }
+    elif case_no == 3:
+        with open("test/15_a_15_b_circ.dat", 'r') as jackson_file:
+            gamma_jackson = np.genfromtxt(jackson_file)
+        state = {
+            "velocity" : 1.0,
+            "alpha" : 15.0,
+            "beta" : 15.0
         }
 
     not_grid = 1
