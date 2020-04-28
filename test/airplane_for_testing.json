@@ -32,7 +32,8 @@
                 }
             },
             "grid" : {
-                "N" : 40
+                "N" : 40,
+                "reid_corrections" : true
             }
         },
         "h_stab" : {
@@ -53,7 +54,8 @@
                 }
             },
             "grid" : {
-                "N" : 40
+                "N" : 40,
+                "reid_corrections" : true
             }
         },
         "v_stab" : {
@@ -76,7 +78,8 @@
                 }
             },
             "grid" : {
-                "N" : 40
+                "N" : 40,
+                "reid_corrections" : true
             }
         }
     }

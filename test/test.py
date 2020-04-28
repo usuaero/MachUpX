@@ -13,13 +13,9 @@ if __name__=="__main__":
     input_dict = {
         "solver" : {
             "type" : "scipy_fsolve",
-            "convergence" : 1e-10,
-            "relaxation" : 0.9
         },
         "units" : "English",
         "scene" : {
-            "atmosphere" : {},
-            "aircraft" : {}
         }
     }
 
@@ -27,11 +23,6 @@ if __name__=="__main__":
     airplane_dict = {
         "CG" : [0,0,0],
         "weight" : 10.0,
-        "reference" : {
-            "area" : 8.0,
-            "longitudinal_length" : 1.0,
-            "lateral_length" : 4.0
-        },
         "controls" : {
             "aileron" : {
                 "is_symmetric" : False
@@ -67,10 +58,8 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
+                    "N" : 20,
+                    "reid_corrections" : True
                 }
             },
             "h_stab" : {
@@ -94,10 +83,8 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
+                    "N" : 20,
+                    "reid_corrections" : True
                 }
             },
             "v_stab" : {
@@ -113,8 +100,6 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
-                #"sweep" : 45.0,
-                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -122,10 +107,8 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : 0.15,
-                    "blending_distance" : 0.25
+                    "N" : 20,
+                    "reid_corrections" : True
                 }
             }
         }
@@ -133,16 +116,18 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "velocity" : [10, "mph"],
-        #"orientation" : [30, 30, 30],
+        "velocity" : [20, "mph"],
         "alpha" : 10.0
+    }
+    control_state = {
+        "elevator" : 0.0
     }
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state)
+    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=True)
+    scene.display_wireframe(show_vortices=True)
 
     #print("Original state")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

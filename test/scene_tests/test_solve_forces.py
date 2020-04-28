@@ -228,3 +228,55 @@ def test_coefficients():
     assert abs(FM["test_plane"]["total"]["Cl"])<1e-10
     assert abs(FM["test_plane"]["total"]["Cm"]+0.13548794578109555)<1e-10
     assert abs(FM["test_plane"]["total"]["Cn"])<1e-10
+
+
+def test_swept_wing():
+    # Tests that the proper result for a swept wing is produced using the scipy solver
+
+    # Inputs
+    input_dict = {
+        "solver" : {
+            "type" : "scipy_fsolve"
+        },
+        "scene" : {}
+    }
+    airplane_dict = {
+        "weight" : 10,
+        "airfoils" : {
+            "NACA_0012" : {
+                "CLa" : 6.907213339669221,
+                "geometry" : {
+                    "NACA" : "0012"
+                }
+            }
+        },
+        "wings" : {
+            "main_wing" : {
+                "ID" : 1,
+                "side" : "both",
+                "is_main" : True,
+                "semispan" : 2.5,
+                "chord" : 1.0,
+                "airfoil" : "NACA_0012",
+                "sweep" : 45.0,
+                "ac_offset" : "kuchemann",
+                "grid" : {
+                    "N" : 20,
+                    "reid_corrections" : True
+                }
+            }
+        }
+    }
+
+    # Get results
+    state = {
+        "velocity" : 10.0,
+        "alpha" : 10.0
+    }
+    scene = MX.Scene(input_dict)
+    scene.add_aircraft("jackson_wing", airplane_dict, state=state)
+    FM = scene.solve_forces(verbose=True, report_by_segment=True, non_dimensional=False)
+
+    # Check circulation distribution
+    correct_gamma = np.array([0.47123536, 1.36936314, 2.16971088, 2.78795243, 3.18301932, 3.41035458, 3.53474218, 3.59736899, 3.62115168, 3.61858063, 3.59673976, 3.56030944, 3.5136121,  3.46215726, 3.41358434, 3.37738807, 3.36088964, 3.35806733, 3.35540463, 3.353645,   3.353645,   3.35540463, 3.35806733, 3.36088964, 3.37738807, 3.41358434, 3.46215726, 3.5136121,  3.56030944, 3.59673976, 3.61858063, 3.62115168, 3.59736899, 3.53474218, 3.41035458, 3.18301932, 2.78795243, 2.16971088, 1.36936314, 0.47123536])
+    assert np.allclose(scene._gamma, correct_gamma)
