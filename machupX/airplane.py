@@ -348,7 +348,7 @@ class Airplane:
 
     def _calculate_geometry(self):
         # Figures out which wing segments are contiguous and sets up the lists of control points and vortex nodes
-        jackson_analytic = False
+        jackson_analytic = False # For comparing to Jackson's case
 
         # Initialize arrays
         # Geometry
@@ -369,14 +369,12 @@ class Airplane:
         self.P0 = np.zeros((self.N,3)) # Inbound vortex node location
         self.P0_eff = np.zeros((self.N,self.N,3)) # Inbound vortex node location (effective locus of aerodynamic centers)
         self.P0_span_locs = np.zeros(self.N)
-        self.P0_joint = np.zeros((self.N,3)) # Inbound vortex joint node location
         self.P0_joint_eff = np.zeros((self.N,self.N,3)) # Inbound vortex joint node location (effective locus of aerodynamic centers)
 
         # Outbound nodes
         self.P1 = np.zeros((self.N,3)) # Outbound vortex node location
         self.P1_eff = np.zeros((self.N,self.N,3)) # Outbound vortex node location (effective locus of aerodynamic centers)
         self.P1_span_locs = np.zeros(self.N)
-        self.P1_joint = np.zeros((self.N,3)) # Outbound vortex joint node location
         self.P1_joint_eff = np.zeros((self.N,self.N,3)) # Outbound vortex joint node location (effective locus of aerodynamic centers)
 
         # Section unit vectors
@@ -471,6 +469,8 @@ class Airplane:
         # Calculate joint locations for actual LAC
         self.P0_joint = self.P0+self.P0_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P0_u_a*reid_corr[:,np.newaxis]
         self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
+        self.P0_joint_eff[:] = np.copy(self.P0_joint)[np.newaxis,:,:]
+        self.P1_joint_eff[:] = np.copy(self.P1_joint)[np.newaxis,:,:]
 
         # Calculate control point derivative with respect to distance in the plane of the wing and perpendicular to the x-axis
         if jackson_analytic:
@@ -549,8 +549,7 @@ class Airplane:
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    c = self.P0_chord[wing_slice]
-                    self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
                     # P1 joint
                     d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
@@ -564,8 +563,8 @@ class Airplane:
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    c = self.P1_chord[wing_slice]
-                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+c[:,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
 
             else:
 
@@ -594,6 +593,7 @@ class Airplane:
 
 
     def _calc_f_prime_of_z(self, z):
+        # !!!THIS IS ONLY FOR COMPARING TO JACKSON"S CASE!!!
         CLa = 6.907213339669221
         sweep = np.radians(45)
         lambda_k = sweep/(1+((CLa*np.cos(sweep))/(np.pi*5.0))**2)**0.25

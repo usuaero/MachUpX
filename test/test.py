@@ -14,10 +14,11 @@ if __name__=="__main__":
         "solver" : {
             "type" : "scipy_fsolve",
         },
-        "units" : "English",
         "scene" : {
         }
     }
+
+    joint_length = 0.15
 
     # Specify airplane
     airplane_dict = {
@@ -58,8 +59,9 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 20,
-                    "reid_corrections" : True
+                    "N" : 10,
+                    "reid_corrections" : True,
+                    "joint_length" : joint_length
                 }
             },
             "h_stab" : {
@@ -83,8 +85,9 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 20,
-                    "reid_corrections" : True
+                    "N" : 10,
+                    "reid_corrections" : True,
+                    "joint_length" : joint_length
                 }
             },
             "v_stab" : {
@@ -107,8 +110,9 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 20,
-                    "reid_corrections" : True
+                    "N" : 10,
+                    "reid_corrections" : True,
+                    "joint_length" : joint_length
                 }
             }
         }
@@ -123,32 +127,30 @@ if __name__=="__main__":
         "elevator" : 0.0
     }
 
-    # Load scene
-    scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    # Load scene with Jackson's corrections
+    reid_scene = MX.Scene()
+    reid_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=True)
+    # Load scene without Jackson's corrections
+    for key, value in airplane_dict["wings"].items():
+        value["grid"]["reid_corrections"] = False
 
-    #print("Original state")
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    orig_scene = MX.Scene()
+    orig_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+
+    ## Show wireframes
+    #reid_scene.display_wireframe(show_vortices=True)
+    #orig_scene.display_wireframe(show_vortices=True)
+
+    # Solve forces
+    FM = reid_scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    FM = orig_scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    #trim_angles = scene.aircraft_pitch_trim(verbose=True, set_trim_state=True)
-    #print(json.dumps(trim_angles["plane"], indent=4))
-
-    #print("---Trim State---")
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-
-    #print("---Derivatives---")
-    #derivs = scene.aircraft_derivatives()
-    #print(json.dumps(derivs["plane"]["stability"], indent=4))
-
-    #print("---MAC---")
-    #MAC = scene.aircraft_mean_aerodynamic_chord()
-    #print(json.dumps(MAC["plane"], indent=4))
-
-    #print("---Aerodynamic Center---")
-    #AC = scene.aircraft_aero_center()
-    #print(json.dumps(AC["plane"], indent=4))
-    #scene.remove_aircraft("plane")
+    ## Compare
+    #val0 = reid_scene._P0#[:,:,2]
+    #val1 = reid_scene._P0_joint#[:,:,2]
+    #print(val0)
+    #print(val1)
+    #print((val0-val1)[np.where(np.abs(val0-val1)>1e-10)])

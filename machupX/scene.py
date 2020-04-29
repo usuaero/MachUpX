@@ -21,9 +21,9 @@ class Scene:
 
     Parameters
     ----------
-    scene_input : string or dict
+    scene_input : string or dict, optional
         Dictionary or path to the JSON object specifying the scene parameters (see
-        'Creating Input Files for MachUp').
+        'Creating Input Files for MachUp'). If not specified, all default values are chosen.
 
     Raises
     ------
@@ -31,7 +31,7 @@ class Scene:
         If input filepath or filename is invalid
     """
 
-    def __init__(self, scene_input):
+    def __init__(self, scene_input={}):
 
         # Initialize basic storage objects
         self._airplanes = {}
@@ -78,7 +78,8 @@ class Scene:
         self._unit_sys = self._input_dict.get("units", "English")
 
         # Setup atmospheric property getter functions
-        atmos_dict = self._input_dict["scene"].get("atmosphere", {})
+        scene_dict = self._input_dict.get("scene", {})
+        atmos_dict = scene_dict.get("atmosphere", {})
         self._std_atmos = StandardAtmosphere(unit_sys=self._unit_sys)
         self._get_density = self._initialize_density_getter(**atmos_dict)
         self._get_wind = self._initialize_wind_getter(**atmos_dict)
@@ -86,7 +87,7 @@ class Scene:
         self._get_sos = self._initialize_sos_getter(**atmos_dict)
 
         # Initialize aircraft geometries
-        aircraft_dict = self._input_dict["scene"].get("aircraft", {})
+        aircraft_dict = scene_dict.get("aircraft", {})
         for key in aircraft_dict:
 
             # Get inputs
@@ -408,7 +409,7 @@ class Scene:
             # Node locations
             # Note the first index indicates which control point this is the effective LAC for
             self._P0[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_eff)
-            self._P1[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_eff)
+            self._P1[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1_eff)
             self._P0_joint[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_joint_eff)
             self._P1_joint[airplane_slice,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1_joint_eff)
 
