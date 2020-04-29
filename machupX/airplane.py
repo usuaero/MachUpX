@@ -155,7 +155,7 @@ class Airplane:
             beta = import_value("beta", kwargs, self._unit_sys, 0.0)
 
             # Set state
-            self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking
+            self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking; will be overwritten
             self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
 
         # Earth-fixed velocity vector
@@ -195,12 +195,12 @@ class Airplane:
         """
         # Determine velocity relative to the wind in the body-fixed frame
         v = quat_trans(self.q, self.v-v_wind)
+        V = m.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])
 
         # Calculate values
         alpha = m.degrees(m.atan2(v[2], v[0]))
-        beta = m.degrees(m.atan2(v[1], v[0]))
-        velocity = np.linalg.norm(v)
-        return alpha, beta, velocity
+        beta = m.degrees(m.asin(v[1]/V))
+        return alpha, beta, V
 
 
     def set_aerodynamic_state(self, **kwargs):
@@ -234,11 +234,14 @@ class Airplane:
         beta = kwargs.get("beta", current_aero_state[1])
         velocity = kwargs.get("velocity", current_aero_state[2])
 
-        # Calculate trigonometric values
+        # Convert to flank angle
         C_a = m.cos(m.radians(alpha))
+        B_f = m.atan2(m.tan(beta), C_a)
+
+        # Calculate trigonometric values
         S_a = m.sin(m.radians(alpha))
-        C_B = m.cos(m.radians(beta))
-        S_B = m.sin(m.radians(beta))
+        C_B = m.cos(m.radians(B_f))
+        S_B = m.sin(m.radians(B_f))
 
         # Determine freestream velocity components in body-fixed frame (Mech of Flight Eqs. 7.1.10-12)
         v_inf_b = np.zeros(3)

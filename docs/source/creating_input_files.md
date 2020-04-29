@@ -261,7 +261,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>>Aerodynamic angle of attack. Defaults to 0.
 >>>>>
 >>>>>**"beta" : float, optional**
->>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the analytical sideslip angle, i.e. B = atan(Vy/Vx).
+>>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. B = asin(Vy/V).
 >>>>
 >>>>**"control_state" : dict, optional**
 >>>>>Describes the control deflections. The number and names of controls are arbitrary and may be specified by the user. This is discussed more in depth as part of the aircraft object. If the aircraft has controls but no state is specified, all deflections will be assumed to be zero.

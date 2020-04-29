@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve",
+            "type" : "linear",
         },
         "scene" : {
         }
@@ -121,36 +121,21 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : [20, "mph"],
-        "alpha" : 10.0
+        "alpha" : 10.0,
+        "angular_rates" : [0.0, 0.0, 0.0],
+        "position" : [0.0, 0.0, 0.0]
     }
     control_state = {
         "elevator" : 0.0
     }
 
     # Load scene with Jackson's corrections
-    reid_scene = MX.Scene()
-    reid_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    scene = MX.Scene()
+    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    # Load scene without Jackson's corrections
-    for key, value in airplane_dict["wings"].items():
-        value["grid"]["reid_corrections"] = False
-
-    orig_scene = MX.Scene()
-    orig_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-
-    ## Show wireframes
-    #reid_scene.display_wireframe(show_vortices=True)
-    #orig_scene.display_wireframe(show_vortices=True)
+    # Show wireframes
+    scene.display_wireframe(show_vortices=True)
 
     # Solve forces
-    FM = reid_scene.solve_forces(non_dimensional=False, verbose=True)
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-    FM = orig_scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
-
-    ## Compare
-    #val0 = reid_scene._P0#[:,:,2]
-    #val1 = reid_scene._P0_joint#[:,:,2]
-    #print(val0)
-    #print(val1)
-    #print((val0-val1)[np.where(np.abs(val0-val1)>1e-10)])

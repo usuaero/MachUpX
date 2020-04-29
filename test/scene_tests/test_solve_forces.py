@@ -219,14 +219,14 @@ def test_coefficients():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces(non_dimensional=True)
-    assert abs(FM["test_plane"]["total"]["CL"]-0.22047582886611075)<1e-10
-    assert abs(FM["test_plane"]["total"]["CD"]-0.014658786284228585)<1e-10
+    assert abs(FM["test_plane"]["total"]["CL"]-0.22044634308263014)<1e-10
+    assert abs(FM["test_plane"]["total"]["CD"]-0.014655821299887987)<1e-10
     assert abs(FM["test_plane"]["total"]["CS"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Cx"]+0.006955361085197383)<1e-10
+    assert abs(FM["test_plane"]["total"]["Cx"]+0.006953426946048488)<1e-10
     assert abs(FM["test_plane"]["total"]["Cy"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Cz"]+0.22085310521181217)<1e-10
+    assert abs(FM["test_plane"]["total"]["Cz"]+0.22082353391381299)<1e-10
     assert abs(FM["test_plane"]["total"]["Cl"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Cm"]+0.13548794578109555)<1e-10
+    assert abs(FM["test_plane"]["total"]["Cm"]+0.13540656980424948)<1e-10
     assert abs(FM["test_plane"]["total"]["Cn"])<1e-10
 
 

@@ -66,10 +66,10 @@ class Scene:
 
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
-        self._solver_type = solver_params.get("type", "scipy_fsolve")
-        if self._solver_type != "scipy_fsolve":
-            warnings.warn("Only the 'scipy_fsolve' solver option is available in MachUpX 2.0.0. Reverting to Scipy solver...")
-            self._solver_type = "scipy_fsolve"
+        self._solver_type = solver_params.get("type", "linear")
+        #if self._solver_type != "scipy_fsolve":
+        #    warnings.warn("Only the 'scipy_fsolve' solver option is available in MachUpX 2.0.0. Reverting to Scipy solver...")
+        #    self._solver_type = "scipy_fsolve"
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
@@ -699,13 +699,13 @@ class Scene:
         # A matrix
         A = np.zeros((self._N,self._N))
         V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])
-        A[:,:] = -(self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
+        A[:,:] = -(self._R_CL_a*self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
         u_inf_x_dl = np.cross(self._cp_u_inf, self._dl)
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = self._cp_V_inf*self._CLa*self._dS*(self._alpha_approx-self._aL0+self._esp_f_delta_f)
+        b = self._cp_V_inf*self._CLa*self._dS*(self._alpha_approx-self._aL0+self._esp_f_delta_f-self._delta_a_L0)
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
