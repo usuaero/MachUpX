@@ -189,7 +189,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>Specifies parameters regarding how the lifting-line equation is solved.
 >>
 >>**"type" : string, optional**
->>>Can be "linear" or "nonlinear". The lifing-line equations are solved first by solving a linear approximation and then improving the result using the full nonlinear equations and Newton's method. The linear approximation is reasonably accurate for high aspect ratio lifting surfaces at low angles of attack. Defaults to "linear".
+>>>Can be "linear", "nonlinear", or "scipy_fsolve". The lifing-line equations are solved first by solving a linear approximation and then improving the result using the full nonlinear equations and Newton's method. The linear approximation is reasonably accurate for high aspect ratio lifting surfaces at low angles of attack. Alternately, if "scipy_fsolve" is selected, the scipy.optimize.fsolve function is used to calculate the solution. Defaults to "linear".
 >>
 >>**"convergence" : float, optional**
 >>>Threshold for convergence of the nonlinear solution. The nonlinear solver is considered complete once the norm of the residuals falls below this threshold. Defaults to 1e-10. Has no effect on the linear solver. Can also be used to specify the 'xtol' argument for scipy.optimize.fsolve, if that is the selected solver. Note, this is not the same behavior between the nolinear solver and the scipy solver.

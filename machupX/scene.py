@@ -67,9 +67,6 @@ class Scene:
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
         self._solver_type = solver_params.get("type", "linear")
-        #if self._solver_type != "scipy_fsolve":
-        #    warnings.warn("Only the 'scipy_fsolve' solver option is available in MachUpX 2.0.0. Reverting to Scipy solver...")
-        #    self._solver_type = "scipy_fsolve"
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
@@ -607,7 +604,9 @@ class Scene:
         self._calc_v_i()
 
         # Get vortex lift
-        L_vortex = np.linalg.norm(np.cross(self._v_i, self._dl), axis=-1)*self._gamma
+        self._w_i = np.cross(self._v_i, self._dl)
+        self._w_i_mag = np.sqrt(np.einsum('ij,ij->i', self._w_i, self._w_i))
+        L_vortex = self._w_i_mag*self._gamma
         
         # Get section lift
         L_section = self._get_section_lift()
@@ -626,16 +625,19 @@ class Scene:
 
         # Project velocity into effective airfoil section plane
         self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-        V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
+        self._V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
+        self._V_eff = np.sqrt(self._V_eff_2)
 
         # Calculate swept airfoil parameters
-        v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-        v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+        self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+        self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
         #v_s = np.einsum('ij,ij->i', self._v_i-self._v_i_eff, self._u_s)
-        self._alpha_swept = np.arctan2(v_n, v_a)
-        #self._beta_swept = np.arctan2(v_s, v_a)
+        self._alpha_swept = np.arctan2(self._v_n, self._v_a)
+        #self._beta_swept = np.arctan2(v_s, self._v_a)
 
         # Calculate lift
+        self._Re = self._V_eff*self._c_bar/self._nu
+        self._M = self._V_eff/self._a
         self._CL = np.zeros(self._N)
         index = 0
 
@@ -659,7 +661,7 @@ class Scene:
 
         # Determine Jackson's dimensionalization correction factors
         #V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
-        #R_i = np.sqrt(V_eff_2/V_i_2)
+        #R_i = np.sqrt(self._V_eff_2/V_i_2)
         #S_a = np.sin(self._alpha_swept)
         #S_B = np.sin(self._beta_swept)
         #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-S_a*S_a*S_B*S_B)
@@ -667,7 +669,7 @@ class Scene:
         #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
         #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
 
-        return 0.5*V_eff_2*self._CL*self._dS # Mine, which is so much cleaner...
+        return 0.5*self._V_eff_2*self._CL*self._dS # Mine, which is so much cleaner...
 
 
     def _correct_CL_for_sweep(self):
@@ -732,31 +734,22 @@ class Scene:
         J = np.zeros((self._N, self._N))
 
         # Airfoil coefs
-        C_L = np.zeros(self._N)
-        C_La = np.zeros(self._N)
         C_LRe = np.zeros(self._N)
         C_LM = np.zeros(self._N)
-
-        # Velocities
-        v_i = np.zeros((self._N,3))
-        v_ni = np.zeros(self._N)
-        v_ai = np.zeros(self._N)
 
         iteration = 0
         error = 100
         while error > self._solver_convergence:
             iteration += 1
 
-            # Calculate residual
-            v_i = self._cp_v_inf+np.einsum('ijk,i->ik', self._V_ji, self._gamma)
-            np.einsum('ij,ij->i', v_i, self._u_n, out=v_ni)
-            np.einsum('ij,ij->i', v_i, self._u_a, out=v_ai)
-            V_i = np.sqrt(np.einsum('ij,ij->i', v_i, v_i))
+            # Get residual vector
+            R = self._lifting_line_residual(self._gamma)
+            error = np.linalg.norm(R)
 
             # Calculate airfoil parameters
-            self._alpha = np.arctan2(v_ni, v_ai)
-            self._Re = V_i*self._c_bar/self._nu
-            self._M = V_i/self._a
+            self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+            self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+            self._alpha_swept = np.arctan2(self._v_n, self._v_a)
 
             index = 0
 
@@ -770,43 +763,32 @@ class Scene:
                     cur_slice = slice(index, index+num_cps)
 
                     # Get lift coefficient and lift slopes
-                    C_L[cur_slice] = segment_object.get_cp_CL(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_La[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                     index += num_cps
 
             # Intermediate calcs
-            w_i = np.cross(v_i, self._dl)
-            w_i_mag = np.sqrt(np.einsum('ij,ij->i', w_i, w_i))
-            v_iji = np.einsum('ijk,ijk->ij', v_i[:,np.newaxis,:], self._V_ji_trans)
-
-            # Residual vector
-            if phillips:
-                R = 2*w_i_mag*self._gamma-self._cp_V_inf*self._cp_V_inf*C_L*self._dS # Phillips' way
-            else:
-                R = 2*w_i_mag*self._gamma-V_i*V_i*C_L*self._dS # My way
-
-            error = np.linalg.norm(R)
+            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], self._V_ji_trans)
 
             # Caclulate Jacobian
-            J[:,:] = (2*self._gamma/w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
+            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
 
             if not phillips:
-                J[:,:] -= (2*self._dS*C_L)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
+                J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
-            CL_gamma_alpha = C_La[:,np.newaxis]*(v_ai[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-v_ni[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(v_ni*v_ni+v_ai*v_ai)[:,np.newaxis]
-            CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*V_i)[:,np.newaxis]*v_iji
-            CL_gamma_M = C_LM[:,np.newaxis]/(self._a*V_i)[:,np.newaxis]*v_iji
+            CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
+            CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
+            CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_eff)[:,np.newaxis]*v_iji
 
             if phillips:
                 J[:,:] -= (self._cp_V_inf*self._cp_V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
             else:
-                J[:,:] -= (V_i*V_i*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
+                J[:,:] -= (self._V_eff_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
 
             diag_ind = np.diag_indices(self._N)
-            J[diag_ind] += 2*w_i_mag
+            J[diag_ind] += 2*self._w_i_mag
 
             # Solve for change in gamma
             dGamma = np.linalg.solve(J, -R)
