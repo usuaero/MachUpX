@@ -116,7 +116,6 @@ def test_variable_airfoil_section_get_drag():
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
     alphas = np.radians([0,1,2])
-    spans = np.asarray([0.0, 0.5, 1.0])
     CDs = np.asarray([[0.00513183, 0.00514539, 0.00516733, 0.00518926, 0.00520282],
                       [0.00634576, 0.00616087, 0.0058617 , 0.00556253, 0.00537763],
                       [0.00998628, 0.00919643, 0.00791843, 0.00664042, 0.00585057]])
@@ -155,9 +154,9 @@ def test_variable_airfoil_section_get_moment():
     scene.add_aircraft("test_plane", airplane_dict, state=state, control_state=control_state)
 
     alphas = np.radians([0,1,2])
-    Cms = np.asarray([[-0.00128477, -0.01082064, -0.02625   , -0.04167936, -0.05121523],
-                      [-0.00127084, -0.01070337, -0.02596551, -0.04122766, -0.05066018],
-                      [-0.00125692, -0.0105861 , -0.02568102, -0.04077595, -0.05010513]])
+    Cms = np.asarray([[-0.00125541, -0.01057337, -0.02565016, -0.04072695, -0.05004491],
+                      [-0.00124148, -0.0104561 , -0.02536567, -0.04027524, -0.04948986],
+                      [-0.00122756, -0.01033883, -0.02508118, -0.03982353, -0.0489348]])
 
     wing_segments = scene._airplanes["test_plane"].wing_segments
     for i, alpha in enumerate(alphas):

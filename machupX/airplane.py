@@ -236,7 +236,7 @@ class Airplane:
 
         # Convert to flank angle
         C_a = m.cos(m.radians(alpha))
-        B_f = m.atan2(m.tan(beta), C_a)
+        B_f = m.atan(m.tan(m.radians(beta))/C_a)
 
         # Calculate trigonometric values
         S_a = m.sin(m.radians(alpha))

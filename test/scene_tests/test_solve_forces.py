@@ -34,8 +34,8 @@ def test_linear_NLL():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-20.96187814976615)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-1.393693329077191)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-20.95753393799707)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-1.393410892863983)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"])<1e-10
     assert abs(FM["test_plane"]["total"]["Fx"]+0.6612853313914597)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
@@ -71,8 +71,8 @@ def test_nonlinear_NLL():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-20.963419907083935)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-1.3936939776023654)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-20.959074770349314)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-1.3934114313254868)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"])<1e-10
     assert abs(FM["test_plane"]["total"]["Fx"]+0.6612320094219648)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
@@ -108,7 +108,7 @@ def test_sideslip():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-20.961937696103853)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-20.957604863614606)<1e-10
     assert abs(FM["test_plane"]["total"]["FD"]-1.5650657667527752)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"]+4.067078748220425)<1e-10
     assert abs(FM["test_plane"]["total"]["Fx"]+0.6178147806271342)<1e-10
@@ -145,7 +145,7 @@ def test_angular_rotation():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-21.572483067700848)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-21.57411895445147)<1e-10
     assert abs(FM["test_plane"]["total"]["FD"]-1.5716318622656185)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"]+3.8352520904652434)<1e-10
     assert abs(FM["test_plane"]["total"]["Fx"]+0.6151782803754537)<1e-10
@@ -182,8 +182,8 @@ def test_flap_deflection():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-15.380997116045302)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-2.1716305378887792)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-15.377197126456984)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-2.17132207592394)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"]-0.6544050217081607)<1e-10
     assert abs(FM["test_plane"]["total"]["Fx"]+1.6335185811079909)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"]-0.6544050217081607)<1e-10
@@ -219,8 +219,8 @@ def test_coefficients():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces(non_dimensional=True)
-    assert abs(FM["test_plane"]["total"]["CL"]-0.22044634308263014)<1e-10
-    assert abs(FM["test_plane"]["total"]["CD"]-0.014655821299887987)<1e-10
+    assert abs(FM["test_plane"]["total"]["CL"]-0.22043013669655828)<1e-10
+    assert abs(FM["test_plane"]["total"]["CD"]-0.014655815636380912)<1e-10
     assert abs(FM["test_plane"]["total"]["CS"])<1e-10
     assert abs(FM["test_plane"]["total"]["Cx"]+0.006953426946048488)<1e-10
     assert abs(FM["test_plane"]["total"]["Cy"])<1e-10
