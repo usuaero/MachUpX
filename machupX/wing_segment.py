@@ -803,6 +803,35 @@ class WingSegment:
         return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, aL0s)
 
 
+    def get_cp_am0(self, Rey, Mach):
+        """Returns the zero-moment angle of attack at each control point. Used for corrections to section properties due to sweep.
+
+        Parameters
+        ----------
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
+
+        Returns
+        -------
+        float
+            Zero-moment angle of attack
+        """
+
+        # Gather zero-lift angles of attack
+        am0s = np.zeros((self.N,self._num_airfoils))
+        for j in range(self._num_airfoils):
+            if self._has_control_surface:
+                am0s[:,j] = self._airfoils[j].get_am0(Rey=Rey, Mach=Mach, trailing_flap=self._delta_flap, trailing_flap_efficiency=self._flap_eff, trailing_flap_fraction=self._cp_flap_chord_frac)
+            else:
+                am0s[:,j] = self._airfoils[j].get_am0(Rey=Rey, Mach=Mach)
+
+        # Interpolate
+        return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, am0s)
+
+
     def get_cp_CLRe(self, alpha, Rey, Mach):
         """Returns the derivative of the lift coefficient with respect to Reynolds number at each control point
 

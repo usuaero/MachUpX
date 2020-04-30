@@ -12,13 +12,13 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear",
+            "type" : "scipy_fsolve",
         },
         "scene" : {
         }
     }
 
-    joint_length = 0
+    joint_length = 0.15
 
     # Specify airplane
     airplane_dict = {

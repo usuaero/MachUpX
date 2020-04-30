@@ -318,8 +318,8 @@ Describes an aircraft. Stored as a .json file
 >>>**"CLa" : float, optional**
 >>>>The lift slope in radians^-1. Defaults to 2pi
 >>>
->>>**"CmL0" : float, optional**
->>>>The zero-lift moment coefficient. Defaults to 0.0.
+>>>**"am0" : float, optional**
+>>>>The zero-moment angle of attak in radians. Defaults to 0.0.
 >>>
 >>>**"Cma" : float, optional**
 >>>>The moment slope in radians^-1. Defaults to 0.0.

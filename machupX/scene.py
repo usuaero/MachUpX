@@ -347,6 +347,7 @@ class Scene:
         self._M = np.zeros(self._N) # Mach number
         self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
         self._CLa = np.zeros(self._N) # Lift slope
+        self._am0 = np.zeros(self._N) # Zero-moment angle of attack
         self._esp_f_delta_f = np.zeros(self._N) # Change in effective angle of attack due to flap deflection
 
         # Velocities
@@ -478,8 +479,13 @@ class Scene:
         # Swept section corrections
         sweep2 = self._section_sweep**2
         sweep4 = self._section_sweep**4
+        tau2 = self._max_thickness*self._max_thickness
+
         self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
         self._R_CL_a = 1.0/(1.0-0.2955*self._max_thickness**0.96*sweep2-0.1335*self._max_thickness**0.68*sweep4)
+
+        self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
+        self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
 
         self._solved = False
 
@@ -532,6 +538,7 @@ class Scene:
                 seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
                 self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_approx[seg_slice], self._Re[seg_slice], self._M[seg_slice])
                 self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
+                self._am0[seg_slice] = segment.get_cp_am0(self._Re[seg_slice], self._M[seg_slice])
                 self._esp_f_delta_f[seg_slice] = segment.get_cp_flap_eff()
                 seg_ind += seg_N
 
@@ -557,12 +564,12 @@ class Scene:
 
         # Sum and transpose
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
-        self._V_ji_trans = self._V_ji.transpose((1,0,2))
 
 
     def _solve_w_scipy(self, **kwargs):
         # Determines the votrex strengths using scipy.fsolve
 
+        # Initialize
         verbose = kwargs.get("verbose", False)
         if verbose: print("Running scipy solver...")
         start_time = time.time()
@@ -684,6 +691,18 @@ class Scene:
         self._CL = self._CLa*(self._alpha_swept-self._aL0)
 
 
+    def _correct_Cm_for_sweep(self):
+        # Applies Jackson's corrections for swept section moment
+
+        ## Estimate lift slope
+        Cm_a_est = self._Cm/(self._alpha_swept-self._am0)
+
+        # Get new estimate
+        self._Cma = self._R_Cm_a*Cm_a_est
+        self._am0 = self._am0+self._delta_a_m0
+        self._Cm = self._Cma*(self._alpha_swept-self._am0)
+
+
 
     def _solve_linear(self, **kwargs):
         # Determines the vortex strengths of all horseshoe vortices in the scene using the linearize equations
@@ -700,7 +719,7 @@ class Scene:
 
         # A matrix
         A = np.zeros((self._N,self._N))
-        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])
+        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji, self._u_n[:,np.newaxis])
         A[:,:] = -(self._R_CL_a*self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
         u_inf_x_dl = np.cross(self._cp_u_inf, self._dl)
@@ -770,15 +789,15 @@ class Scene:
                     index += num_cps
 
             # Intermediate calcs
-            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], self._V_ji_trans)
+            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], self._V_ji)
 
             # Caclulate Jacobian
-            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(self._V_ji_trans, self._dl)))
+            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(self._V_ji, self._dl)))
 
             if not phillips:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
-            CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji_trans, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
+            CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
             CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
             CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_eff)[:,np.newaxis]*v_iji
 
@@ -831,13 +850,36 @@ class Scene:
         self._dL = np.linalg.norm(dF_inv, axis=-1)
 
         # Calculate conditions for determining viscid contributions
-        alpha = np.arctan2(np.einsum('ij,ij->i', self._u_i, self._u_n), np.einsum('ij,ij->i', self._u_i, self._u_a))
+        if not hasattr(self, "_alpha_swept"):
+            self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+            self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+            self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+            self._alpha_swept = np.arctan2(self._v_n, self._v_a)
         self._q_i = 0.5*self._rho*self._V_i_2
 
         # Store lift, drag, and moment coefficient distributions
         self._FM = {}
         empty_coef_dict = { "CL" : {}, "CD" : {}, "CS" : {}, "Cx" : {}, "Cy" : {}, "Cz" : {}, "Cl" : {}, "Cm" : {}, "Cn" : {}}
         empty_FM_dict = { "FL" : {}, "FD" : {}, "FS" : {}, "Fx" : {}, "Fy" : {}, "Fz" : {}, "Mx" : {}, "My" : {}, "Mz" : {}}
+
+        # Get section moment and drag coefficients
+        index = 0
+        for airplane_name in self._airplane_names:
+            for segment in self._airplanes[airplane_name].segments:
+                num_cps = segment.N
+                cur_slice = slice(index, index+num_cps)
+
+                # Section drag
+                self._CD[cur_slice] = segment.get_cp_CD(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+
+                # Determine moment due to section moment coef
+                self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+
+                index += num_cps
+
+        # Make sweep corrections
+        self._correct_Cm_for_sweep()
+        self._CD /= np.cos(self._section_sweep)
 
         # Loop through airplanes to gather necessary data
         index = 0
@@ -879,8 +921,6 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Get drag coef and redimensionalize
-                self._CD[cur_slice] = segment.get_cp_CD(alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                #TODO correct for sweep
                 dD = self._q_i[cur_slice]*self._dS[cur_slice]*self._CD[cur_slice]
 
                 # Determine viscous force vector
@@ -898,10 +938,7 @@ class Scene:
 
                 # Determine inviscid moment vector
                 dM_vortex = np.cross(self._r_CG[cur_slice,:], dF_inv[cur_slice,:])
-
-                # Determine moment due to section moment coef
-                self._Cm[cur_slice] = self._airplanes[airplane_name].wing_segments[segment_name].get_cp_Cm(alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                #TODO correct for sweep
+                
                 dM_section = -(self._q_i[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*self._Cm[cur_slice])[:,np.newaxis]*self._u_s[cur_slice]
 
                 # Combine moment due to lift and section moment
