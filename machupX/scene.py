@@ -856,6 +856,7 @@ class Scene:
             self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
             self._alpha_swept = np.arctan2(self._v_n, self._v_a)
         self._q_i = 0.5*self._rho*self._V_i_2
+        self._redim = self._q_i*self._dS
 
         # Store lift, drag, and moment coefficient distributions
         self._FM = {}
@@ -878,8 +879,21 @@ class Scene:
                 index += num_cps
 
         # Make sweep corrections
+        C_sweep_inv = 1.0/np.cos(self._section_sweep)
         self._correct_Cm_for_sweep()
-        self._CD /= np.cos(self._section_sweep)
+        self._CD *= C_sweep_inv
+
+        # Determine viscous drag vector
+        dD = self._redim*self._CD
+        dF_b_visc = dD[:,np.newaxis]*self._u_i
+
+        # Moment due to viscous drag
+        dM_visc = np.cross(self._r_CG, dF_b_visc)
+
+        # Inviscid moment
+        dM_vortex = np.cross(self._r_CG, dF_inv)
+        dM_section = -(self._redim*self._c_bar*C_sweep_inv*self._Cm)[:,np.newaxis]*self._u_s
+        dM_inv = dM_vortex+dM_section
 
         # Loop through airplanes to gather necessary data
         index = 0
@@ -921,28 +935,18 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Get drag coef and redimensionalize
-                dD = self._q_i[cur_slice]*self._dS[cur_slice]*self._CD[cur_slice]
-
-                # Determine viscous force vector
-                dF_b_visc = dD[:,np.newaxis]*self._u_i[cur_slice]
-                F_b_visc = quat_trans(airplane_object.q, np.sum(dF_b_visc, axis=0))
+                F_b_visc = quat_trans(airplane_object.q, np.sum(dF_b_visc[cur_slice], axis=0))
                 L_visc, D_visc, S_visc = self._rotate_aero_forces(F_b_visc, u_inf)
 
                 # Determine viscous moment vector
-                dM_visc = np.cross(self._r_CG[cur_slice], dF_b_visc)
-                M_b_visc = quat_trans(airplane_object.q, np.sum(dM_visc, axis=0))
+                M_b_visc = quat_trans(airplane_object.q, np.sum(dM_visc[cur_slice], axis=0))
 
                 # Determine inviscid force vector
                 F_b_inv = quat_trans(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
                 L_inv, D_inv, S_inv = self._rotate_aero_forces(F_b_inv, u_inf)
 
-                # Determine inviscid moment vector
-                dM_vortex = np.cross(self._r_CG[cur_slice,:], dF_inv[cur_slice,:])
-                
-                dM_section = -(self._q_i[cur_slice]*self._dS[cur_slice]*self._c_bar[cur_slice]*self._Cm[cur_slice])[:,np.newaxis]*self._u_s[cur_slice]
-
                 # Combine moment due to lift and section moment
-                M_b_inv = quat_trans(airplane_object.q, np.sum(dM_section+dM_vortex, axis=0))
+                M_b_inv = quat_trans(airplane_object.q, np.sum(dM_inv[cur_slice], axis=0))
 
                 # Store
                 if report_by_segment:
@@ -1085,7 +1089,8 @@ class Scene:
 
 
     def _rotate_aero_forces(self, F, u_inf):
-        # Takes the force vector and coverts it to lift, drag, and sideforce
+        # Takes the body-fixed force vector and coverts it to lift, drag, and sideforce
+        # This uses the AeroLab convention where beta is asin(Vy/V)
 
         # Determine direction vectors
         u_lift = np.cross(u_inf, [0.,1.,0.])

@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve",
+            "type" : "linear",
         },
         "scene" : {
         }
@@ -121,7 +121,8 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : [20, "mph"],
-        "alpha" : 10.0
+        "alpha" : 10.0,
+        "beta" : 10.0
     }
     control_state = {
         "elevator" : 0.0
