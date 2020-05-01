@@ -76,7 +76,7 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
                 #"sweep" : 45.0,
-                "twist" : -3.95,
+                #"twist" : -3.95,
                 #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
@@ -120,9 +120,8 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "velocity" : [20, "mph"],
-        "alpha" : 10.0,
-        "beta" : 10.0
+        "velocity" : [20.0, 0.0, 0.0],
+        "orientation" : [0.0, 0.0, 90.0]
     }
     control_state = {
         "elevator" : 0.0

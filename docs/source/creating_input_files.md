@@ -249,7 +249,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>>Position of the origin of the aircraft's body-fixed coordinate system in earth-fixed coordinates. Defaults to [0.0, 0.0, 0.0]
 >>>>>
 >>>>>**"velocity" : float or vector**
->>>>>>Velocity vector of the aircraft in flat-earth coordinates or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
+>>>>>>Velocity vector of the aircraft in body-fixed coordinates (i.e. u, v, and w) or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
 >>>>>
 >>>>>**"orientation" : vector, optional**
 >>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.

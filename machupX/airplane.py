@@ -166,7 +166,7 @@ class Airplane:
                 raise IOError("Alpha and beta are not allowed when the freestream velocity is a vector.")
 
             # Store
-            self.v = v_value
+            self.v = quat_inv_trans(self.q, v_value)
 
         else:
             raise IOError("{0} is not an allowable velocity definition.".format(v_value))
