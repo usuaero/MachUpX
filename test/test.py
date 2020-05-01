@@ -133,7 +133,6 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
     #scene.display_wireframe(show_vortices=True)
     a, B, V = scene._airplanes["plane"].get_aerodynamic_state()
-    print(B)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
