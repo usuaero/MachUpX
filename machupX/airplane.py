@@ -240,8 +240,8 @@ class Airplane:
 
         # Calculate trigonometric values
         S_a = m.sin(m.radians(alpha))
-        C_B = m.cos(m.radians(B_f))
-        S_B = m.sin(m.radians(B_f))
+        C_B = m.cos(B_f)
+        S_B = m.sin(B_f)
 
         # Determine freestream velocity components in body-fixed frame (Mech of Flight Eqs. 7.1.10-12)
         v_inf_b = np.zeros(3)
