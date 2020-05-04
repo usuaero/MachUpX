@@ -41,7 +41,6 @@ def test_damping_derivatives():
     damp_derivs = scene.aircraft_damping_derivatives()
     print(json.dumps(damp_derivs["test_plane"], indent=4))
 
-    # There's something about how NLL calculates these cases that introduces a little more numerical error...
     assert abs(damp_derivs["test_plane"]["CL,pbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["CD,pbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["CS,pbar"]+0.07876155824189048)<1e-10
@@ -55,20 +54,20 @@ def test_damping_derivatives():
     assert abs(damp_derivs["test_plane"]["CD,qbar"]-0.30679384901623197)<1e-10
     assert abs(damp_derivs["test_plane"]["CS,qbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["Cx,qbar"]-0.14545935904301463)<1e-10
-    assert abs(damp_derivs["test_plane"]["Cy,qbar"])<1e-10
+    assert abs(damp_derivs["test_plane"]["Cy,qbar"])<1e-9
     assert abs(damp_derivs["test_plane"]["Cz,qbar"]+12.956192520550136)<1e-10
     assert abs(damp_derivs["test_plane"]["Cl,qbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["Cm,qbar"]+36.46247702820127)<1e-10
     assert abs(damp_derivs["test_plane"]["Cn,qbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["CL,rbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["CD,rbar"])<1e-10
-    assert abs(damp_derivs["test_plane"]["CS,rbar"]-1.2254471136479639)<1e-10
+    assert abs(damp_derivs["test_plane"]["CS,rbar"]-1.2254471136479639)<1e-9
     assert abs(damp_derivs["test_plane"]["Cx,rbar"])<1e-10
-    assert abs(damp_derivs["test_plane"]["Cy,rbar"]-1.2254471136479639)<1e-10
+    assert abs(damp_derivs["test_plane"]["Cy,rbar"]-1.2254471136479639)<1e-9
     assert abs(damp_derivs["test_plane"]["Cz,rbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["Cl,rbar"]-0.3681357898633655)<1e-10
     assert abs(damp_derivs["test_plane"]["Cm,rbar"])<1e-10
-    assert abs(damp_derivs["test_plane"]["Cn,rbar"]+0.9272539506646101)<1e-10
+    assert abs(damp_derivs["test_plane"]["Cn,rbar"]+0.9272539506646101)<1e-9
 
 
 def test_control_derivatives():
@@ -133,3 +132,30 @@ def test_all_derivs():
     assert abs(derivs["test_plane"]["stability"]["Cl,B"]+0.1615386223535695)<1e-10
     assert abs(derivs["test_plane"]["stability"]["Cm,B"])<1e-10
     assert abs(derivs["test_plane"]["stability"]["Cn,B"]-0.6171846005680138)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CL,pbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CD,pbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CS,pbar"]+0.07876155824189048)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cx,pbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cy,pbar"]+0.07876155824189048)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cz,pbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cl,pbar"]+2.5582645049471457)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cm,pbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cn,pbar"]-0.014280792399212826)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CL,qbar"]-12.953376416553475)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CD,qbar"]-0.30679384901623197)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CS,qbar"])<1e-9
+    assert abs(derivs["test_plane"]["damping"]["Cx,qbar"]-0.14545935904301463)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cy,qbar"])<1e-9
+    assert abs(derivs["test_plane"]["damping"]["Cz,qbar"]+12.956192520550136)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cl,qbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cm,qbar"]+36.46247702820127)<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cn,qbar"])<1e-9
+    assert abs(derivs["test_plane"]["damping"]["CL,rbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CD,rbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["CS,rbar"]-1.2254471136479639)<1e-9
+    assert abs(derivs["test_plane"]["damping"]["Cx,rbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cy,rbar"]-1.2254471136479639)<1e-9
+    assert abs(derivs["test_plane"]["damping"]["Cz,rbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cl,rbar"]-0.3681357898633655)<1e-9
+    assert abs(derivs["test_plane"]["damping"]["Cm,rbar"])<1e-10
+    assert abs(derivs["test_plane"]["damping"]["Cn,rbar"]+0.9272539506646101)<1e-9

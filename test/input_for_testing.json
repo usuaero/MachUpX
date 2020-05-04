@@ -10,7 +10,7 @@
         "stl" : {}
     },
     "solver" : {
-        "type" : "nonlinear",
+        "type" : "scipy_fsolve",
         "convergence" : 1e-10,
         "relaxation" : 0.9
     },
