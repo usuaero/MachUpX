@@ -44,7 +44,18 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "chord" : 1.0,
                 "airfoil" : "NACA_0010",
-                #"sweep" : 45.0,
+                "sweep" : [[0.0, 45.0],
+                           [0.2, 45.0],
+                           [0.2, -10.0],
+                           [0.4, -10.0],
+                           [0.4, 60.0],
+                           [0.6, 60.0],
+                           [0.6, 20.0],
+                           [0.8, 20.0],
+                           [0.8, 4.0],
+                           [0.9, 4.0],
+                           [0.9, 5.0],
+                           [1.0, 5.0]],
                 #"dihedral" : [[0.0, 0.0],
                 #              [1.0, 30.0]],
                 #"twist" : [[0.0, 0.0],
@@ -121,8 +132,8 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 40.0,
-        "alpha" : 90.0,
-        "beta" : 90.0
+        "alpha" : 9.0,
+        "beta" : 0.0
     }
     control_state = {
         "elevator" : 0.0
@@ -131,7 +142,7 @@ if __name__=="__main__":
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-    #scene.display_wireframe(show_vortices=True)
+    scene.display_wireframe(show_vortices=True)
     a, B, V = scene._airplanes["plane"].get_aerodynamic_state()
 
     # Solve forces

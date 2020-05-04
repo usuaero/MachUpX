@@ -200,6 +200,9 @@ class WingSegment:
     def _initialize_getters(self):
         # Sets getters for functions which are a function of span
 
+        # Store discontinuities to make the integrators more reliable
+        self._discont = []
+
         # Twist
         twist_data = import_value("twist", self._input_dict, self._unit_sys, 0)
         self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True) # Side is not specified because this is always positive
@@ -207,10 +210,12 @@ class WingSegment:
         # Dihedral
         dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, 0)
         self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, side=self.side)
+        self._add_discontinuities(self._getter_data["dihedral"], self._discont)
 
         # Sweep
         sweep_data = import_value("sweep", self._input_dict, self._unit_sys, 0)
         self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
+        self._add_discontinuities(self._getter_data["sweep"], self._discont)
 
         # Chord
         chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0) # Side is not specified because this is always positive
@@ -220,6 +225,17 @@ class WingSegment:
 
         else: # Linear distribution
             self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
+            
+
+    def _add_discontinuities(self, data, discont):
+        # Finds discontinuities in the data (i.e. step changes in first derivative)
+
+        if isinstance(data, np.ndarray):
+
+            # Look for places where the span location is the same, but the values are different
+            for i in range(data.shape[0]):
+                if data[i,0] == data[i-1,0] and data[i,1] != data[i-1,1] and data[i,0].item() not in discont:
+                    discont.append(data[i,0].item())
 
 
     def _build_getter_linear_f_of_span(self, data, name, angular_data=False, side="right"):
@@ -642,12 +658,12 @@ class WingSegment:
         # Integrate sweep and dihedral along the span to get the location
         ds = np.zeros((span_array.shape[0],3))
         for i, span in enumerate(span_array):
-            ds[i,0] = integ.quad(lambda s : -np.abs(np.tan(self.get_sweep(s))), 0, span)[0]*self.b
+            ds[i,0] = integ.quad(lambda s : -np.abs(np.tan(self.get_sweep(s))), 0, span, points=self._discont)[0]*self.b
             if self.side == "left":
-                ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
+                ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span, points=self._discont)[0]*self.b
             else:
-                ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span)[0]*self.b
-            ds[i,2] = integ.quad(lambda s : -np.abs(np.sin(self.get_dihedral(s))), 0, span)[0]*self.b
+                ds[i,1] = integ.quad(lambda s : np.cos(self.get_dihedral(s)), 0, span, points=self._discont)[0]*self.b
+            ds[i,2] = integ.quad(lambda s : -np.abs(np.sin(self.get_dihedral(s))), 0, span, points=self._discont)[0]*self.b
 
         qc_loc = self.get_root_loc()+ds
         if converted:
