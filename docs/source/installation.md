@@ -1,5 +1,9 @@
 # Installation
 
+## Prerequisites
+
+Version 2 of MachUpX is dependent upon the AirfoilDatabase package, also distributed by the USU AeroLab. The source code for AirfoilDatabase can be found [here](www.github.com/usuaero/AirfoilDatabase). Please make sure you have the latest version of AirfoilDatabase downloaded and installed before installing MachUpX version 2.
+
 ## Getting Python
 
 If you do not have Python installed on your machine, it can be downloaded from [https://www.anaconda.com/distribution/](https://www.anaconda.com/distribution/). This is the Anaconda distribution, which we highly recommend (no we are not affiliated with nor do we receive financial support from Anaconda).

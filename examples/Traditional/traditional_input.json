@@ -4,7 +4,7 @@
         "display_wireframe" : {
             "show_legend" : true
         },
-        "forces" : {
+        "solve_forces" : {
             "non_dimensional" : false
         },
         "pitch_trim" : {
@@ -24,7 +24,6 @@
             "traditional_airplane" : {
                 "file" : "traditional_airplane.json",
                 "state" : {
-                    "type" : "aerodynamic",
                     "velocity" : 100,
                     "alpha" : 2.0,
                     "beta" : 0.0

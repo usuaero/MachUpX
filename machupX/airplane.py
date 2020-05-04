@@ -124,8 +124,8 @@ class Airplane:
 
         # Check for ussers using depreciated state definitions
         self.state_type = import_value("type", kwargs, self._unit_sys, "none")
-        if self.state_type != "none":
-            raise IOError("Use of 'state_type' is no longer supported. See documentation for details.")
+        if self.state_type == 'rigid_body':
+            raise IOError("Use of 'rigid_body' state type is no longer supported and the 'state_type' key in general is depreciated. See documentation for details.")
 
         # Get position and angular rates
         self.p_bar = import_value("position", kwargs, self._unit_sys, [0.0, 0.0, 0.0])

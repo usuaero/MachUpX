@@ -39,7 +39,6 @@ def test_damping_derivatives():
     # Load scene
     scene = MX.Scene(input_file)
     damp_derivs = scene.aircraft_damping_derivatives()
-    print(json.dumps(damp_derivs["test_plane"], indent=4))
 
     assert abs(damp_derivs["test_plane"]["CL,pbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["CD,pbar"])<1e-10

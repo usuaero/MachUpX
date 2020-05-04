@@ -4,7 +4,7 @@
         "display_wireframe" : {
             "show_legend" : true
         },
-        "forces" : {
+        "solve_forces" : {
             "non_dimensional" : false
         },
         "pitch_trim" : {
@@ -22,7 +22,6 @@
             "flying_wing" : {
                 "file" : "flying_wing.json",
                 "state" : {
-                    "type" : "aerodynamic",
                     "velocity" : 100,
                     "alpha" : 2.0,
                     "beta" : 0.0

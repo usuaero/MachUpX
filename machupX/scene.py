@@ -700,7 +700,7 @@ class Scene:
         # Get new estimate
         self._Cma = self._R_Cm_a*Cm_a_est
         self._am0 = self._am0+self._delta_a_m0
-        self._Cm = np.where(self._Cm != 0, self._Cma*(self._alpha_swept-self._am0), 0.0)
+        self._Cm = np.where(self._Cm != 0.0, self._Cma*(self._alpha_swept-self._am0), 0.0)
 
 
     def _solve_linear(self, **kwargs):
