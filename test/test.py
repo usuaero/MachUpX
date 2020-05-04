@@ -44,23 +44,6 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "chord" : 1.0,
                 "airfoil" : "NACA_0010",
-                "sweep" : [[0.0, 45.0],
-                           [0.2, 45.0],
-                           [0.2, -10.0],
-                           [0.4, -10.0],
-                           [0.4, 60.0],
-                           [0.6, 60.0],
-                           [0.6, 20.0],
-                           [0.8, 20.0],
-                           [0.8, 4.0],
-                           [0.9, 4.0],
-                           [0.9, 5.0],
-                           [1.0, 5.0]],
-                #"dihedral" : [[0.0, 0.0],
-                #              [1.0, 30.0]],
-                #"twist" : [[0.0, 0.0],
-                #           [1.0, 30.0]],
-                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.1,
@@ -86,9 +69,6 @@ if __name__=="__main__":
                 },
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
-                #"sweep" : 45.0,
-                #"twist" : -3.95,
-                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -132,18 +112,19 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 40.0,
-        "alpha" : 9.0,
+        "alpha" : 5.0,
         "beta" : 0.0
     }
     control_state = {
-        "elevator" : 0.0
+        "elevator" : 0.0,
+        "aileron" : 0.0,
+        "rudder" : 0.0
     }
 
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
     scene.display_wireframe(show_vortices=True)
-    a, B, V = scene._airplanes["plane"].get_aerodynamic_state()
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
