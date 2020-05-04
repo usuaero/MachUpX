@@ -12,18 +12,16 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "linear",
+            "type" : "scipy_fsolve",
         },
         "scene" : {
         }
     }
 
-    joint_length = 0.15
-
     # Specify airplane
     airplane_dict = {
         "CG" : [0,0,0],
-        "weight" : 10.0,
+        "weight" : 100.0,
         "controls" : {
             "aileron" : {
                 "is_symmetric" : False
@@ -42,20 +40,16 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "semispan" : 4.0,
-                "chord" : 1.0,
                 "airfoil" : "NACA_0010",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
-                    "root_span" : 0.1,
-                    "tip_span" : 0.9,
                     "control_mixing" : {
                         "aileron" : 1.0
                     }
                 },
                 "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : joint_length
+                    "N" : 40,
+                    "reid_corrections" : True
                 }
             },
             "h_stab" : {
@@ -65,7 +59,7 @@ if __name__=="__main__":
                 "connect_to" : {
                     "ID" : 1,
                     "location" : "root",
-                    "dx" : -4.0
+                    "dx" : -3.0
                 },
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
@@ -76,9 +70,8 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : joint_length
+                    "N" : 40,
+                    "reid_corrections" : True
                 }
             },
             "v_stab" : {
@@ -88,7 +81,7 @@ if __name__=="__main__":
                 "connect_to" : {
                     "ID" : 1,
                     "location" : "root",
-                    "dx" : -4.0,
+                    "dx" : -3.0,
                     "dz" : -0.1
                 },
                 "semispan" : 2.0,
@@ -101,9 +94,8 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : True,
-                    "joint_length" : joint_length
+                    "N" : 40,
+                    "reid_corrections" : True
                 }
             }
         }
@@ -111,8 +103,8 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "velocity" : 40.0,
-        "alpha" : 5.0,
+        "velocity" : 100.0,
+        "alpha" : 2.0,
         "beta" : 0.0
     }
     control_state = {
@@ -124,28 +116,13 @@ if __name__=="__main__":
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-    scene.display_wireframe(show_vortices=True)
+
+    #scene.display_wireframe(show_vortices=True)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    ## Load scene without Jackson's corrections
-    #for key, value in airplane_dict["wings"].items():
-    #    value["grid"]["reid_corrections"] = False
-
-    #orig_scene = MX.Scene(input_dict)
-    #orig_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-
-    ## Show wireframes
-    #orig_scene.display_wireframe(show_vortices=True)
-
-    #FM = orig_scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-
-    ## Compare
-    #val0 = scene._P0#[:,:,2]
-    #val1 = scene._P0_joint#[:,:,2]
-    #print(val0)
-    #print(val1)
-    #print((val0-val1)[np.where(np.abs(val0-val1)>1e-10)])
+    # Get derivatives
+    derivs = scene.aircraft_derivatives()
+    print(json.dumps(derivs, indent=4))

@@ -687,8 +687,7 @@ class Scene:
 
         # Get new estimate
         self._CLa = self._R_CL_a*CL_a_est
-        self._aL0 = self._aL0+self._delta_a_L0
-        self._CL = self._CLa*(self._alpha_swept-self._aL0)
+        self._CL = self._CLa*(self._alpha_swept-self._aL0-self._delta_a_L0)
 
 
     def _correct_Cm_for_sweep(self):
@@ -699,8 +698,7 @@ class Scene:
 
         # Get new estimate
         self._Cma = self._R_Cm_a*Cm_a_est
-        self._am0 = self._am0+self._delta_a_m0
-        self._Cm = np.where(self._Cm != 0.0, self._Cma*(self._alpha_swept-self._am0), 0.0)
+        self._Cm = np.where(self._Cm != 0.0, self._Cma*(self._alpha_swept-self._am0-self._delta_a_m0), 0.0)
 
 
     def _solve_linear(self, **kwargs):
