@@ -556,11 +556,11 @@ class Scene:
 
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
         denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis], nan=0.0)
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis])
 
         # Influence of vortex segment 1 after the joint
         denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis], nan=0.0)
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis])
 
         # Sum and transpose
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
