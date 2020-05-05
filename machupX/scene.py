@@ -1216,7 +1216,7 @@ class Scene:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
         # Determine wind velocity
-        aircraft_position = state.get("position", np.array([0,0,0]))
+        aircraft_position = np.array(state.get("position", [0.0, 0.0, 0.0]))
         v_wind = self._get_wind(aircraft_position)
 
         # Set state and update precalcs for NLL
