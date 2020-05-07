@@ -1189,7 +1189,7 @@ class Scene:
         return self._FM
 
 
-    def set_aircraft_state(self, state={}, aircraft_name=None):
+    def set_aircraft_state(self, state={}, aircraft=None):
         """Sets the state of the given aircraft.
 
         Parameters
@@ -1202,16 +1202,16 @@ class Scene:
             default to their original defaults. The previous 
             state of the aircraft is in no way preserved.
 
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to set the state of. If there
             is only one aircraft in the scene, this does not need 
             to be specified.
         """
 
         # Specify the only aircraft if not already specified
-        if aircraft_name is None:
+        if aircraft is None:
             if self._num_aircraft == 1:
-                aircraft_name = list(self._airplanes.keys())[0]
+                aircraft = list(self._airplanes.keys())[0]
             else:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
@@ -1220,17 +1220,17 @@ class Scene:
         v_wind = self._get_wind(aircraft_position)
 
         # Set state and update precalcs for NLL
-        old_position = self._airplanes[aircraft_name].p_bar
-        old_orient = self._airplanes[aircraft_name].q
-        self._airplanes[aircraft_name].set_state(**state, v_wind=v_wind)
-        aircraft_orient = self._airplanes[aircraft_name].q
+        old_position = self._airplanes[aircraft].p_bar
+        old_orient = self._airplanes[aircraft].q
+        self._airplanes[aircraft].set_state(**state, v_wind=v_wind)
+        aircraft_orient = self._airplanes[aircraft].q
 
         # If the position has changed, then we need to update the geometry
         if not np.allclose(old_position, aircraft_position) or not np.allclose(old_orient, aircraft_orient):
             self._perform_geometry_and_atmos_calcs()
 
 
-    def set_aircraft_control_state(self, control_state={}, aircraft_name=None):
+    def set_aircraft_control_state(self, control_state={}, aircraft=None):
         """Sets the control state of the given aircraft.
 
         Parameters
@@ -1239,21 +1239,21 @@ class Scene:
             Dictionary describing the control state. Each key value pair should be
             the name of the control and its deflection in degrees.
 
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to set the state of. If there
             is only one aircraft in the scene, this does not need 
             to be specified.
         """
 
         # Specify the only aircraft if not already specified
-        if aircraft_name is None:
+        if aircraft is None:
             if self._num_aircraft == 1:
-                aircraft_name = list(self._airplanes.keys())[0]
+                aircraft = list(self._airplanes.keys())[0]
             else:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
         # Set state
-        self._airplanes[aircraft_name].set_control_state(control_state)
+        self._airplanes[aircraft].set_control_state(control_state)
         self._solved = False
 
 
@@ -2125,7 +2125,7 @@ class Scene:
 
         Parameters
         ----------
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to get the reference params for. Does
             not need to be specified if there is only one aircraft in the 
             scene. Only one may be specified.
@@ -2222,7 +2222,7 @@ class Scene:
 
         Parameters
         ----------
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to get the reference params for. Does
             not need to be specified if there is only one aircraft in the 
             scene.
