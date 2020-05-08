@@ -103,9 +103,11 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "velocity" : 1.0,
-        "alpha" : 0.0,
-        "beta" : 0.0
+        "velocity" : 100.0,
+        "alpha" : 5.0,
+        "beta" : 5.0,
+        "angular_rates" : [0.0, 0.0, 10.0],
+        "angular_rate_frame" : "body"
     }
     control_state = {
         "elevator" : 0.0,
@@ -117,7 +119,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=True)
+    #scene.display_wireframe(show_vortices=True)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

@@ -183,7 +183,7 @@ class Airplane:
 
         elif self.angular_rate_frame == "stab": # Stability coordinates
             try:
-                self.q_to_stab = quat_conj(euler_to_quat([0.0, alpha, 0.0]))
+                self.q_to_stab = quat_conj(euler_to_quat([0.0, m.radians(alpha), 0.0]))
             except:
                 alpha = m.atan2(v_value[2], v_value[0])
                 self.q_to_stab = quat_conj(euler_to_quat([0.0, alpha, 0.0]))
@@ -191,11 +191,11 @@ class Airplane:
 
         elif self.angular_rate_frame == "wind": # Wind frame
             try:
-                self.q_to_wind = quat_conj(euler_to_quat([beta, alpha, 0.0]))
+                self.q_to_wind = quat_conj(euler_to_quat([0.0, m.radians(alpha), m.radians(beta)]))
             except:
                 alpha = m.atan2(v_value[2], v_value[0])
                 beta = m.asin(v_value[1]/m.sqrt(v_value[0]**2+v_value[1]**2+v_value[2]**2))
-                self.q_to_wind = quat_conj(euler_to_quat([beta, alpha, 0.0]))
+                self.q_to_wind = quat_conj(euler_to_quat([0.0, alpha, beta]))
             self.w = quat_inv_trans(self.q_to_wind, w_raw)
 
         else:
