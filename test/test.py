@@ -103,8 +103,8 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "velocity" : 100.0,
-        "alpha" : 2.0,
+        "velocity" : 1.0,
+        "alpha" : 0.0,
         "beta" : 0.0
     }
     control_state = {
@@ -117,12 +117,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=True)
+    scene.display_wireframe(show_vortices=True)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Get derivatives
-    derivs = scene.aircraft_derivatives()
-    print(json.dumps(derivs, indent=4))
+    ## Get derivatives
+    #derivs = scene.aircraft_derivatives()
+    #print(json.dumps(derivs, indent=4))

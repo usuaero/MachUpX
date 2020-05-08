@@ -1,4 +1,4 @@
-from .helpers import import_value,  euler_to_quat, check_filepath, quat_trans, quat_inv_trans
+from .helpers import import_value,  euler_to_quat, check_filepath, quat_trans, quat_inv_trans, quat_conj
 from .wing_segment import WingSegment
 from airfoil_db import Airfoil
 
@@ -115,6 +115,10 @@ class Airplane:
         angular_rates : list, optional
             Body-fixed rotation rates. Defaults to [0.0, 0.0, 0.0].
 
+        angular_rate_frame : str, optional
+            Coordinate frame in which the given angular rates are specified. Can be "body", "stab"
+            (stability coordinates), or "wind". Defaults to "body".
+
         v_wind : list, optional
             Local wind vector. Defaults to [0.0, 0.0, 0.0].
         """
@@ -129,7 +133,6 @@ class Airplane:
 
         # Get position and angular rates
         self.p_bar = import_value("position", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
-        self.w = import_value("angular_rates", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
 
         # Set up orientation quaternion
         self.q = import_value("orientation", kwargs, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
@@ -158,7 +161,7 @@ class Airplane:
             self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking; will be overwritten
             self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
 
-        # Earth-fixed velocity vector
+        # Body-fixed velocity vector
         elif isinstance(v_value, np.ndarray) and v_value.shape == (3,):
 
             # Make sure alpha and beta haven't also been given
@@ -170,6 +173,33 @@ class Airplane:
 
         else:
             raise IOError("{0} is not an allowable velocity definition.".format(v_value))
+
+        # Set angular rates
+        w_raw = import_value("angular_rates", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
+        self.angular_rate_frame = kwargs.get("angular_rate_frame", "body")
+
+        if self.angular_rate_frame == "body": # Body-fixed
+            self.w = w_raw
+
+        elif self.angular_rate_frame == "stab": # Stability coordinates
+            try:
+                self.q_to_stab = quat_conj(euler_to_quat([0.0, alpha, 0.0]))
+            except:
+                alpha = m.atan2(v_value[2], v_value[0])
+                self.q_to_stab = quat_conj(euler_to_quat([0.0, alpha, 0.0]))
+            self.w = quat_inv_trans(self.q_to_stab, w_raw)
+
+        elif self.angular_rate_frame == "wind": # Wind frame
+            try:
+                self.q_to_wind = quat_conj(euler_to_quat([beta, alpha, 0.0]))
+            except:
+                alpha = m.atan2(v_value[2], v_value[0])
+                beta = m.asin(v_value[1]/m.sqrt(v_value[0]**2+v_value[1]**2+v_value[2]**2))
+                self.q_to_wind = quat_conj(euler_to_quat([beta, alpha, 0.0]))
+            self.w = quat_inv_trans(self.q_to_wind, w_raw)
+
+        else:
+            raise IOError("{0} is not an allowable angular rate frame.".format(self.angular_rate_frame))
 
 
     def get_aerodynamic_state(self, v_wind=[0.0, 0.0, 0.0]):

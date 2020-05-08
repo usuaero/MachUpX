@@ -251,23 +251,26 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>**"velocity" : float or vector**
 >>>>>>Velocity vector of the aircraft in body-fixed coordinates (i.e. u, v, and w) or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
 >>>>>
+>>>>>**"alpha" : float, optional**
+>>>>>>Aerodynamic angle of attack. Defaults to 0.
+>>>>>
+>>>>>**"beta" : float, optional**
+>>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. B = asin(Vy/V).
+>>>>>
 >>>>>**"orientation" : vector, optional**
 >>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.
 >>>>>
 >>>>>**"angular_rates" : vector, optional**
 >>>>>>Angular rates of the aircraft in body-fixed coordinates, corresponding to p, q, and r. Defaults to [0.0, 0.0, 0.0].
 >>>>>
->>>>>**"alpha" : float, optional**
->>>>>>Aerodynamic angle of attack. Defaults to 0.
->>>>>
->>>>>**"beta" : float, optional**
->>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. B = asin(Vy/V).
+>>>>>**"angular_rate_frame" : str, optional**
+>>>>>>Frame in which the angular rates are given. Can be "body", "stab" (stability coordinates), or "wind". Defaults to "body".
 >>>>
 >>>>**"control_state" : dict, optional**
 >>>>>Describes the control deflections. The number and names of controls are arbitrary and may be specified by the user. This is discussed more in depth as part of the aircraft object. If the aircraft has controls but no state is specified, all deflections will be assumed to be zero.
 >>>>
 >>>>>**"<CONTROL_NAME>" : float, optional**
->>>>>>Control surface deflection.
+>>>>>>Control setting.
 
 ## Aircraft Object
 Describes an aircraft. Stored as a .json file

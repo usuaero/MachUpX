@@ -682,8 +682,9 @@ class Scene:
     def _correct_CL_for_sweep(self):
         # Applies Jackson's corrections for swept section lift
 
-        ## Estimate lift slope
-        CL_a_est = self._CL/(self._alpha_swept-self._aL0)
+        # Estimate lift slope
+        with np.errstate(divide='ignore', invalid='ignore'):
+            CL_a_est = np.nan_to_num(self._CL/(self._alpha_swept-self._aL0))
 
         # Get new estimate
         self._CLa = self._R_CL_a*CL_a_est
@@ -693,8 +694,9 @@ class Scene:
     def _correct_Cm_for_sweep(self):
         # Applies Jackson's corrections for swept section moment
 
-        ## Estimate lift slope
-        Cm_a_est = self._Cm/(self._alpha_swept-self._am0)
+        # Estimate moment slope
+        with np.errstate(divide='ignore', invalid='ignore'):
+            Cm_a_est = np.nan_to_num(self._Cm/(self._alpha_swept-self._am0))
 
         # Get new estimate
         self._Cma = self._R_Cm_a*Cm_a_est
@@ -1153,15 +1155,15 @@ class Scene:
         nonlinear_time = 0.0
         if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
 
-            if fsolve_time == -1:
-                fsolve_time = 0.0
-
             # Linear solution
             linear_time = self._solve_linear(**kwargs)
 
             # Nonlinear improvement
-            if self._solver_type == "nonlinear":
+            if self._solver_type == "nonlinear" or fsolve_time == -1:
                 nonlinear_time = self._solve_nonlinear(**kwargs)
+
+            if fsolve_time == -1:
+                fsolve_time = 0.0
 
         # Integrate forces and moments
         integrate_time = self._integrate_forces_and_moments(**kwargs)
