@@ -837,6 +837,9 @@ class Scene:
         non_dimensional = kwargs.get("non_dimensional", True)
         dimensional = kwargs.get("dimensional", True)
         report_by_segment = kwargs.get("report_by_segment", False)
+        body_frame = kwargs.get("body_frame", True)
+        stab_frame = kwargs.get("stab_frame", False)
+        wind_frame = kwargs.get("wind_frame", True)
 
         # Get velocities
         self._calc_v_i()
@@ -859,8 +862,17 @@ class Scene:
 
         # Store lift, drag, and moment coefficient distributions
         self._FM = {}
-        empty_coef_dict = { "CL" : {}, "CD" : {}, "CS" : {}, "Cx" : {}, "Cy" : {}, "Cz" : {}, "Cl" : {}, "Cm" : {}, "Cn" : {}}
-        empty_FM_dict = { "FL" : {}, "FD" : {}, "FS" : {}, "Fx" : {}, "Fy" : {}, "Fz" : {}, "Mx" : {}, "My" : {}, "Mz" : {}}
+        empty_coef_dict = {}
+        empty_FM_dict = {}
+        if body_frame:
+            empty_coef_dict.update({"Cx" : {}, "Cy" : {}, "Cz" : {}, "Cl" : {}, "Cm" : {}, "Cn" : {}})
+            empty_FM_dict.update({"Fx" : {}, "Fy" : {}, "Fz" : {}, "Mx" : {}, "My" : {}, "Mz" : {}})
+        if stab_frame:
+            empty_coef_dict.update({"Cx_s" : {}, "Cy_s" : {}, "Cz_s" : {}, "Cl_s" : {}, "Cm_s" : {}, "Cn_s" : {}})
+            empty_FM_dict.update({"Fx_s" : {}, "Fy_s" : {}, "Fz_s" : {}, "Mx_s" : {}, "My_s" : {}, "Mz_s" : {}})
+        if wind_frame:
+            empty_coef_dict.update({"CL" : {}, "CD" : {}, "CS" : {}, "Cl_w" : {}, "Cm_w" : {}, "Cn_w" : {}})
+            empty_FM_dict.update({"FL" : {}, "FD" : {}, "FS" : {}, "Mx_w" : {}, "My_w" : {}, "Mz_w" : {}})
 
         # Get section moment and drag coefficients
         index = 0
@@ -919,6 +931,19 @@ class Scene:
             V_inf = np.linalg.norm(v_inf)
             u_inf = quat_trans(airplane_object.q, (v_inf/V_inf).flatten())
 
+            # Determine rotations to wind and stability frames
+            if stab_frame or wind_frame:
+                u_lift = np.cross(u_inf, [0.,1.,0.])
+                u_lift = u_lift/np.linalg.norm(u_lift)
+            if stab_frame:
+                u_x_stab = np.cross(u_lift, [0.0, 1.0, 0.0])
+                u_x_stab = u_x_stab/np.linalg.norm(u_x_stab)
+                rot_to_stab = np.array([u_x_stab, [0.0, 1.0, 0.0], -u_lift])
+            if wind_frame:
+                u_side = np.cross(u_lift, u_inf)
+                u_side = u_side/np.linalg.norm(u_side)
+                rot_to_wind = np.array([u_inf, u_side, u_lift])
+
             # Determine reference parameters
             if non_dimensional:
                 S_w =  airplane_object.S_w
@@ -935,17 +960,27 @@ class Scene:
 
                 # Get drag coef and redimensionalize
                 F_b_visc = quat_trans(airplane_object.q, np.sum(dF_b_visc[cur_slice], axis=0))
-                L_visc, D_visc, S_visc = self._rotate_aero_forces(F_b_visc, u_inf)
 
                 # Determine viscous moment vector
                 M_b_visc = quat_trans(airplane_object.q, np.sum(dM_visc[cur_slice], axis=0))
 
                 # Determine inviscid force vector
                 F_b_inv = quat_trans(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
-                L_inv, D_inv, S_inv = self._rotate_aero_forces(F_b_inv, u_inf)
 
-                # Combine moment due to lift and section moment
+                # Determine inviscid moment vector
                 M_b_inv = quat_trans(airplane_object.q, np.sum(dM_inv[cur_slice], axis=0))
+
+                # Rotate frames
+                if wind_frame:
+                    F_w_visc = np.matmul(rot_to_wind, F_b_visc)
+                    F_w_inv = np.matmul(rot_to_wind, F_b_inv)
+                    M_w_visc = np.matmul(rot_to_wind, M_b_visc)
+                    M_w_inv = np.matmul(rot_to_wind, M_b_inv)
+                if stab_frame:
+                    F_s_visc = np.matmul(rot_to_stab, F_b_visc)
+                    F_s_inv = np.matmul(rot_to_stab, F_b_inv)
+                    M_s_visc = np.matmul(rot_to_stab, M_b_visc)
+                    M_s_inv = np.matmul(rot_to_stab, M_b_inv)
 
                 # Store
                 if report_by_segment:
@@ -954,9 +989,9 @@ class Scene:
                         self._FM[airplane_name]["viscous"]["Cy"][segment_name] = F_b_visc[1].item()/(q_ref*S_w)
                         self._FM[airplane_name]["viscous"]["Cz"][segment_name] = F_b_visc[2].item()/(q_ref*S_w)
 
-                        self._FM[airplane_name]["viscous"]["CL"][segment_name] = L_visc/(q_ref*S_w)
-                        self._FM[airplane_name]["viscous"]["CD"][segment_name] = D_visc/(q_ref*S_w)
-                        self._FM[airplane_name]["viscous"]["CS"][segment_name] = S_visc/(q_ref*S_w)
+                        self._FM[airplane_name]["viscous"]["CD"][segment_name] = F_w_visc[0]/(q_ref*S_w)
+                        self._FM[airplane_name]["viscous"]["CS"][segment_name] = F_w_visc[1]/(q_ref*S_w)
+                        self._FM[airplane_name]["viscous"]["CL"][segment_name] = F_w_visc[2]/(q_ref*S_w)
 
                         self._FM[airplane_name]["viscous"]["Cl"][segment_name] = M_b_visc[0].item()/(q_ref*S_w*l_ref_lat)
                         self._FM[airplane_name]["viscous"]["Cm"][segment_name] = M_b_visc[1].item()/(q_ref*S_w*l_ref_lon)
@@ -966,9 +1001,9 @@ class Scene:
                         self._FM[airplane_name]["inviscid"]["Cy"][segment_name] = F_b_inv[1].item()/(q_ref*S_w)
                         self._FM[airplane_name]["inviscid"]["Cz"][segment_name] = F_b_inv[2].item()/(q_ref*S_w)
 
-                        self._FM[airplane_name]["inviscid"]["CL"][segment_name] = L_inv/(q_ref*S_w)
-                        self._FM[airplane_name]["inviscid"]["CD"][segment_name] = D_inv/(q_ref*S_w)
-                        self._FM[airplane_name]["inviscid"]["CS"][segment_name] = S_inv/(q_ref*S_w)
+                        self._FM[airplane_name]["inviscid"]["CD"][segment_name] = F_w_inv[0]/(q_ref*S_w)
+                        self._FM[airplane_name]["inviscid"]["CS"][segment_name] = F_w_inv[1]/(q_ref*S_w)
+                        self._FM[airplane_name]["inviscid"]["CL"][segment_name] = F_w_inv[2]/(q_ref*S_w)
 
                         self._FM[airplane_name]["inviscid"]["Cl"][segment_name] = M_b_inv[0].item()/(q_ref*S_w*l_ref_lat)
                         self._FM[airplane_name]["inviscid"]["Cm"][segment_name] = M_b_inv[1].item()/(q_ref*S_w*l_ref_lon)
@@ -979,9 +1014,9 @@ class Scene:
                         self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
                         self._FM[airplane_name]["viscous"]["Fz"][segment_name] = F_b_visc[2].item()
 
-                        self._FM[airplane_name]["viscous"]["FL"][segment_name] = L_visc
-                        self._FM[airplane_name]["viscous"]["FD"][segment_name] = D_visc
-                        self._FM[airplane_name]["viscous"]["FS"][segment_name] = S_visc
+                        self._FM[airplane_name]["viscous"]["FD"][segment_name] = F_w_visc[0]
+                        self._FM[airplane_name]["viscous"]["FS"][segment_name] = F_w_visc[1]
+                        self._FM[airplane_name]["viscous"]["FL"][segment_name] = F_w_visc[2]
 
                         self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
                         self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
@@ -991,21 +1026,21 @@ class Scene:
                         self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
                         self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
 
-                        self._FM[airplane_name]["inviscid"]["FL"][segment_name] = L_inv
-                        self._FM[airplane_name]["inviscid"]["FD"][segment_name] = D_inv
-                        self._FM[airplane_name]["inviscid"]["FS"][segment_name] = S_inv
+                        self._FM[airplane_name]["inviscid"]["FD"][segment_name] = F_w_inv[0]
+                        self._FM[airplane_name]["inviscid"]["FS"][segment_name] = F_w_inv[1]
+                        self._FM[airplane_name]["inviscid"]["FL"][segment_name] = F_w_inv[2]
 
                         self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
                         self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
                         self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
 
                 # Sum up totals
-                FM_inv_airplane_total[0] += L_inv
-                FM_inv_airplane_total[1] += D_inv
-                FM_inv_airplane_total[2] += S_inv
-                FM_vis_airplane_total[0] += L_visc
-                FM_vis_airplane_total[1] += D_visc
-                FM_vis_airplane_total[2] += S_visc
+                FM_inv_airplane_total[0] += F_w_inv[2]
+                FM_inv_airplane_total[1] += F_w_inv[0]
+                FM_inv_airplane_total[2] += F_w_inv[1]
+                FM_vis_airplane_total[0] += F_w_visc[2]
+                FM_vis_airplane_total[1] += F_w_visc[0]
+                FM_vis_airplane_total[2] += F_w_visc[1]
                 FM_inv_airplane_total[3:6] += F_b_inv
                 FM_vis_airplane_total[3:6] += F_b_visc
                 FM_inv_airplane_total[6:] += M_b_inv
@@ -1087,7 +1122,7 @@ class Scene:
         return end_time-start_time
 
 
-    def _rotate_aero_forces(self, F, u_inf):
+    def _rotate_to_wind(self, F, u_inf):
         # Takes the body-fixed force vector and coverts it to lift, drag, and sideforce
         # This uses the AeroLab convention where beta is asin(Vy/V)
 
@@ -1131,6 +1166,15 @@ class Scene:
 
         report_by_segment : bool
             Whether to include results broken down by wing segment. Defaults to False.
+
+        body_frame : boolean, optional
+            Whether to output results in the body-fixed frame. Defaults to True.
+
+        stab_frame : boolean, optional
+            Whether to output results in the stability frame. Defaults to False.
+
+        wind_frame : boolean, optional
+            Whether to output results in the wind frame. Defaults to True.
 
         verbose : bool
             Display the time it took to complete each portion of the calculation. 

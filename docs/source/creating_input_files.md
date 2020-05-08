@@ -74,6 +74,15 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"non_dimensional" : boolean, optional**
 >>>>Whether results should include nondimensional coefficients. Defaults to true.
 >>>
+>>>**"body_frame" : boolean, optional**
+>>>>Whether to output results in the body-fixed frame. Defaults to true.
+>>>
+>>>**"stab_frame" : boolean, optional**
+>>>>Whether to output results in the stability frame. Defaults to false.
+>>>
+>>>**"wind_frame" : boolean, optional**
+>>>>Whether to output results in the wind frame. Defaults to true.
+>>>
 >>>**"verbose" : boolean, optional**
 >>>>Defaults to false
 >>

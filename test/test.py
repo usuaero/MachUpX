@@ -105,9 +105,7 @@ if __name__=="__main__":
     state = {
         "velocity" : 100.0,
         "alpha" : 5.0,
-        "beta" : 5.0,
-        "angular_rates" : [0.0, 0.0, 10.0],
-        "angular_rate_frame" : "body"
+        "beta" : .0
     }
     control_state = {
         "elevator" : 0.0,
@@ -122,7 +120,7 @@ if __name__=="__main__":
     #scene.display_wireframe(show_vortices=True)
 
     # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    FM = scene.solve_forces(non_dimensional=False, verbose=True, wind_frame=True, stab_frame=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
     ## Get derivatives
