@@ -1269,31 +1269,6 @@ class Scene:
         return end_time-start_time
 
 
-    def _rotate_to_wind(self, F, u_inf):
-        # Takes the body-fixed force vector and coverts it to lift, drag, and sideforce
-        # This uses the AeroLab convention where beta is asin(Vy/V)
-
-        # Determine direction vectors
-        u_lift = np.cross(u_inf, [0.,1.,0.])
-        u_lift = u_lift/np.linalg.norm(u_lift)
-        u_side = np.cross(u_lift, u_inf)
-        u_side = u_side/np.linalg.norm(u_side)
-
-        # Drag force
-        D = np.dot(F, u_inf)
-        D_vec = D*u_inf
-        
-        # Lift force
-        L = np.dot(F, u_lift)
-        L_vec = L*u_lift
-        
-        # Side force
-        S_vec = F-L_vec-D_vec
-        S = np.dot(S_vec,u_side)
-
-        return L,D,S
-
-
     def solve_forces(self, **kwargs):
         """Solves the NLL equations to determine the forces and moments on each aircraft.
 
@@ -1389,11 +1364,9 @@ class Scene:
         ----------
         state : dict
             Dictionary describing the state as specified in 
-            'Creating Input Files for MachUp'. The state type may be 
-            aerodynamic or rigid-body, regardless of how the 
-            state was originally specified. Any values not given 
-            default to their original defaults. The previous 
-            state of the aircraft is in no way preserved.
+            'Creating Input Files for MachUp'. Any values not
+            given default to their original defaults. The
+            previous state of the aircraft is in no way preserved.
 
         aircraft : str
             The name of the aircraft to set the state of. If there
@@ -1412,7 +1385,7 @@ class Scene:
         aircraft_position = np.array(state.get("position", [0.0, 0.0, 0.0]))
         v_wind = self._get_wind(aircraft_position)
 
-        # Set state and update precalcs for NLL
+        # Set state
         old_position = self._airplanes[aircraft].p_bar
         old_orient = self._airplanes[aircraft].q
         self._airplanes[aircraft].set_state(**state, v_wind=v_wind)
@@ -1578,7 +1551,9 @@ class Scene:
 
     def aircraft_derivatives(self, **kwargs):
         """Determines the stability, damping, and control derivatives at the 
-        current state. Uses a central difference sceme.
+        current state. Uses a central difference sceme. Note that the angular
+        rates for the damping derivatives will be in the frame the angular
+        rates were originally given in.
 
         Parameters
         ----------
@@ -1617,6 +1592,7 @@ class Scene:
                 json.dump(derivs, output_handle, indent=4)
 
         return derivs
+
 
     def aircraft_stability_derivatives(self, aircraft=None, dtheta=0.5):
         """Determines the stability derivatives at the current state. Uses 
@@ -1708,7 +1684,9 @@ class Scene:
     def aircraft_damping_derivatives(self, aircraft=None, dtheta_dot=0.005):
         """Determines the damping derivatives at the current state. Uses 
         a central difference sceme. Note, the damping derivatives are non-
-        dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon.
+        dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Note
+        that the angular rates for the damping derivatives will be in the
+        frame the angular rates were originally given in.
 
         Parameters
         ----------
@@ -1739,56 +1717,68 @@ class Scene:
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
-            # Get current aerodynamic state
-            _,_,vel_0 = self._airplanes[aircraft_name].get_aerodynamic_state()
+            aircraft_object = self._airplanes[aircraft_name]
 
-            # Determine current angular rates
-            omega_0 = self._airplanes[aircraft_name].w
+            # Get current aerodynamic state
+            _,_,vel_0 = aircraft_object.get_aerodynamic_state()
+
+            # Determine current angular rates and the frame they were specified in
+            omega_0 = aircraft_object.w
+            frame = aircraft_object.angular_rate_frame
+
+            # Determine preturbations
+            p_pert = np.array([dtheta_dot, 0.0, 0.0])
+            q_pert = np.array([0.0, dtheta_dot, 0.0])
+            r_pert = np.array([0.0, 0.0, dtheta_dot])
+
+            if frame == "stab":
+                p_pert = quat_inv_trans(aircraft_object.q_to_stab, p_pert)
+                q_pert = quat_inv_trans(aircraft_object.q_to_stab, q_pert)
+                r_pert = quat_inv_trans(aircraft_object.q_to_stab, r_pert)
+
+            elif frame == "wind":
+                p_pert = quat_inv_trans(aircraft_object.q_to_wind, p_pert)
+                q_pert = quat_inv_trans(aircraft_object.q_to_wind, q_pert)
+                r_pert = quat_inv_trans(aircraft_object.q_to_wind, r_pert)
 
             # Perturb forward in roll rate
-            omega_pert_p_fwd = copy.copy(omega_0)
-            omega_pert_p_fwd[0] += dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_p_fwd
+            omega_pert_p_fwd = omega_0+p_pert
+            aircraft_object.w = omega_pert_p_fwd
             self.solve_forces(dimensional=False)
             FM_dp_fwd = self._FM
 
             # Perturb backward in roll rate
-            omega_pert_p_bwd = copy.copy(omega_0)
-            omega_pert_p_bwd[0] -= dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_p_bwd
+            omega_pert_p_bwd = omega_0-p_pert
+            aircraft_object.w = omega_pert_p_bwd
             self.solve_forces(dimensional=False)
             FM_dp_bwd = self._FM
 
             # Perturb forward in pitch rate
-            omega_pert_q_fwd = copy.copy(omega_0)
-            omega_pert_q_fwd[1] += dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_q_fwd
+            omega_pert_q_fwd = omega_0+q_pert
+            aircraft_object.w = omega_pert_q_fwd
             self.solve_forces(dimensional=False)
             FM_dq_fwd = self._FM
 
             # Perturb backward in pitch rate
-            omega_pert_q_bwd = copy.copy(omega_0)
-            omega_pert_q_bwd[1] -= dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_q_bwd
+            omega_pert_q_bwd = omega_0-q_pert
+            aircraft_object.w = omega_pert_q_bwd
             self.solve_forces(dimensional=False)
             FM_dq_bwd = self._FM
 
             # Perturb forward in yaw rate
-            omega_pert_r_fwd = copy.copy(omega_0)
-            omega_pert_r_fwd[2] += dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_r_fwd
+            omega_pert_r_fwd = omega_0+r_pert
+            aircraft_object.w = omega_pert_r_fwd
             self.solve_forces(dimensional=False)
             FM_dr_fwd = self._FM
 
             # Perturb backward in yaw rate
-            omega_pert_r_bwd = copy.copy(omega_0)
-            omega_pert_r_bwd[2] -= dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_r_bwd
+            omega_pert_r_bwd = omega_0-r_pert
+            aircraft_object.w = omega_pert_r_bwd
             self.solve_forces(dimensional=False)
             FM_dr_bwd = self._FM
 
             # Reset state
-            self._airplanes[aircraft_name].w = omega_0
+            aircraft_object.w = omega_0
             self._solved = False
 
             # Compute derivatives
