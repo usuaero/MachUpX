@@ -193,6 +193,46 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to export .dxf files for. Defaults to all aircraft in the scene.
+>>>
+>>>**"export_pylot_model" : dict, optional**
+>>>>Creates a JSON object containing a linearized model of the aircraft to use as input for Pylot (www.github.com/usuaero/Pylot). Any information not available to MachupX but required for Pylot will be filled with "PLEASE SPECIFY" and must be changed by the user before the input can be used for Pylot. Note, this can only be used if there is one aircraft in the scene.
+>>>>
+>>>>We designed the input files for Pylot we designed to be cross-compatible with MachUpX. With this in mind, if values are already specified in the input but those values are not used in MachUpX, they will still be included in the input file exported here.
+>>>>filename : str, optional
+>>>>>Name of the JSON file to write the model to. Must be ".json". Defaults to "<AIRCRAFT_NAME>_linearized.json".
+>>>>
+>>>>inertia : dict, optional
+>>>>>Moments of inertia for the aircraft, formatted as
+>>>>>
+>>>>>>{
+>>>>>>>"Ixx" : <VALUE>,
+>>>>>>>"Iyy" : <VALUE>,
+>>>>>>>"Izz" : <VALUE>,
+>>>>>>>"Ixy" : <VALUE>,
+>>>>>>>"Ixz" : <VALUE>,
+>>>>>>>"Iyz" : <VALUE>
+>>>>>>}
+>>>>>
+>>>>>If not specified, this will be left blank for the user to specify after the fact. Alternatively, if "inertia" was already part of the aircraft input, it will remain the same as inputted.
+>>>>
+>>>>angular_momentum : list, optional
+>>>>>Angular momentum vector. Defaults to [0.0, 0.0, 0.0]. Alternatively, if "angular_momentum" was already part of the aircraft input, it will remain the same as inputted.
+>>>>
+>>>>stall_angle_of_attack : float, optional
+>>>>>Angle of attack in degrees at which the aircraft stalls.
+>>>>
+>>>>stall_sideslip_angle : float, optional
+>>>>>Sideslip angle in degrees at which the aircraft stalls laterally.
+>>>>
+>>>>controller_type : str, optional
+>>>>>The controller that will be used with the exported model. Can be "keyboard", "joystick", "user_defined", or "time_sequence". This affects whether certain inputs unknown to MachUpX are marked "<PLEASE_SPECIFY>". If not given, all such keys will be marked "<PLEASE_SPECIFY>".
+>>>>
+>>>>velocity : float, optional
+>>>>>Velocity at which to evaluate the model. Should not have any effect unless Mach and Reynolds
+>>>>>number effects are included. Defaults to 100.
+>>>>
+>>>>set_accel_derivs : bool, optional
+>>>>>Whether to set derivatives with respect to vertical and lateral acceleration to zero. Defaults to False, in which case the user must specify these.
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.

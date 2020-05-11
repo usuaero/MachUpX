@@ -117,6 +117,7 @@ if __name__=="__main__":
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", "test/mux_airplane.json", state=state, control_state=control_state)
+    #scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
 

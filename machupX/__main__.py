@@ -113,6 +113,13 @@ def _run_prescribed_analyses(input_filename):
             scene.export_aircraft_dxf(**params)
             print("Done")
 
+        # Export linearized model
+        elif key == "export_pylot_model":
+
+            print("\nExporting Pylot model...", end='')
+            scene.export_pylot_model(**params)
+            print("Done")
+
         # Unrecognized command
         else:
             print("{0} is not recognized as a valid run command. Skipping...".format(key))

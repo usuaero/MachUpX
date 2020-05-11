@@ -2505,7 +2505,7 @@ class Scene:
         user before the input can be used for Pylot. Note, this can only be used if there is 
         one aircraft in the scene.
 
-        The input files for Pylot we designed to be cross-compatible with MachUpX. With this in
+        We designed the input files for Pylot to be cross-compatible with MachUpX. With this in
         mind, if values are already specified in the input but those values are not used in MachUpX,
         they will still be included in the input file exported here.
 
@@ -2544,7 +2544,7 @@ class Scene:
         controller_type : str, optional
             The controller that will be used with the exported model. Can be "keyboard", "joystick",
             "user_defined", or "time_sequence". This affects whether certain inputs unknown to MachUpX
-            are marked "<PLEASE_SPECIFY>". If not given, all such keys will be marked "<PLEASE_SPECIFY>".
+            are marked "PLEASE SPECIFY". If not given, all such keys will be marked "PLEASE SPECIFY".
 
         velocity : float, optional
             Velocity at which to evaluate the model. Should not have any effect unless Mach and Reynolds
@@ -2600,11 +2600,16 @@ class Scene:
         try:
             for key, value in model_dict["controls"].items():
                 if control_type == "keyboard" or control_type == "joystick" or control_type == None:
-                    value["max_deflection"] = value.get("max_deflection", "<PLEASE_SPECIFY>")
-                    value["input_axis"] = value.get("input_axis", "<PLEASE_SPECIFY>")
+                    try:
+                        value["max_deflection"] = value["max_deflection"]
+                    except KeyError:
+                        if control_type == None:
+                            value["max_deflections"] = "PLEASE SPECIFY"
+                        pass
+                    value["input_axis"] = value.get("input_axis", "PLEASE SPECIFY")
                 
                 if control_type == "time_sequence" or control_type == None:
-                    value["column_index"] = value.get("column_index", "<PLEASE_SPECIFY>")
+                    value["column_index"] = value.get("column_index", "PLEASE SPECIFY")
 
         except KeyError:
             pass
@@ -2688,13 +2693,17 @@ class Scene:
         model_dict["coefficients"]["CD1"] = float(coefs[1])
         model_dict["coefficients"]["CD2"] = float(coefs[0])
 
-        # Evaluate drag polar in beta
+        # Determine zero-lift aoa
+        coefs = np.polyfit(alphas, CL, 1)
+        a_L0 = -coefs[1]/coefs[0]
+
+        # Evaluate drag polar in beta at zero-lift angle of attack
         num_points = 21
         betas = np.linspace(-10, 10, num_points)
         CS = np.zeros(num_points)
         CD = np.zeros(num_points)
         for i, beta in enumerate(betas):
-            self.set_aircraft_state(state={"velocity" : V_ref, "beta" : beta})
+            self.set_aircraft_state(state={"velocity" : V_ref, "alpha" : a_L0, "beta" : beta})
             FM = self.solve_forces(dimensional=False, body_frame=False)
             CS[i] = FM[aircraft_name]["total"]["CS"]
             CD[i] = FM[aircraft_name]["total"]["CD"]
