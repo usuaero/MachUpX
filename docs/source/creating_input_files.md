@@ -23,9 +23,9 @@ For array inputs, such as a density profile or chord distribution, the units are
 When specifying column units in files, these are also appended as another row:
 
     # File: density_profile.csv
-    0.0, 1.225,
-    2000.0, 1.0066,
-    4000.0, 0.81935,
+    0.0, 1.225
+    2000.0, 1.0066
+    4000.0, 0.81935
     "m", "kg/m^3"
 
 The following measurements can be defined with the accompanying units:
