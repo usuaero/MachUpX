@@ -2009,11 +2009,11 @@ class Scene:
         set_trim_state = kwargs.get("set_trim_state", True)
         if set_trim_state:
             airplane_object.set_aerodynamic_state(alpha=alpha1)
-            self.set_aircraft_control_state({pitch_control : delta_flap1}, aircraft_name=aircraft_name)
+            self.set_aircraft_control_state({pitch_control : delta_flap1}, aircraft=aircraft_name)
 
         else: # Return to the original state
             airplane_object.set_aerodynamic_state(alpha=alpha_original)
-            self.set_aircraft_control_state(controls_original, aircraft_name=aircraft_name)
+            self.set_aircraft_control_state(controls_original, aircraft=aircraft_name)
 
         # Output results to file
         filename = kwargs.get("filename", None)
@@ -2496,6 +2496,216 @@ class Scene:
         # Loop through aircraft
         for aircraft_name in aircraft_names:
             self._airplanes[aircraft_name].export_dxf(**kwargs)
+
+
+    def export_pylot_model(self, **kwargs):
+        """Creates a JSON object containing a linearized model of the aircraft to use as input
+        for Pylot (www.github.com/usuaero/Pylot). Any information not available to MachupX but
+        required for Pylot will be filled with "PLEASE SPECIFY" and must be changed by the 
+        user before the input can be used for Pylot. Note, this can only be used if there is 
+        one aircraft in the scene.
+
+        The input files for Pylot we designed to be cross-compatible with MachUpX. With this in
+        mind, if values are already specified in the input but those values are not used in MachUpX,
+        they will still be included in the input file exported here.
+
+        Parameters
+        ----------
+        filename : str, optional
+            Name of the JSON file to write the model to. Must be ".json". Defaults to 
+            "<AIRCRAFT_NAME>_linearized.json".
+
+        inertia : dict, optional
+            Moments of inertia for the aircraft, formatted as
+
+                {
+                    "Ixx" : <VALUE>,
+                    "Iyy" : <VALUE>,
+                    "Izz" : <VALUE>,
+                    "Ixy" : <VALUE>,
+                    "Ixz" : <VALUE>,
+                    "Iyz" : <VALUE>
+                }
+            
+            If not specified, this will be left blank for the user to specify after the fact.
+            Alternatively, if "inertia" was already part of the aircraft input, it will remain
+            the same as inputted.
+
+        angular_momentum : list, optional
+            Angular momentum vector. Defaults to [0.0, 0.0, 0.0]. Alternatively, if "angular_momentum"
+            was already part of the aircraft input, it will remain the same as inputted.
+
+        stall_angle_of_attack : float, optional
+            Angle of attack in degrees at which the aircraft stalls.
+        
+        stall_sideslip_angle : float, optional
+            Sideslip angle in degrees at which the aircraft stalls laterally.
+
+        controller_type : str, optional
+            The controller that will be used with the exported model. Can be "keyboard", "joystick",
+            "user_defined", or "time_sequence". This affects whether certain inputs unknown to MachUpX
+            are marked "<PLEASE_SPECIFY>". If not given, all such keys will be marked "<PLEASE_SPECIFY>".
+
+        velocity : float, optional
+            Velocity at which to evaluate the model. Should not have any effect unless Mach and Reynolds
+            number effects are included. Defaults to 100.
+
+        set_accel_derivs : bool, optional
+            Whether to set derivatives with respect to vertical and lateral acceleration to zero. Defaults
+            to False, in which case the user must specify these.
+        """
+
+        # Make sure there is only one aircraft in the scene
+        aircraft_names = list(self._airplanes.keys())
+        if len(aircraft_names) != 1:
+            raise IOError("export_pylot_model() may not be used when there is more than one aircraft in the scene.")
+
+        # Initialize
+        aircraft_name = aircraft_names[0]
+        aircraft_object = self._airplanes[aircraft_name]
+        model_dict = copy.deepcopy(aircraft_object._input_dict)
+        model_dict.pop("wings")
+        model_dict.pop("airfoils")
+
+        # Store params
+        model_dict["units"] = self._unit_sys
+        model_dict["CG"] = list(aircraft_object.CG)
+        model_dict["weight"] = float(aircraft_object.W)
+        model_dict["reference"] = {
+            "area" : float(aircraft_object.S_w),
+            "longitudinal_length" : float(aircraft_object.l_ref_lon),
+            "lateral_length" : float(aircraft_object.l_ref_lat)
+        }
+
+        # Store inertia and angular momentum
+        try:
+            model_dict["inertia"]
+        except KeyError:
+            def_inertia = {
+                "Ixx" : "PLEASE SPECIFY",
+                "Iyy" : "PLEASE SPECIFY",
+                "Izz" : "PLEASE SPECIFY",
+                "Ixy" : "PLEASE SPECIFY",
+                "Ixz" : "PLEASE SPECIFY",
+                "Iyz" : "PLEASE SPECIFY"
+            }
+            model_dict["inertia"] = kwargs.get("inertia", def_inertia)
+        try:
+            model_dict["angular_momentum"]
+        except KeyError:
+            model_dict["angular_momentum"] = list(kwargs.get("angular_momentum", [0.0, 0.0, 0.0]))
+
+        # Inform the user which control parameters need to be specified
+        control_type = kwargs.get("controller_type", None)
+        try:
+            for key, value in model_dict["controls"].items():
+                if control_type == "keyboard" or control_type == "joystick" or control_type == None:
+                    value["max_deflection"] = value.get("max_deflection", "<PLEASE_SPECIFY>")
+                    value["input_axis"] = value.get("input_axis", "<PLEASE_SPECIFY>")
+                
+                if control_type == "time_sequence" or control_type == None:
+                    value["column_index"] = value.get("column_index", "<PLEASE_SPECIFY>")
+
+        except KeyError:
+            pass
+
+        # Specify model type
+        model_dict["aero_model"] = {
+            "type" : "linearized_coefficients"
+        }
+        try:
+            model_dict["aero_model"]["stall_angle_of_attack"] = kwargs["stall_angle_of_attack"]
+        except KeyError:
+            pass
+        try:
+            model_dict["aero_model"]["stall_sideslip_angle"] = kwargs["stall_sideslip_angle"]
+        except KeyError:
+            pass
+
+        # Set reference state at zero sideslip and angle of attack, zero control deflections, and zero angular rates
+        V_ref = kwargs.get("velocity", 100)
+        self.set_aircraft_state(state={"velocity" : V_ref})
+        self.set_aircraft_control_state()
+
+        # Get forces and derivatives at reference state
+        FM_ref = self.solve_forces(dimensional=False)
+        derivs_ref = self.aircraft_derivatives()
+
+        # Get reference coefficients, stability and damping derivatives
+        model_dict["coefficients"] = {}
+        model_dict["coefficients"]["CL0"] = float(FM_ref[aircraft_name]["total"]["CL"])
+        model_dict["coefficients"]["Cm0"] = float(FM_ref[aircraft_name]["total"]["Cm"])
+        model_dict["coefficients"]["CL,a"] = float(derivs_ref[aircraft_name]["stability"]["CL,a"])
+        model_dict["coefficients"]["Cm,a"] = float(derivs_ref[aircraft_name]["stability"]["Cm,a"])
+        model_dict["coefficients"]["CS,b"] = float(derivs_ref[aircraft_name]["stability"]["CS,B"])
+        model_dict["coefficients"]["Cl,b"] = float(derivs_ref[aircraft_name]["stability"]["Cl,B"])
+        model_dict["coefficients"]["Cn,b"] = float(derivs_ref[aircraft_name]["stability"]["Cn,B"])
+        model_dict["coefficients"]["CS,p"] = float(derivs_ref[aircraft_name]["damping"]["CS,pbar"])
+        model_dict["coefficients"]["Cl,p"] = float(derivs_ref[aircraft_name]["damping"]["Cl,pbar"])
+        model_dict["coefficients"]["Cn,p"] = float(derivs_ref[aircraft_name]["damping"]["Cn,pbar"])
+        model_dict["coefficients"]["CL,q"] = float(derivs_ref[aircraft_name]["damping"]["CL,qbar"])
+        model_dict["coefficients"]["CD,q"] = float(derivs_ref[aircraft_name]["damping"]["CD,qbar"])
+        model_dict["coefficients"]["Cm,q"] = float(derivs_ref[aircraft_name]["damping"]["Cm,qbar"])
+        model_dict["coefficients"]["CS,r"] = float(derivs_ref[aircraft_name]["damping"]["CS,rbar"])
+        model_dict["coefficients"]["Cl,r"] = float(derivs_ref[aircraft_name]["damping"]["Cl,rbar"])
+        model_dict["coefficients"]["Cn,r"] = float(derivs_ref[aircraft_name]["damping"]["Cn,rbar"])
+
+        # Specify coefficients MachUpX doesn't know about
+        if kwargs.get("set_accel_derivs", False):
+            val = 0.0
+        else:
+            val = "PLEASE SPECIFY"
+        model_dict["coefficients"]["CL,a_hat"] = val
+        model_dict["coefficients"]["CD,a_hat"] = val
+        model_dict["coefficients"]["Cm,a_hat"] = val
+        model_dict["coefficients"]["CS,b_hat"] = val
+        model_dict["coefficients"]["Cl,b_hat"] = val
+        model_dict["coefficients"]["Cn,b_hat"] = val
+
+        # Specify control derivatives
+        for control_name in aircraft_object.control_names:
+            model_dict["coefficients"][control_name] = {}
+            model_dict["coefficients"][control_name]["CL"] = float(derivs_ref[aircraft_name]["control"]["CL,d"+control_name])
+            model_dict["coefficients"][control_name]["CD"] = float(derivs_ref[aircraft_name]["control"]["CD,d"+control_name])
+            model_dict["coefficients"][control_name]["CS"] = float(derivs_ref[aircraft_name]["control"]["CS,d"+control_name])
+            model_dict["coefficients"][control_name]["Cl"] = float(derivs_ref[aircraft_name]["control"]["Cl,d"+control_name])
+            model_dict["coefficients"][control_name]["Cm"] = float(derivs_ref[aircraft_name]["control"]["Cm,d"+control_name])
+            model_dict["coefficients"][control_name]["Cn"] = float(derivs_ref[aircraft_name]["control"]["Cn,d"+control_name])
+
+        # Evaluate drag polar in alpha
+        num_points = 21
+        alphas = np.linspace(-10, 10, num_points)
+        CL = np.zeros(num_points)
+        CD = np.zeros(num_points)
+        for i, alpha in enumerate(alphas):
+            self.set_aircraft_state(state={"velocity" : V_ref, "alpha" : alpha})
+            FM = self.solve_forces(dimensional=False, body_frame=False)
+            CL[i] = FM[aircraft_name]["total"]["CL"]
+            CD[i] = FM[aircraft_name]["total"]["CD"]
+
+        coefs = np.polyfit(CL, CD, 2)
+        model_dict["coefficients"]["CD0"] = float(coefs[2])
+        model_dict["coefficients"]["CD1"] = float(coefs[1])
+        model_dict["coefficients"]["CD2"] = float(coefs[0])
+
+        # Evaluate drag polar in beta
+        num_points = 21
+        betas = np.linspace(-10, 10, num_points)
+        CS = np.zeros(num_points)
+        CD = np.zeros(num_points)
+        for i, beta in enumerate(betas):
+            self.set_aircraft_state(state={"velocity" : V_ref, "beta" : beta})
+            FM = self.solve_forces(dimensional=False, body_frame=False)
+            CS[i] = FM[aircraft_name]["total"]["CS"]
+            CD[i] = FM[aircraft_name]["total"]["CD"]
+
+        coefs = np.polyfit(CS, CD, 2)
+        model_dict["coefficients"]["CD3"] = float(coefs[0])
+
+        # Export model
+        filename = kwargs.get("filename", aircraft_name+"_linearized.json")
+        with open(filename, 'w') as output_handle:
+            json.dump(model_dict, output_handle, indent=4)
 
 
     def _get_aircraft(self, **kwargs):

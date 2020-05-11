@@ -84,7 +84,7 @@ class Airplane:
             raise IOError("{0} is not an allowed airplane definition. Must be path or dictionary.".format(airplane_input))
 
         # Set airplane global params
-        self.CG = import_value("CG", self._input_dict, self._unit_sys, [0,0,0])
+        self.CG = import_value("CG", self._input_dict, self._unit_sys, [0.0, 0.0, 0.0])
         self.W = import_value("weight", self._input_dict, self._unit_sys, None)
         self.S_w = import_value("area", self._input_dict.get("reference", {}), self._unit_sys, -1)
         self.l_ref_lon = import_value("longitudinal_length", self._input_dict.get("reference", {}), self._unit_sys, -1)
