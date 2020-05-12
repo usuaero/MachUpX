@@ -129,13 +129,4 @@ if __name__=="__main__":
     #FM = scene.solve_forces(non_dimensional=False, verbose=True, stab_frame=True)
     #print(json.dumps(FM["plane"]["total"], indent=4))
 
-<<<<<<< HEAD
-    ## Get derivatives
-    #derivs = scene.aircraft_derivatives(coord_system="stab")
-    #print(json.dumps(derivs, indent=4))
-
-    # Output stl file
-    scene.export_stl(filename="plane.stl")
-=======
     scene.export_pylot_model(set_accel_derivs=True, controller_type="keyboard")
->>>>>>> bd4575c6fa0d27ebc2463583033a0da1f3796a78
