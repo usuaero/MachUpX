@@ -15,6 +15,8 @@ if __name__=="__main__":
             "type" : "scipy_fsolve",
         },
         "scene" : {
+            "atmosphere" : {
+            }
         }
     }
 
@@ -43,6 +45,8 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "control_surface" : {
                     "chord_fraction" : 0.1,
+                    "root_span" : 0.5,
+                    "tip_span" : 0.95,
                     "control_mixing" : {
                         "aileron" : 1.0
                     }
@@ -117,12 +121,15 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=True)
+    scene.display_wireframe(show_vortices=False)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Get derivatives
-    derivs = scene.aircraft_derivatives()
-    print(json.dumps(derivs, indent=4))
+    ## Get derivatives
+    #derivs = scene.aircraft_derivatives(coord_system="stab")
+    #print(json.dumps(derivs, indent=4))
+
+    # Output stl file
+    scene.export_stl(filename="plane.stl")
