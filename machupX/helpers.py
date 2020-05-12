@@ -222,7 +222,7 @@ def euler_to_quat(E):
     return q
 
 
-def quatn_to_euler(q):
+def quat_to_euler(q):
     # Converts an orientation quaternion to Euler angles
     # Phillips Mech. of Flight 11.7.11
     E = np.zeros(3)
@@ -247,3 +247,7 @@ def quatn_to_euler(q):
         E[2] = 0.0
 
     return E
+
+
+def quat_conj(q):
+    return [q[0], -q[1], -q[2], -q[3]]

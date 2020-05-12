@@ -23,9 +23,9 @@ For array inputs, such as a density profile or chord distribution, the units are
 When specifying column units in files, these are also appended as another row:
 
     # File: density_profile.csv
-    0.0, 1.225,
-    2000.0, 1.0066,
-    4000.0, 0.81935,
+    0.0, 1.225
+    2000.0, 1.0066
+    4000.0, 0.81935
     "m", "kg/m^3"
 
 The following measurements can be defined with the accompanying units:
@@ -75,6 +75,15 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"non_dimensional" : boolean, optional**
 >>>>Whether results should include nondimensional coefficients. Defaults to true.
+>>>
+>>>**"body_frame" : boolean, optional**
+>>>>Whether to output results in the body-fixed frame. Defaults to true.
+>>>
+>>>**"stab_frame" : boolean, optional**
+>>>>Whether to output results in the stability frame. Defaults to false.
+>>>
+>>>**"wind_frame" : boolean, optional**
+>>>>Whether to output results in the wind frame. Defaults to true.
 >>>
 >>>**"verbose" : boolean, optional**
 >>>>Defaults to false
@@ -186,6 +195,46 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to export .dxf files for. Defaults to all aircraft in the scene.
+>>>
+>>>**"export_pylot_model" : dict, optional**
+>>>>Creates a JSON object containing a linearized model of the aircraft to use as input for Pylot (www.github.com/usuaero/Pylot). Any information not available to MachupX but required for Pylot will be filled with "PLEASE SPECIFY" and must be changed by the user before the input can be used for Pylot. Note, this can only be used if there is one aircraft in the scene.
+>>>>
+>>>>We designed the input files for Pylot we designed to be cross-compatible with MachUpX. With this in mind, if values are already specified in the input but those values are not used in MachUpX, they will still be included in the input file exported here.
+>>>>filename : str, optional
+>>>>>Name of the JSON file to write the model to. Must be ".json". Defaults to "<AIRCRAFT_NAME>_linearized.json".
+>>>>
+>>>>inertia : dict, optional
+>>>>>Moments of inertia for the aircraft, formatted as
+>>>>>
+>>>>>>{
+>>>>>>>"Ixx" : <VALUE>,
+>>>>>>>"Iyy" : <VALUE>,
+>>>>>>>"Izz" : <VALUE>,
+>>>>>>>"Ixy" : <VALUE>,
+>>>>>>>"Ixz" : <VALUE>,
+>>>>>>>"Iyz" : <VALUE>
+>>>>>>}
+>>>>>
+>>>>>If not specified, this will be left blank for the user to specify after the fact. Alternatively, if "inertia" was already part of the aircraft input, it will remain the same as inputted.
+>>>>
+>>>>angular_momentum : list, optional
+>>>>>Angular momentum vector. Defaults to [0.0, 0.0, 0.0]. Alternatively, if "angular_momentum" was already part of the aircraft input, it will remain the same as inputted.
+>>>>
+>>>>stall_angle_of_attack : float, optional
+>>>>>Angle of attack in degrees at which the aircraft stalls.
+>>>>
+>>>>stall_sideslip_angle : float, optional
+>>>>>Sideslip angle in degrees at which the aircraft stalls laterally.
+>>>>
+>>>>controller_type : str, optional
+>>>>>The controller that will be used with the exported model. Can be "keyboard", "joystick", "user_defined", or "time_sequence". This affects whether certain inputs unknown to MachUpX are marked "<PLEASE_SPECIFY>". If not given, all such keys will be marked "<PLEASE_SPECIFY>".
+>>>>
+>>>>velocity : float, optional
+>>>>>Velocity at which to evaluate the model. Should not have any effect unless Mach and Reynolds
+>>>>>number effects are included. Defaults to 100.
+>>>>
+>>>>set_accel_derivs : bool, optional
+>>>>>Whether to set derivatives with respect to vertical and lateral acceleration to zero. Defaults to False, in which case the user must specify these.
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.
@@ -253,23 +302,26 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>**"velocity" : float or vector**
 >>>>>>Velocity vector of the aircraft in body-fixed coordinates (i.e. u, v, and w) or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
 >>>>>
+>>>>>**"alpha" : float, optional**
+>>>>>>Aerodynamic angle of attack. Defaults to 0.
+>>>>>
+>>>>>**"beta" : float, optional**
+>>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. B = asin(Vy/V).
+>>>>>
 >>>>>**"orientation" : vector, optional**
 >>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.
 >>>>>
 >>>>>**"angular_rates" : vector, optional**
 >>>>>>Angular rates of the aircraft in body-fixed coordinates, corresponding to p, q, and r. Defaults to [0.0, 0.0, 0.0].
 >>>>>
->>>>>**"alpha" : float, optional**
->>>>>>Aerodynamic angle of attack. Defaults to 0.
->>>>>
->>>>>**"beta" : float, optional**
->>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. B = asin(Vy/V).
+>>>>>**"angular_rate_frame" : str, optional**
+>>>>>>Frame in which the angular rates are given. Can be "body", "stab" (stability coordinates), or "wind". Defaults to "body".
 >>>>
 >>>>**"control_state" : dict, optional**
 >>>>>Describes the control deflections. The number and names of controls are arbitrary and may be specified by the user. This is discussed more in depth as part of the aircraft object. If the aircraft has controls but no state is specified, all deflections will be assumed to be zero.
 >>>>
 >>>>>**"<CONTROL_NAME>" : float, optional**
->>>>>>Control surface deflection.
+>>>>>>Control setting.
 
 ## Aircraft Object
 Describes an aircraft. Stored as a .json file

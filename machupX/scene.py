@@ -556,11 +556,11 @@ class Scene:
 
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
         denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis], nan=0.0)
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis])
 
         # Influence of vortex segment 1 after the joint
         denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis], nan=0.0)
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis])
 
         # Sum and transpose
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
@@ -682,8 +682,9 @@ class Scene:
     def _correct_CL_for_sweep(self):
         # Applies Jackson's corrections for swept section lift
 
-        ## Estimate lift slope
-        CL_a_est = self._CL/(self._alpha_swept-self._aL0)
+        # Estimate lift slope
+        with np.errstate(divide='ignore', invalid='ignore'):
+            CL_a_est = np.nan_to_num(self._CL/(self._alpha_swept-self._aL0))
 
         # Get new estimate
         self._CLa = self._R_CL_a*CL_a_est
@@ -693,8 +694,9 @@ class Scene:
     def _correct_Cm_for_sweep(self):
         # Applies Jackson's corrections for swept section moment
 
-        ## Estimate lift slope
-        Cm_a_est = self._Cm/(self._alpha_swept-self._am0)
+        # Estimate moment slope
+        with np.errstate(divide='ignore', invalid='ignore'):
+            Cm_a_est = np.nan_to_num(self._Cm/(self._alpha_swept-self._am0))
 
         # Get new estimate
         self._Cma = self._R_Cm_a*Cm_a_est
@@ -835,6 +837,9 @@ class Scene:
         non_dimensional = kwargs.get("non_dimensional", True)
         dimensional = kwargs.get("dimensional", True)
         report_by_segment = kwargs.get("report_by_segment", False)
+        body_frame = kwargs.get("body_frame", True)
+        stab_frame = kwargs.get("stab_frame", False)
+        wind_frame = kwargs.get("wind_frame", True)
 
         # Get velocities
         self._calc_v_i()
@@ -857,8 +862,17 @@ class Scene:
 
         # Store lift, drag, and moment coefficient distributions
         self._FM = {}
-        empty_coef_dict = { "CL" : {}, "CD" : {}, "CS" : {}, "Cx" : {}, "Cy" : {}, "Cz" : {}, "Cl" : {}, "Cm" : {}, "Cn" : {}}
-        empty_FM_dict = { "FL" : {}, "FD" : {}, "FS" : {}, "Fx" : {}, "Fy" : {}, "Fz" : {}, "Mx" : {}, "My" : {}, "Mz" : {}}
+        empty_coef_dict = {}
+        empty_FM_dict = {}
+        if body_frame:
+            empty_coef_dict.update({"Cx" : {}, "Cy" : {}, "Cz" : {}, "Cl" : {}, "Cm" : {}, "Cn" : {}})
+            empty_FM_dict.update({"Fx" : {}, "Fy" : {}, "Fz" : {}, "Mx" : {}, "My" : {}, "Mz" : {}})
+        if stab_frame:
+            empty_coef_dict.update({"Cx_s" : {}, "Cy_s" : {}, "Cz_s" : {}, "Cl_s" : {}, "Cm_s" : {}, "Cn_s" : {}})
+            empty_FM_dict.update({"Fx_s" : {}, "Fy_s" : {}, "Fz_s" : {}, "Mx_s" : {}, "My_s" : {}, "Mz_s" : {}})
+        if wind_frame:
+            empty_coef_dict.update({"CL" : {}, "CD" : {}, "CS" : {}, "Cl_w" : {}, "Cm_w" : {}, "Cn_w" : {}})
+            empty_FM_dict.update({"FL" : {}, "FD" : {}, "FS" : {}, "Mx_w" : {}, "My_w" : {}, "Mz_w" : {}})
 
         # Get section moment and drag coefficients
         index = 0
@@ -896,8 +910,16 @@ class Scene:
         index = 0
         for i, airplane_name in enumerate(self._airplane_names):
             airplane_object = self._airplanes[airplane_name]
-            FM_inv_airplane_total = np.zeros(9)
-            FM_vis_airplane_total = np.zeros(9)
+
+            if body_frame:
+                FM_b_inv_airplane_total = np.zeros(6)
+                FM_b_vis_airplane_total = np.zeros(6)
+            if wind_frame:
+                FM_w_inv_airplane_total = np.zeros(6)
+                FM_w_vis_airplane_total = np.zeros(6)
+            if stab_frame:
+                FM_s_inv_airplane_total = np.zeros(6)
+                FM_s_vis_airplane_total = np.zeros(6)
 
             # Initialize dictionary keys
             self._FM[airplane_name] = {
@@ -917,13 +939,24 @@ class Scene:
             V_inf = np.linalg.norm(v_inf)
             u_inf = quat_trans(airplane_object.q, (v_inf/V_inf).flatten())
 
+            # Determine rotations to wind and stability frames
+            if stab_frame or wind_frame:
+                u_lift = np.cross(u_inf, [0.,1.,0.])
+                u_lift = u_lift/np.linalg.norm(u_lift)
+            if stab_frame:
+                u_x_stab = np.cross(u_lift, [0.0, 1.0, 0.0])
+                u_x_stab = u_x_stab/np.linalg.norm(u_x_stab)
+                rot_to_stab = np.array([u_x_stab, [0.0, 1.0, 0.0], -u_lift])
+            if wind_frame:
+                u_side = np.cross(u_lift, u_inf)
+                u_side = u_side/np.linalg.norm(u_side)
+                rot_to_wind = np.array([u_inf, u_side, u_lift])
+
             # Determine reference parameters
             if non_dimensional:
-                S_w =  airplane_object.S_w
-                l_ref_lon = airplane_object.l_ref_lon
-                l_ref_lat = airplane_object.l_ref_lat
-                rho_ref = self._get_density(airplane_object.p_bar)
-                q_ref = 0.5*rho_ref*V_inf*V_inf
+                non_dim_inv = 1.0/(0.5*self._get_density(airplane_object.p_bar)*V_inf*V_inf*airplane_object.S_w)
+                lat_non_dim_inv = non_dim_inv/airplane_object.l_ref_lat
+                lon_non_dim_inv = non_dim_inv/airplane_object.l_ref_lon
 
             # Loop through segments
             for segment in airplane_object.segments:
@@ -933,181 +966,307 @@ class Scene:
 
                 # Get drag coef and redimensionalize
                 F_b_visc = quat_trans(airplane_object.q, np.sum(dF_b_visc[cur_slice], axis=0))
-                L_visc, D_visc, S_visc = self._rotate_aero_forces(F_b_visc, u_inf)
 
                 # Determine viscous moment vector
                 M_b_visc = quat_trans(airplane_object.q, np.sum(dM_visc[cur_slice], axis=0))
 
                 # Determine inviscid force vector
                 F_b_inv = quat_trans(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
-                L_inv, D_inv, S_inv = self._rotate_aero_forces(F_b_inv, u_inf)
 
-                # Combine moment due to lift and section moment
+                # Determine inviscid moment vector
                 M_b_inv = quat_trans(airplane_object.q, np.sum(dM_inv[cur_slice], axis=0))
+
+                # Rotate frames
+                if wind_frame:
+                    F_w_visc = np.matmul(rot_to_wind, F_b_visc)
+                    F_w_inv = np.matmul(rot_to_wind, F_b_inv)
+                    M_w_visc = np.matmul(rot_to_wind, M_b_visc)
+                    M_w_inv = np.matmul(rot_to_wind, M_b_inv)
+                if stab_frame:
+                    F_s_visc = np.matmul(rot_to_stab, F_b_visc)
+                    F_s_inv = np.matmul(rot_to_stab, F_b_inv)
+                    M_s_visc = np.matmul(rot_to_stab, M_b_visc)
+                    M_s_inv = np.matmul(rot_to_stab, M_b_inv)
 
                 # Store
                 if report_by_segment:
                     if non_dimensional:
-                        self._FM[airplane_name]["viscous"]["Cx"][segment_name] = F_b_visc[0].item()/(q_ref*S_w)
-                        self._FM[airplane_name]["viscous"]["Cy"][segment_name] = F_b_visc[1].item()/(q_ref*S_w)
-                        self._FM[airplane_name]["viscous"]["Cz"][segment_name] = F_b_visc[2].item()/(q_ref*S_w)
+                        if body_frame:
+                            self._FM[airplane_name]["viscous"]["Cx"][segment_name] = F_b_visc[0].item()*non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cy"][segment_name] = F_b_visc[1].item()*non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cz"][segment_name] = F_b_visc[2].item()*non_dim_inv
 
-                        self._FM[airplane_name]["viscous"]["CL"][segment_name] = L_visc/(q_ref*S_w)
-                        self._FM[airplane_name]["viscous"]["CD"][segment_name] = D_visc/(q_ref*S_w)
-                        self._FM[airplane_name]["viscous"]["CS"][segment_name] = S_visc/(q_ref*S_w)
+                            self._FM[airplane_name]["viscous"]["Cl"][segment_name] = M_b_visc[0].item()*lat_non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cm"][segment_name] = M_b_visc[1].item()*lon_non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cn"][segment_name] = M_b_visc[2].item()*lat_non_dim_inv
 
-                        self._FM[airplane_name]["viscous"]["Cl"][segment_name] = M_b_visc[0].item()/(q_ref*S_w*l_ref_lat)
-                        self._FM[airplane_name]["viscous"]["Cm"][segment_name] = M_b_visc[1].item()/(q_ref*S_w*l_ref_lon)
-                        self._FM[airplane_name]["viscous"]["Cn"][segment_name] = M_b_visc[2].item()/(q_ref*S_w*l_ref_lat)
+                            self._FM[airplane_name]["inviscid"]["Cx"][segment_name] = F_b_inv[0].item()*non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cy"][segment_name] = F_b_inv[1].item()*non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cz"][segment_name] = F_b_inv[2].item()*non_dim_inv
 
-                        self._FM[airplane_name]["inviscid"]["Cx"][segment_name] = F_b_inv[0].item()/(q_ref*S_w)
-                        self._FM[airplane_name]["inviscid"]["Cy"][segment_name] = F_b_inv[1].item()/(q_ref*S_w)
-                        self._FM[airplane_name]["inviscid"]["Cz"][segment_name] = F_b_inv[2].item()/(q_ref*S_w)
+                            self._FM[airplane_name]["inviscid"]["Cl"][segment_name] = M_b_inv[0].item()*lat_non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cm"][segment_name] = M_b_inv[1].item()*lon_non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cn"][segment_name] = M_b_inv[2].item()*lat_non_dim_inv
 
-                        self._FM[airplane_name]["inviscid"]["CL"][segment_name] = L_inv/(q_ref*S_w)
-                        self._FM[airplane_name]["inviscid"]["CD"][segment_name] = D_inv/(q_ref*S_w)
-                        self._FM[airplane_name]["inviscid"]["CS"][segment_name] = S_inv/(q_ref*S_w)
+                        if wind_frame:
+                            self._FM[airplane_name]["viscous"]["CD"][segment_name] = F_w_visc[0].item()*non_dim_inv
+                            self._FM[airplane_name]["viscous"]["CS"][segment_name] = F_w_visc[1].item()*non_dim_inv
+                            self._FM[airplane_name]["viscous"]["CL"][segment_name] = F_w_visc[2].item()*non_dim_inv
 
-                        self._FM[airplane_name]["inviscid"]["Cl"][segment_name] = M_b_inv[0].item()/(q_ref*S_w*l_ref_lat)
-                        self._FM[airplane_name]["inviscid"]["Cm"][segment_name] = M_b_inv[1].item()/(q_ref*S_w*l_ref_lon)
-                        self._FM[airplane_name]["inviscid"]["Cn"][segment_name] = M_b_inv[2].item()/(q_ref*S_w*l_ref_lat)
+                            self._FM[airplane_name]["viscous"]["Cl_w"][segment_name] = M_w_visc[0].item()*lat_non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cm_w"][segment_name] = M_w_visc[1].item()*lon_non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cn_w"][segment_name] = M_w_visc[2].item()*lat_non_dim_inv
+
+                            self._FM[airplane_name]["inviscid"]["CD"][segment_name] = F_w_inv[0].item()*non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["CS"][segment_name] = F_w_inv[1].item()*non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["CL"][segment_name] = F_w_inv[2].item()*non_dim_inv
+
+                            self._FM[airplane_name]["inviscid"]["Cl_w"][segment_name] = M_w_inv[0].item()*lat_non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cm_w"][segment_name] = M_w_inv[1].item()*lon_non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cn_w"][segment_name] = M_w_inv[2].item()*lat_non_dim_inv
+
+                        if stab_frame:
+                            self._FM[airplane_name]["viscous"]["Cx_s"][segment_name] = F_s_visc[0].item()*non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cy_s"][segment_name] = F_s_visc[1].item()*non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cz_s"][segment_name] = F_s_visc[2].item()*non_dim_inv
+
+                            self._FM[airplane_name]["viscous"]["Cl_s"][segment_name] = M_s_visc[0].item()*lat_non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cm_s"][segment_name] = M_s_visc[1].item()*lon_non_dim_inv
+                            self._FM[airplane_name]["viscous"]["Cn_s"][segment_name] = M_s_visc[2].item()*lat_non_dim_inv
+
+                            self._FM[airplane_name]["inviscid"]["Cx_s"][segment_name] = F_s_inv[0].item()*non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cy_s"][segment_name] = F_s_inv[1].item()*non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cz_s"][segment_name] = F_s_inv[2].item()*non_dim_inv
+
+                            self._FM[airplane_name]["inviscid"]["Cl_s"][segment_name] = M_s_inv[0].item()*lat_non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cm_s"][segment_name] = M_s_inv[1].item()*lon_non_dim_inv
+                            self._FM[airplane_name]["inviscid"]["Cn_s"][segment_name] = M_s_inv[2].item()*lat_non_dim_inv
 
                     if dimensional:
-                        self._FM[airplane_name]["viscous"]["Fx"][segment_name] = F_b_visc[0].item()
-                        self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
-                        self._FM[airplane_name]["viscous"]["Fz"][segment_name] = F_b_visc[2].item()
+                        if body_frame:
+                            self._FM[airplane_name]["viscous"]["Fx"][segment_name] = F_b_visc[0].item()
+                            self._FM[airplane_name]["viscous"]["Fy"][segment_name] = F_b_visc[1].item()
+                            self._FM[airplane_name]["viscous"]["Fz"][segment_name] = F_b_visc[2].item()
 
-                        self._FM[airplane_name]["viscous"]["FL"][segment_name] = L_visc
-                        self._FM[airplane_name]["viscous"]["FD"][segment_name] = D_visc
-                        self._FM[airplane_name]["viscous"]["FS"][segment_name] = S_visc
+                            self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
+                            self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
+                            self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
 
-                        self._FM[airplane_name]["viscous"]["Mx"][segment_name] = M_b_visc[0].item()
-                        self._FM[airplane_name]["viscous"]["My"][segment_name] = M_b_visc[1].item()
-                        self._FM[airplane_name]["viscous"]["Mz"][segment_name] = M_b_visc[2].item()
+                            self._FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_b_inv[0].item()
+                            self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
+                            self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
 
-                        self._FM[airplane_name]["inviscid"]["Fx"][segment_name] = F_b_inv[0].item()
-                        self._FM[airplane_name]["inviscid"]["Fy"][segment_name] = F_b_inv[1].item()
-                        self._FM[airplane_name]["inviscid"]["Fz"][segment_name] = F_b_inv[2].item()
+                            self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
+                            self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
+                            self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
 
-                        self._FM[airplane_name]["inviscid"]["FL"][segment_name] = L_inv
-                        self._FM[airplane_name]["inviscid"]["FD"][segment_name] = D_inv
-                        self._FM[airplane_name]["inviscid"]["FS"][segment_name] = S_inv
+                        if wind_frame:
+                            self._FM[airplane_name]["viscous"]["FD"][segment_name] = F_w_visc[0].item()
+                            self._FM[airplane_name]["viscous"]["FS"][segment_name] = F_w_visc[1].item()
+                            self._FM[airplane_name]["viscous"]["FL"][segment_name] = F_w_visc[2].item()
 
-                        self._FM[airplane_name]["inviscid"]["Mx"][segment_name] = M_b_inv[0].item()
-                        self._FM[airplane_name]["inviscid"]["My"][segment_name] = M_b_inv[1].item()
-                        self._FM[airplane_name]["inviscid"]["Mz"][segment_name] = M_b_inv[2].item()
+                            self._FM[airplane_name]["inviscid"]["FD"][segment_name] = F_w_inv[0].item()
+                            self._FM[airplane_name]["inviscid"]["FS"][segment_name] = F_w_inv[1].item()
+                            self._FM[airplane_name]["inviscid"]["FL"][segment_name] = F_w_inv[2].item()
+
+                            self._FM[airplane_name]["viscous"]["Mx_w"][segment_name] = M_w_visc[0].item()
+                            self._FM[airplane_name]["viscous"]["My_w"][segment_name] = M_w_visc[1].item()
+                            self._FM[airplane_name]["viscous"]["Mz_w"][segment_name] = M_w_visc[2].item()
+
+                            self._FM[airplane_name]["inviscid"]["Mx_w"][segment_name] = M_w_inv[0].item()
+                            self._FM[airplane_name]["inviscid"]["My_w"][segment_name] = M_w_inv[1].item()
+                            self._FM[airplane_name]["inviscid"]["Mz_w"][segment_name] = M_w_inv[2].item()
+
+                        if stab_frame:
+                            self._FM[airplane_name]["viscous"]["Fx_s"][segment_name] = F_s_visc[0].item()
+                            self._FM[airplane_name]["viscous"]["Fy_s"][segment_name] = F_s_visc[1].item()
+                            self._FM[airplane_name]["viscous"]["Fz_s"][segment_name] = F_s_visc[2].item()
+
+                            self._FM[airplane_name]["viscous"]["Mx_s"][segment_name] = M_s_visc[0].item()
+                            self._FM[airplane_name]["viscous"]["My_s"][segment_name] = M_s_visc[1].item()
+                            self._FM[airplane_name]["viscous"]["Mz_s"][segment_name] = M_s_visc[2].item()
+
+                            self._FM[airplane_name]["inviscid"]["Fx_s"][segment_name] = F_s_inv[0].item()
+                            self._FM[airplane_name]["inviscid"]["Fy_s"][segment_name] = F_s_inv[1].item()
+                            self._FM[airplane_name]["inviscid"]["Fz_s"][segment_name] = F_s_inv[2].item()
+
+                            self._FM[airplane_name]["inviscid"]["Mx_s"][segment_name] = M_s_inv[0].item()
+                            self._FM[airplane_name]["inviscid"]["My_s"][segment_name] = M_s_inv[1].item()
+                            self._FM[airplane_name]["inviscid"]["Mz_s"][segment_name] = M_s_inv[2].item()
 
                 # Sum up totals
-                FM_inv_airplane_total[0] += L_inv
-                FM_inv_airplane_total[1] += D_inv
-                FM_inv_airplane_total[2] += S_inv
-                FM_vis_airplane_total[0] += L_visc
-                FM_vis_airplane_total[1] += D_visc
-                FM_vis_airplane_total[2] += S_visc
-                FM_inv_airplane_total[3:6] += F_b_inv
-                FM_vis_airplane_total[3:6] += F_b_visc
-                FM_inv_airplane_total[6:] += M_b_inv
-                FM_vis_airplane_total[6:] += M_b_visc
-                
+                if body_frame:
+                    FM_b_inv_airplane_total[:3] += F_b_inv
+                    FM_b_inv_airplane_total[3:] += M_b_inv
+                    FM_b_vis_airplane_total[:3] += F_b_visc
+                    FM_b_vis_airplane_total[3:] += M_b_visc
+                if wind_frame:
+                    FM_w_inv_airplane_total[:3] += F_w_inv
+                    FM_w_inv_airplane_total[3:] += M_w_inv
+                    FM_w_vis_airplane_total[:3] += F_w_visc
+                    FM_w_vis_airplane_total[3:] += M_w_visc
+                if stab_frame:
+                    FM_s_inv_airplane_total[:3] += F_s_inv
+                    FM_s_inv_airplane_total[3:] += M_s_inv
+                    FM_s_vis_airplane_total[:3] += F_s_visc
+                    FM_s_vis_airplane_total[3:] += M_s_visc
+
                 index += num_cps
 
             if non_dimensional:
-                # Store the total inviscid force and moment
-                self._FM[airplane_name]["inviscid"]["CL"]["total"] = FM_inv_airplane_total[0].item()/(q_ref*S_w)
-                self._FM[airplane_name]["inviscid"]["CD"]["total"] = FM_inv_airplane_total[1].item()/(q_ref*S_w)
-                self._FM[airplane_name]["inviscid"]["CS"]["total"] = FM_inv_airplane_total[2].item()/(q_ref*S_w)
-                self._FM[airplane_name]["inviscid"]["Cx"]["total"] = FM_inv_airplane_total[3].item()/(q_ref*S_w)
-                self._FM[airplane_name]["inviscid"]["Cy"]["total"] = FM_inv_airplane_total[4].item()/(q_ref*S_w)
-                self._FM[airplane_name]["inviscid"]["Cz"]["total"] = FM_inv_airplane_total[5].item()/(q_ref*S_w)
-                self._FM[airplane_name]["inviscid"]["Cl"]["total"] = FM_inv_airplane_total[6].item()/(q_ref*S_w*l_ref_lat)
-                self._FM[airplane_name]["inviscid"]["Cm"]["total"] = FM_inv_airplane_total[7].item()/(q_ref*S_w*l_ref_lon)
-                self._FM[airplane_name]["inviscid"]["Cn"]["total"] = FM_inv_airplane_total[8].item()/(q_ref*S_w*l_ref_lat)
+                if body_frame:
+                    self._FM[airplane_name]["inviscid"]["Cx"]["total"] = FM_b_inv_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cy"]["total"] = FM_b_inv_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cz"]["total"] = FM_b_inv_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cl"]["total"] = FM_b_inv_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cm"]["total"] = FM_b_inv_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cn"]["total"] = FM_b_inv_airplane_total[5].item()*lat_non_dim_inv
 
-                # Store the total viscous force and moment
-                self._FM[airplane_name]["viscous"]["CL"]["total"] = FM_vis_airplane_total[0].item()/(q_ref*S_w)
-                self._FM[airplane_name]["viscous"]["CD"]["total"] = FM_vis_airplane_total[1].item()/(q_ref*S_w)
-                self._FM[airplane_name]["viscous"]["CS"]["total"] = FM_vis_airplane_total[2].item()/(q_ref*S_w)
-                self._FM[airplane_name]["viscous"]["Cx"]["total"] = FM_vis_airplane_total[3].item()/(q_ref*S_w)
-                self._FM[airplane_name]["viscous"]["Cy"]["total"] = FM_vis_airplane_total[4].item()/(q_ref*S_w)
-                self._FM[airplane_name]["viscous"]["Cz"]["total"] = FM_vis_airplane_total[5].item()/(q_ref*S_w)
-                self._FM[airplane_name]["viscous"]["Cl"]["total"] = FM_vis_airplane_total[6].item()/(q_ref*S_w*l_ref_lat)
-                self._FM[airplane_name]["viscous"]["Cm"]["total"] = FM_vis_airplane_total[7].item()/(q_ref*S_w*l_ref_lon)
-                self._FM[airplane_name]["viscous"]["Cn"]["total"] = FM_vis_airplane_total[8].item()/(q_ref*S_w*l_ref_lat)
+                    # Store the total viscous force and moment
+                    self._FM[airplane_name]["viscous"]["Cx"]["total"] = FM_b_vis_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cy"]["total"] = FM_b_vis_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cz"]["total"] = FM_b_vis_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cl"]["total"] = FM_b_vis_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cm"]["total"] = FM_b_vis_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cn"]["total"] = FM_b_vis_airplane_total[5].item()*lat_non_dim_inv
 
-                # Determine total force and moment for the airplane
-                FM_airplane_total = FM_vis_airplane_total+FM_inv_airplane_total
-                self._FM[airplane_name]["total"]["CL"] = FM_airplane_total[0].item()/(q_ref*S_w)
-                self._FM[airplane_name]["total"]["CD"] = FM_airplane_total[1].item()/(q_ref*S_w)
-                self._FM[airplane_name]["total"]["CS"] = FM_airplane_total[2].item()/(q_ref*S_w)
-                self._FM[airplane_name]["total"]["Cx"] = FM_airplane_total[3].item()/(q_ref*S_w)
-                self._FM[airplane_name]["total"]["Cy"] = FM_airplane_total[4].item()/(q_ref*S_w)
-                self._FM[airplane_name]["total"]["Cz"] = FM_airplane_total[5].item()/(q_ref*S_w)
-                self._FM[airplane_name]["total"]["Cl"] = FM_airplane_total[6].item()/(q_ref*S_w*l_ref_lat)
-                self._FM[airplane_name]["total"]["Cm"] = FM_airplane_total[7].item()/(q_ref*S_w*l_ref_lon)
-                self._FM[airplane_name]["total"]["Cn"] = FM_airplane_total[8].item()/(q_ref*S_w*l_ref_lat)
+                    # Determine total force and moment for the airplane
+                    FM_b_airplane_total = FM_b_vis_airplane_total+FM_b_inv_airplane_total
+                    self._FM[airplane_name]["total"]["Cx"] = FM_b_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cy"] = FM_b_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cz"] = FM_b_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cl"] = FM_b_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["total"]["Cm"] = FM_b_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["total"]["Cn"] = FM_b_airplane_total[5].item()*lat_non_dim_inv
+
+                if stab_frame:
+                    self._FM[airplane_name]["inviscid"]["Cx_s"]["total"] = FM_s_inv_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cy_s"]["total"] = FM_s_inv_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cz_s"]["total"] = FM_s_inv_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cl_s"]["total"] = FM_s_inv_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cm_s"]["total"] = FM_s_inv_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cn_s"]["total"] = FM_s_inv_airplane_total[5].item()*lat_non_dim_inv
+
+                    # Store the total viscous force and moment
+                    self._FM[airplane_name]["viscous"]["Cx_s"]["total"] = FM_s_vis_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cy_s"]["total"] = FM_s_vis_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cz_s"]["total"] = FM_s_vis_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cl_s"]["total"] = FM_s_vis_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cm_s"]["total"] = FM_s_vis_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cn_s"]["total"] = FM_s_vis_airplane_total[5].item()*lat_non_dim_inv
+
+                    # Determine total force and moment for the airplane
+                    FM_s_airplane_total = FM_s_vis_airplane_total+FM_s_inv_airplane_total
+                    self._FM[airplane_name]["total"]["Cx_s"] = FM_s_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cy_s"] = FM_s_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cz_s"] = FM_s_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cl_s"] = FM_s_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["total"]["Cm_s"] = FM_s_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["total"]["Cn_s"] = FM_s_airplane_total[5].item()*lat_non_dim_inv
+
+                if wind_frame:
+                    self._FM[airplane_name]["inviscid"]["CD"]["total"] = FM_w_inv_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["CS"]["total"] = FM_w_inv_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["CL"]["total"] = FM_w_inv_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cl_w"]["total"] = FM_w_inv_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cm_w"]["total"] = FM_w_inv_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["inviscid"]["Cn_w"]["total"] = FM_w_inv_airplane_total[5].item()*lat_non_dim_inv
+
+                    # Store the total viscous force and moment
+                    self._FM[airplane_name]["viscous"]["CD"]["total"] = FM_w_vis_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["CS"]["total"] = FM_w_vis_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["CL"]["total"] = FM_w_vis_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cl_w"]["total"] = FM_w_vis_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cm_w"]["total"] = FM_w_vis_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["viscous"]["Cn_w"]["total"] = FM_w_vis_airplane_total[5].item()*lat_non_dim_inv
+
+                    # Determine total force and moment for the airplane
+                    FM_w_airplane_total = FM_w_vis_airplane_total+FM_w_inv_airplane_total
+                    self._FM[airplane_name]["total"]["CD"] = FM_w_airplane_total[0].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["CS"] = FM_w_airplane_total[1].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["CL"] = FM_w_airplane_total[2].item()*non_dim_inv
+                    self._FM[airplane_name]["total"]["Cl_w"] = FM_w_airplane_total[3].item()*lat_non_dim_inv
+                    self._FM[airplane_name]["total"]["Cm_w"] = FM_w_airplane_total[4].item()*lon_non_dim_inv
+                    self._FM[airplane_name]["total"]["Cn_w"] = FM_w_airplane_total[5].item()*lat_non_dim_inv
 
             if dimensional:
-                # Store the total inviscid force and moment
-                self._FM[airplane_name]["inviscid"]["FL"]["total"] = FM_inv_airplane_total[0].item()
-                self._FM[airplane_name]["inviscid"]["FD"]["total"] = FM_inv_airplane_total[1].item()
-                self._FM[airplane_name]["inviscid"]["FS"]["total"] = FM_inv_airplane_total[2].item()
-                self._FM[airplane_name]["inviscid"]["Fx"]["total"] = FM_inv_airplane_total[3].item()
-                self._FM[airplane_name]["inviscid"]["Fy"]["total"] = FM_inv_airplane_total[4].item()
-                self._FM[airplane_name]["inviscid"]["Fz"]["total"] = FM_inv_airplane_total[5].item()
-                self._FM[airplane_name]["inviscid"]["Mx"]["total"] = FM_inv_airplane_total[6].item()
-                self._FM[airplane_name]["inviscid"]["My"]["total"] = FM_inv_airplane_total[7].item()
-                self._FM[airplane_name]["inviscid"]["Mz"]["total"] = FM_inv_airplane_total[8].item()
+                if body_frame:
+                    self._FM[airplane_name]["inviscid"]["Fx"]["total"] = FM_b_inv_airplane_total[0].item()
+                    self._FM[airplane_name]["inviscid"]["Fy"]["total"] = FM_b_inv_airplane_total[1].item()
+                    self._FM[airplane_name]["inviscid"]["Fz"]["total"] = FM_b_inv_airplane_total[2].item()
+                    self._FM[airplane_name]["inviscid"]["Mx"]["total"] = FM_b_inv_airplane_total[3].item()
+                    self._FM[airplane_name]["inviscid"]["My"]["total"] = FM_b_inv_airplane_total[4].item()
+                    self._FM[airplane_name]["inviscid"]["Mz"]["total"] = FM_b_inv_airplane_total[5].item()
 
-                # Store the total viscous force and moment
-                self._FM[airplane_name]["viscous"]["FL"]["total"] = FM_vis_airplane_total[0].item()
-                self._FM[airplane_name]["viscous"]["FD"]["total"] = FM_vis_airplane_total[1].item()
-                self._FM[airplane_name]["viscous"]["FS"]["total"] = FM_vis_airplane_total[2].item()
-                self._FM[airplane_name]["viscous"]["Fx"]["total"] = FM_vis_airplane_total[3].item()
-                self._FM[airplane_name]["viscous"]["Fy"]["total"] = FM_vis_airplane_total[4].item()
-                self._FM[airplane_name]["viscous"]["Fz"]["total"] = FM_vis_airplane_total[5].item()
-                self._FM[airplane_name]["viscous"]["Mx"]["total"] = FM_vis_airplane_total[6].item()
-                self._FM[airplane_name]["viscous"]["My"]["total"] = FM_vis_airplane_total[7].item()
-                self._FM[airplane_name]["viscous"]["Mz"]["total"] = FM_vis_airplane_total[8].item()
+                    # Store the total viscous force and moment
+                    self._FM[airplane_name]["viscous"]["Fx"]["total"] = FM_b_vis_airplane_total[0].item()
+                    self._FM[airplane_name]["viscous"]["Fy"]["total"] = FM_b_vis_airplane_total[1].item()
+                    self._FM[airplane_name]["viscous"]["Fz"]["total"] = FM_b_vis_airplane_total[2].item()
+                    self._FM[airplane_name]["viscous"]["Mx"]["total"] = FM_b_vis_airplane_total[3].item()
+                    self._FM[airplane_name]["viscous"]["My"]["total"] = FM_b_vis_airplane_total[4].item()
+                    self._FM[airplane_name]["viscous"]["Mz"]["total"] = FM_b_vis_airplane_total[5].item()
 
-                # Determine total force and moment for the airplane
-                FM_airplane_total = FM_vis_airplane_total+FM_inv_airplane_total
-                self._FM[airplane_name]["total"]["FL"] = FM_airplane_total[0].item()
-                self._FM[airplane_name]["total"]["FD"] = FM_airplane_total[1].item()
-                self._FM[airplane_name]["total"]["FS"] = FM_airplane_total[2].item()
-                self._FM[airplane_name]["total"]["Fx"] = FM_airplane_total[3].item()
-                self._FM[airplane_name]["total"]["Fy"] = FM_airplane_total[4].item()
-                self._FM[airplane_name]["total"]["Fz"] = FM_airplane_total[5].item()
-                self._FM[airplane_name]["total"]["Mx"] = FM_airplane_total[6].item()
-                self._FM[airplane_name]["total"]["My"] = FM_airplane_total[7].item()
-                self._FM[airplane_name]["total"]["Mz"] = FM_airplane_total[8].item()
+                    # Determine total force and moment for the airplane
+                    FM_b_airplane_total = FM_b_vis_airplane_total+FM_b_inv_airplane_total
+                    self._FM[airplane_name]["total"]["Fx"] = FM_b_airplane_total[0].item()
+                    self._FM[airplane_name]["total"]["Fy"] = FM_b_airplane_total[1].item()
+                    self._FM[airplane_name]["total"]["Fz"] = FM_b_airplane_total[2].item()
+                    self._FM[airplane_name]["total"]["Mx"] = FM_b_airplane_total[3].item()
+                    self._FM[airplane_name]["total"]["My"] = FM_b_airplane_total[4].item()
+                    self._FM[airplane_name]["total"]["Mz"] = FM_b_airplane_total[5].item()
+
+                if stab_frame:
+                    self._FM[airplane_name]["inviscid"]["Fx_s"]["total"] = FM_s_inv_airplane_total[0].item()
+                    self._FM[airplane_name]["inviscid"]["Fy_s"]["total"] = FM_s_inv_airplane_total[1].item()
+                    self._FM[airplane_name]["inviscid"]["Fz_s"]["total"] = FM_s_inv_airplane_total[2].item()
+                    self._FM[airplane_name]["inviscid"]["Mx_s"]["total"] = FM_s_inv_airplane_total[3].item()
+                    self._FM[airplane_name]["inviscid"]["My_s"]["total"] = FM_s_inv_airplane_total[4].item()
+                    self._FM[airplane_name]["inviscid"]["Mz_s"]["total"] = FM_s_inv_airplane_total[5].item()
+
+                    # Store the total viscous force and moment
+                    self._FM[airplane_name]["viscous"]["Fx_s"]["total"] = FM_s_vis_airplane_total[0].item()
+                    self._FM[airplane_name]["viscous"]["Fy_s"]["total"] = FM_s_vis_airplane_total[1].item()
+                    self._FM[airplane_name]["viscous"]["Fz_s"]["total"] = FM_s_vis_airplane_total[2].item()
+                    self._FM[airplane_name]["viscous"]["Mx_s"]["total"] = FM_s_vis_airplane_total[3].item()
+                    self._FM[airplane_name]["viscous"]["My_s"]["total"] = FM_s_vis_airplane_total[4].item()
+                    self._FM[airplane_name]["viscous"]["Mz_s"]["total"] = FM_s_vis_airplane_total[5].item()
+
+                    # Determine total force and moment for the airplane
+                    FM_s_airplane_total = FM_s_vis_airplane_total+FM_s_inv_airplane_total
+                    self._FM[airplane_name]["total"]["Fx_s"] = FM_s_airplane_total[0].item()
+                    self._FM[airplane_name]["total"]["Fy_s"] = FM_s_airplane_total[1].item()
+                    self._FM[airplane_name]["total"]["Fz_s"] = FM_s_airplane_total[2].item()
+                    self._FM[airplane_name]["total"]["Mx_s"] = FM_s_airplane_total[3].item()
+                    self._FM[airplane_name]["total"]["My_s"] = FM_s_airplane_total[4].item()
+                    self._FM[airplane_name]["total"]["Mz_s"] = FM_s_airplane_total[5].item()
+
+                if wind_frame:
+                    self._FM[airplane_name]["inviscid"]["FD"]["total"] = FM_w_inv_airplane_total[0].item()
+                    self._FM[airplane_name]["inviscid"]["FS"]["total"] = FM_w_inv_airplane_total[1].item()
+                    self._FM[airplane_name]["inviscid"]["FL"]["total"] = FM_w_inv_airplane_total[2].item()
+                    self._FM[airplane_name]["inviscid"]["Mx_w"]["total"] = FM_w_inv_airplane_total[3].item()
+                    self._FM[airplane_name]["inviscid"]["My_w"]["total"] = FM_w_inv_airplane_total[4].item()
+                    self._FM[airplane_name]["inviscid"]["Mz_w"]["total"] = FM_w_inv_airplane_total[5].item()
+
+                    # Store the total viscous force and moment
+                    self._FM[airplane_name]["viscous"]["FD"]["total"] = FM_w_vis_airplane_total[0].item()
+                    self._FM[airplane_name]["viscous"]["FS"]["total"] = FM_w_vis_airplane_total[1].item()
+                    self._FM[airplane_name]["viscous"]["FL"]["total"] = FM_w_vis_airplane_total[2].item()
+                    self._FM[airplane_name]["viscous"]["Mx_w"]["total"] = FM_w_vis_airplane_total[3].item()
+                    self._FM[airplane_name]["viscous"]["My_w"]["total"] = FM_w_vis_airplane_total[4].item()
+                    self._FM[airplane_name]["viscous"]["Mz_w"]["total"] = FM_w_vis_airplane_total[5].item()
+
+                    # Determine total force and moment for the airplane
+                    FM_w_airplane_total = FM_w_vis_airplane_total+FM_w_inv_airplane_total
+                    self._FM[airplane_name]["total"]["FD"] = FM_w_airplane_total[0].item()
+                    self._FM[airplane_name]["total"]["FS"] = FM_w_airplane_total[1].item()
+                    self._FM[airplane_name]["total"]["FL"] = FM_w_airplane_total[2].item()
+                    self._FM[airplane_name]["total"]["Mx_w"] = FM_w_airplane_total[3].item()
+                    self._FM[airplane_name]["total"]["My_w"] = FM_w_airplane_total[4].item()
+                    self._FM[airplane_name]["total"]["Mz_w"] = FM_w_airplane_total[5].item()
 
         end_time = time.time()
         return end_time-start_time
-
-
-    def _rotate_aero_forces(self, F, u_inf):
-        # Takes the body-fixed force vector and coverts it to lift, drag, and sideforce
-        # This uses the AeroLab convention where beta is asin(Vy/V)
-
-        # Determine direction vectors
-        u_lift = np.cross(u_inf, [0.,1.,0.])
-        u_lift = u_lift/np.linalg.norm(u_lift)
-        u_side = np.cross(u_lift, u_inf)
-        u_side = u_side/np.linalg.norm(u_side)
-
-        # Drag force
-        D = np.dot(F, u_inf)
-        D_vec = D*u_inf
-        
-        # Lift force
-        L = np.dot(F, u_lift)
-        L_vec = L*u_lift
-        
-        # Side force
-        S_vec = F-L_vec-D_vec
-        S = np.dot(S_vec,u_side)
-
-        return L,D,S
 
 
     def solve_forces(self, **kwargs):
@@ -1129,6 +1288,15 @@ class Scene:
 
         report_by_segment : bool
             Whether to include results broken down by wing segment. Defaults to False.
+
+        body_frame : boolean, optional
+            Whether to output results in the body-fixed frame. Defaults to True.
+
+        stab_frame : boolean, optional
+            Whether to output results in the stability frame. Defaults to False.
+
+        wind_frame : boolean, optional
+            Whether to output results in the wind frame. Defaults to True.
 
         verbose : bool
             Display the time it took to complete each portion of the calculation. 
@@ -1153,15 +1321,15 @@ class Scene:
         nonlinear_time = 0.0
         if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
 
-            if fsolve_time == -1:
-                fsolve_time = 0.0
-
             # Linear solution
             linear_time = self._solve_linear(**kwargs)
 
             # Nonlinear improvement
-            if self._solver_type == "nonlinear":
+            if self._solver_type == "nonlinear" or fsolve_time == -1:
                 nonlinear_time = self._solve_nonlinear(**kwargs)
+
+            if fsolve_time == -1:
+                fsolve_time = 0.0
 
         # Integrate forces and moments
         integrate_time = self._integrate_forces_and_moments(**kwargs)
@@ -1189,29 +1357,27 @@ class Scene:
         return self._FM
 
 
-    def set_aircraft_state(self, state={}, aircraft_name=None):
+    def set_aircraft_state(self, state={}, aircraft=None):
         """Sets the state of the given aircraft.
 
         Parameters
         ----------
         state : dict
             Dictionary describing the state as specified in 
-            'Creating Input Files for MachUp'. The state type may be 
-            aerodynamic or rigid-body, regardless of how the 
-            state was originally specified. Any values not given 
-            default to their original defaults. The previous 
-            state of the aircraft is in no way preserved.
+            'Creating Input Files for MachUp'. Any values not
+            given default to their original defaults. The
+            previous state of the aircraft is in no way preserved.
 
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to set the state of. If there
             is only one aircraft in the scene, this does not need 
             to be specified.
         """
 
         # Specify the only aircraft if not already specified
-        if aircraft_name is None:
+        if aircraft is None:
             if self._num_aircraft == 1:
-                aircraft_name = list(self._airplanes.keys())[0]
+                aircraft = list(self._airplanes.keys())[0]
             else:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
@@ -1219,18 +1385,18 @@ class Scene:
         aircraft_position = np.array(state.get("position", [0.0, 0.0, 0.0]))
         v_wind = self._get_wind(aircraft_position)
 
-        # Set state and update precalcs for NLL
-        old_position = self._airplanes[aircraft_name].p_bar
-        old_orient = self._airplanes[aircraft_name].q
-        self._airplanes[aircraft_name].set_state(**state, v_wind=v_wind)
-        aircraft_orient = self._airplanes[aircraft_name].q
+        # Set state
+        old_position = self._airplanes[aircraft].p_bar
+        old_orient = self._airplanes[aircraft].q
+        self._airplanes[aircraft].set_state(**state, v_wind=v_wind)
+        aircraft_orient = self._airplanes[aircraft].q
 
         # If the position has changed, then we need to update the geometry
         if not np.allclose(old_position, aircraft_position) or not np.allclose(old_orient, aircraft_orient):
             self._perform_geometry_and_atmos_calcs()
 
 
-    def set_aircraft_control_state(self, control_state={}, aircraft_name=None):
+    def set_aircraft_control_state(self, control_state={}, aircraft=None):
         """Sets the control state of the given aircraft.
 
         Parameters
@@ -1239,21 +1405,21 @@ class Scene:
             Dictionary describing the control state. Each key value pair should be
             the name of the control and its deflection in degrees.
 
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to set the state of. If there
             is only one aircraft in the scene, this does not need 
             to be specified.
         """
 
         # Specify the only aircraft if not already specified
-        if aircraft_name is None:
+        if aircraft is None:
             if self._num_aircraft == 1:
-                aircraft_name = list(self._airplanes.keys())[0]
+                aircraft = list(self._airplanes.keys())[0]
             else:
                 raise IOError("Aircraft name must be specified if there is more than one aircraft in the scene.")
 
         # Set state
-        self._airplanes[aircraft_name].set_control_state(control_state)
+        self._airplanes[aircraft].set_control_state(control_state)
         self._solved = False
 
 
@@ -1385,7 +1551,9 @@ class Scene:
 
     def aircraft_derivatives(self, **kwargs):
         """Determines the stability, damping, and control derivatives at the 
-        current state. Uses a central difference sceme.
+        current state. Uses a central difference sceme. Note that the angular
+        rates for the damping derivatives will be in the frame the angular
+        rates were originally given in.
 
         Parameters
         ----------
@@ -1424,6 +1592,7 @@ class Scene:
                 json.dump(derivs, output_handle, indent=4)
 
         return derivs
+
 
     def aircraft_stability_derivatives(self, aircraft=None, dtheta=0.5):
         """Determines the stability derivatives at the current state. Uses 
@@ -1515,7 +1684,9 @@ class Scene:
     def aircraft_damping_derivatives(self, aircraft=None, dtheta_dot=0.005):
         """Determines the damping derivatives at the current state. Uses 
         a central difference sceme. Note, the damping derivatives are non-
-        dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon.
+        dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Note
+        that the angular rates for the damping derivatives will be in the
+        frame the angular rates were originally given in.
 
         Parameters
         ----------
@@ -1546,56 +1717,68 @@ class Scene:
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
-            # Get current aerodynamic state
-            _,_,vel_0 = self._airplanes[aircraft_name].get_aerodynamic_state()
+            aircraft_object = self._airplanes[aircraft_name]
 
-            # Determine current angular rates
-            omega_0 = self._airplanes[aircraft_name].w
+            # Get current aerodynamic state
+            _,_,vel_0 = aircraft_object.get_aerodynamic_state()
+
+            # Determine current angular rates and the frame they were specified in
+            omega_0 = aircraft_object.w
+            frame = aircraft_object.angular_rate_frame
+
+            # Determine preturbations
+            p_pert = np.array([dtheta_dot, 0.0, 0.0])
+            q_pert = np.array([0.0, dtheta_dot, 0.0])
+            r_pert = np.array([0.0, 0.0, dtheta_dot])
+
+            if frame == "stab":
+                p_pert = quat_inv_trans(aircraft_object.q_to_stab, p_pert)
+                q_pert = quat_inv_trans(aircraft_object.q_to_stab, q_pert)
+                r_pert = quat_inv_trans(aircraft_object.q_to_stab, r_pert)
+
+            elif frame == "wind":
+                p_pert = quat_inv_trans(aircraft_object.q_to_wind, p_pert)
+                q_pert = quat_inv_trans(aircraft_object.q_to_wind, q_pert)
+                r_pert = quat_inv_trans(aircraft_object.q_to_wind, r_pert)
 
             # Perturb forward in roll rate
-            omega_pert_p_fwd = copy.copy(omega_0)
-            omega_pert_p_fwd[0] += dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_p_fwd
+            omega_pert_p_fwd = omega_0+p_pert
+            aircraft_object.w = omega_pert_p_fwd
             self.solve_forces(dimensional=False)
             FM_dp_fwd = self._FM
 
             # Perturb backward in roll rate
-            omega_pert_p_bwd = copy.copy(omega_0)
-            omega_pert_p_bwd[0] -= dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_p_bwd
+            omega_pert_p_bwd = omega_0-p_pert
+            aircraft_object.w = omega_pert_p_bwd
             self.solve_forces(dimensional=False)
             FM_dp_bwd = self._FM
 
             # Perturb forward in pitch rate
-            omega_pert_q_fwd = copy.copy(omega_0)
-            omega_pert_q_fwd[1] += dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_q_fwd
+            omega_pert_q_fwd = omega_0+q_pert
+            aircraft_object.w = omega_pert_q_fwd
             self.solve_forces(dimensional=False)
             FM_dq_fwd = self._FM
 
             # Perturb backward in pitch rate
-            omega_pert_q_bwd = copy.copy(omega_0)
-            omega_pert_q_bwd[1] -= dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_q_bwd
+            omega_pert_q_bwd = omega_0-q_pert
+            aircraft_object.w = omega_pert_q_bwd
             self.solve_forces(dimensional=False)
             FM_dq_bwd = self._FM
 
             # Perturb forward in yaw rate
-            omega_pert_r_fwd = copy.copy(omega_0)
-            omega_pert_r_fwd[2] += dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_r_fwd
+            omega_pert_r_fwd = omega_0+r_pert
+            aircraft_object.w = omega_pert_r_fwd
             self.solve_forces(dimensional=False)
             FM_dr_fwd = self._FM
 
             # Perturb backward in yaw rate
-            omega_pert_r_bwd = copy.copy(omega_0)
-            omega_pert_r_bwd[2] -= dtheta_dot
-            self._airplanes[aircraft_name].w = omega_pert_r_bwd
+            omega_pert_r_bwd = omega_0-r_pert
+            aircraft_object.w = omega_pert_r_bwd
             self.solve_forces(dimensional=False)
             FM_dr_bwd = self._FM
 
             # Reset state
-            self._airplanes[aircraft_name].w = omega_0
+            aircraft_object.w = omega_0
             self._solved = False
 
             # Compute derivatives
@@ -1826,11 +2009,11 @@ class Scene:
         set_trim_state = kwargs.get("set_trim_state", True)
         if set_trim_state:
             airplane_object.set_aerodynamic_state(alpha=alpha1)
-            self.set_aircraft_control_state({pitch_control : delta_flap1}, aircraft_name=aircraft_name)
+            self.set_aircraft_control_state({pitch_control : delta_flap1}, aircraft=aircraft_name)
 
         else: # Return to the original state
             airplane_object.set_aerodynamic_state(alpha=alpha_original)
-            self.set_aircraft_control_state(controls_original, aircraft_name=aircraft_name)
+            self.set_aircraft_control_state(controls_original, aircraft=aircraft_name)
 
         # Output results to file
         filename = kwargs.get("filename", None)
@@ -2125,7 +2308,7 @@ class Scene:
 
         Parameters
         ----------
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to get the reference params for. Does
             not need to be specified if there is only one aircraft in the 
             scene. Only one may be specified.
@@ -2222,7 +2405,7 @@ class Scene:
 
         Parameters
         ----------
-        aircraft_name : str
+        aircraft : str
             The name of the aircraft to get the reference params for. Does
             not need to be specified if there is only one aircraft in the 
             scene.
@@ -2313,6 +2496,225 @@ class Scene:
         # Loop through aircraft
         for aircraft_name in aircraft_names:
             self._airplanes[aircraft_name].export_dxf(**kwargs)
+
+
+    def export_pylot_model(self, **kwargs):
+        """Creates a JSON object containing a linearized model of the aircraft to use as input
+        for Pylot (www.github.com/usuaero/Pylot). Any information not available to MachupX but
+        required for Pylot will be filled with "PLEASE SPECIFY" and must be changed by the 
+        user before the input can be used for Pylot. Note, this can only be used if there is 
+        one aircraft in the scene.
+
+        We designed the input files for Pylot to be cross-compatible with MachUpX. With this in
+        mind, if values are already specified in the input but those values are not used in MachUpX,
+        they will still be included in the input file exported here.
+
+        Parameters
+        ----------
+        filename : str, optional
+            Name of the JSON file to write the model to. Must be ".json". Defaults to 
+            "<AIRCRAFT_NAME>_linearized.json".
+
+        inertia : dict, optional
+            Moments of inertia for the aircraft, formatted as
+
+                {
+                    "Ixx" : <VALUE>,
+                    "Iyy" : <VALUE>,
+                    "Izz" : <VALUE>,
+                    "Ixy" : <VALUE>,
+                    "Ixz" : <VALUE>,
+                    "Iyz" : <VALUE>
+                }
+            
+            If not specified, this will be left blank for the user to specify after the fact.
+            Alternatively, if "inertia" was already part of the aircraft input, it will remain
+            the same as inputted.
+
+        angular_momentum : list, optional
+            Angular momentum vector. Defaults to [0.0, 0.0, 0.0]. Alternatively, if "angular_momentum"
+            was already part of the aircraft input, it will remain the same as inputted.
+
+        stall_angle_of_attack : float, optional
+            Angle of attack in degrees at which the aircraft stalls.
+        
+        stall_sideslip_angle : float, optional
+            Sideslip angle in degrees at which the aircraft stalls laterally.
+
+        controller_type : str, optional
+            The controller that will be used with the exported model. Can be "keyboard", "joystick",
+            "user_defined", or "time_sequence". This affects whether certain inputs unknown to MachUpX
+            are marked "PLEASE SPECIFY". If not given, all such keys will be marked "PLEASE SPECIFY".
+
+        velocity : float, optional
+            Velocity at which to evaluate the model. Should not have any effect unless Mach and Reynolds
+            number effects are included. Defaults to 100.
+
+        set_accel_derivs : bool, optional
+            Whether to set derivatives with respect to vertical and lateral acceleration to zero. Defaults
+            to False, in which case the user must specify these.
+        """
+
+        # Make sure there is only one aircraft in the scene
+        aircraft_names = list(self._airplanes.keys())
+        if len(aircraft_names) != 1:
+            raise IOError("export_pylot_model() may not be used when there is more than one aircraft in the scene.")
+
+        # Initialize
+        aircraft_name = aircraft_names[0]
+        aircraft_object = self._airplanes[aircraft_name]
+        model_dict = copy.deepcopy(aircraft_object._input_dict)
+        model_dict.pop("wings")
+        model_dict.pop("airfoils")
+
+        # Store params
+        model_dict["units"] = self._unit_sys
+        model_dict["CG"] = list(aircraft_object.CG)
+        model_dict["weight"] = float(aircraft_object.W)
+        model_dict["reference"] = {
+            "area" : float(aircraft_object.S_w),
+            "longitudinal_length" : float(aircraft_object.l_ref_lon),
+            "lateral_length" : float(aircraft_object.l_ref_lat)
+        }
+
+        # Store inertia and angular momentum
+        try:
+            model_dict["inertia"]
+        except KeyError:
+            def_inertia = {
+                "Ixx" : "PLEASE SPECIFY",
+                "Iyy" : "PLEASE SPECIFY",
+                "Izz" : "PLEASE SPECIFY",
+                "Ixy" : "PLEASE SPECIFY",
+                "Ixz" : "PLEASE SPECIFY",
+                "Iyz" : "PLEASE SPECIFY"
+            }
+            model_dict["inertia"] = kwargs.get("inertia", def_inertia)
+        try:
+            model_dict["angular_momentum"]
+        except KeyError:
+            model_dict["angular_momentum"] = list(kwargs.get("angular_momentum", [0.0, 0.0, 0.0]))
+
+        # Inform the user which control parameters need to be specified
+        control_type = kwargs.get("controller_type", None)
+        try:
+            for key, value in model_dict["controls"].items():
+                if control_type == "keyboard" or control_type == "joystick" or control_type == None:
+                    try:
+                        value["max_deflection"] = value["max_deflection"]
+                    except KeyError:
+                        if control_type == None:
+                            value["max_deflections"] = "PLEASE SPECIFY"
+                        pass
+                    value["input_axis"] = value.get("input_axis", "PLEASE SPECIFY")
+                
+                if control_type == "time_sequence" or control_type == None:
+                    value["column_index"] = value.get("column_index", "PLEASE SPECIFY")
+
+        except KeyError:
+            pass
+
+        # Specify model type
+        model_dict["aero_model"] = {
+            "type" : "linearized_coefficients"
+        }
+        try:
+            model_dict["aero_model"]["stall_angle_of_attack"] = kwargs["stall_angle_of_attack"]
+        except KeyError:
+            pass
+        try:
+            model_dict["aero_model"]["stall_sideslip_angle"] = kwargs["stall_sideslip_angle"]
+        except KeyError:
+            pass
+
+        # Set reference state at zero sideslip and angle of attack, zero control deflections, and zero angular rates
+        V_ref = kwargs.get("velocity", 100)
+        self.set_aircraft_state(state={"velocity" : V_ref})
+        self.set_aircraft_control_state()
+
+        # Get forces and derivatives at reference state
+        FM_ref = self.solve_forces(dimensional=False)
+        derivs_ref = self.aircraft_derivatives()
+
+        # Get reference coefficients, stability and damping derivatives
+        model_dict["coefficients"] = {}
+        model_dict["coefficients"]["CL0"] = float(FM_ref[aircraft_name]["total"]["CL"])
+        model_dict["coefficients"]["Cm0"] = float(FM_ref[aircraft_name]["total"]["Cm"])
+        model_dict["coefficients"]["CL,a"] = float(derivs_ref[aircraft_name]["stability"]["CL,a"])
+        model_dict["coefficients"]["Cm,a"] = float(derivs_ref[aircraft_name]["stability"]["Cm,a"])
+        model_dict["coefficients"]["CS,b"] = float(derivs_ref[aircraft_name]["stability"]["CS,B"])
+        model_dict["coefficients"]["Cl,b"] = float(derivs_ref[aircraft_name]["stability"]["Cl,B"])
+        model_dict["coefficients"]["Cn,b"] = float(derivs_ref[aircraft_name]["stability"]["Cn,B"])
+        model_dict["coefficients"]["CS,p"] = float(derivs_ref[aircraft_name]["damping"]["CS,pbar"])
+        model_dict["coefficients"]["Cl,p"] = float(derivs_ref[aircraft_name]["damping"]["Cl,pbar"])
+        model_dict["coefficients"]["Cn,p"] = float(derivs_ref[aircraft_name]["damping"]["Cn,pbar"])
+        model_dict["coefficients"]["CL,q"] = float(derivs_ref[aircraft_name]["damping"]["CL,qbar"])
+        model_dict["coefficients"]["CD,q"] = float(derivs_ref[aircraft_name]["damping"]["CD,qbar"])
+        model_dict["coefficients"]["Cm,q"] = float(derivs_ref[aircraft_name]["damping"]["Cm,qbar"])
+        model_dict["coefficients"]["CS,r"] = float(derivs_ref[aircraft_name]["damping"]["CS,rbar"])
+        model_dict["coefficients"]["Cl,r"] = float(derivs_ref[aircraft_name]["damping"]["Cl,rbar"])
+        model_dict["coefficients"]["Cn,r"] = float(derivs_ref[aircraft_name]["damping"]["Cn,rbar"])
+
+        # Specify coefficients MachUpX doesn't know about
+        if kwargs.get("set_accel_derivs", False):
+            val = 0.0
+        else:
+            val = "PLEASE SPECIFY"
+        model_dict["coefficients"]["CL,a_hat"] = val
+        model_dict["coefficients"]["CD,a_hat"] = val
+        model_dict["coefficients"]["Cm,a_hat"] = val
+        model_dict["coefficients"]["CS,b_hat"] = val
+        model_dict["coefficients"]["Cl,b_hat"] = val
+        model_dict["coefficients"]["Cn,b_hat"] = val
+
+        # Specify control derivatives
+        for control_name in aircraft_object.control_names:
+            model_dict["coefficients"][control_name] = {}
+            model_dict["coefficients"][control_name]["CL"] = float(derivs_ref[aircraft_name]["control"]["CL,d"+control_name])
+            model_dict["coefficients"][control_name]["CD"] = float(derivs_ref[aircraft_name]["control"]["CD,d"+control_name])
+            model_dict["coefficients"][control_name]["CS"] = float(derivs_ref[aircraft_name]["control"]["CS,d"+control_name])
+            model_dict["coefficients"][control_name]["Cl"] = float(derivs_ref[aircraft_name]["control"]["Cl,d"+control_name])
+            model_dict["coefficients"][control_name]["Cm"] = float(derivs_ref[aircraft_name]["control"]["Cm,d"+control_name])
+            model_dict["coefficients"][control_name]["Cn"] = float(derivs_ref[aircraft_name]["control"]["Cn,d"+control_name])
+
+        # Evaluate drag polar in alpha
+        num_points = 21
+        alphas = np.linspace(-10, 10, num_points)
+        CL = np.zeros(num_points)
+        CD = np.zeros(num_points)
+        for i, alpha in enumerate(alphas):
+            self.set_aircraft_state(state={"velocity" : V_ref, "alpha" : alpha})
+            FM = self.solve_forces(dimensional=False, body_frame=False)
+            CL[i] = FM[aircraft_name]["total"]["CL"]
+            CD[i] = FM[aircraft_name]["total"]["CD"]
+
+        coefs = np.polyfit(CL, CD, 2)
+        model_dict["coefficients"]["CD0"] = float(coefs[2])
+        model_dict["coefficients"]["CD1"] = float(coefs[1])
+        model_dict["coefficients"]["CD2"] = float(coefs[0])
+
+        # Determine zero-lift aoa
+        coefs = np.polyfit(alphas, CL, 1)
+        a_L0 = -coefs[1]/coefs[0]
+
+        # Evaluate drag polar in beta at zero-lift angle of attack
+        num_points = 21
+        betas = np.linspace(-10, 10, num_points)
+        CS = np.zeros(num_points)
+        CD = np.zeros(num_points)
+        for i, beta in enumerate(betas):
+            self.set_aircraft_state(state={"velocity" : V_ref, "alpha" : a_L0, "beta" : beta})
+            FM = self.solve_forces(dimensional=False, body_frame=False)
+            CS[i] = FM[aircraft_name]["total"]["CS"]
+            CD[i] = FM[aircraft_name]["total"]["CD"]
+
+        coefs = np.polyfit(CS, CD, 2)
+        model_dict["coefficients"]["CD3"] = float(coefs[0])
+
+        # Export model
+        filename = kwargs.get("filename", aircraft_name+"_linearized.json")
+        with open(filename, 'w') as output_handle:
+            json.dump(model_dict, output_handle, indent=4)
 
 
     def _get_aircraft(self, **kwargs):

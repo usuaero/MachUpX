@@ -1,0 +1,121 @@
+{
+    "units" : "English",
+    "CG" : [-0.11, 0, 0],
+    "weight" : 30.0,
+    "inertia" : {
+        "Ixx" : 1.035,
+        "Iyy" : 1.529,
+        "Izz" : 8.411,
+        "Ixy" : 0.0,
+        "Ixz" : 0.013,
+        "Iyz" : 0.0
+    },
+    "angular_momentum" : [0.0, 0.0, 0.0],
+    "reference" : {
+    },
+    "controls" : {
+        "aileron" : {
+            "is_symmetric" : false,
+            "max_deflection" : 20.0,
+            "input_axis" : 0
+        },
+        "elevator" : {
+            "is_symmetric" : true,
+            "max_deflection" : 20.0,
+            "input_axis" : 1
+        },
+        "rudder" : {
+            "is_symmetric" : false,
+            "max_deflection" : 20.0,
+            "input_axis" : 2
+        },
+        "throttle" : {
+            "input_axis" :3
+        }
+    },
+    "engines" : {
+        "engine1" : {
+            "T0" : 30,
+            "T1" : 0.0,
+            "T2" : 0.0,
+            "a" : 1.0,
+            "control" : "throttle"
+        }
+    },
+    "aero_model" : {
+        "type" : "MachUpX",
+        "solver" : "linear"
+    },
+    "airfoils" : {
+        "NACA_0010" : {
+            "type" : "linear",
+            "aL0" : 0.0,
+            "CLa" : 6.4336,
+            "CmL0" : 0.0,
+            "Cma" : 0.00,
+            "CD0" : 0.00513,
+            "CD1" : 0.0,
+            "CD2" : 0.0984,
+            "geometry" : {
+                "NACA" : "0010"
+            }
+        }
+    },
+    "wings" : {
+        "main_wing" : {
+            "ID" : 1,
+            "side" : "both",
+            "is_main" : true,
+            "semispan" : 4.0,
+            "sweep" : 20.0,
+            "dihedral" : [[0.0,0.0],
+                          [0.8,5.0],
+                          [1.0,80.0]],
+            "chord" : [[0.0, 2.0],
+                       [0.2, 1.0],
+                       [1.0, 0.5]],
+            "airfoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.3,
+                "root_span" : 0.45,
+                "tip_span" : 0.95,
+                "control_mixing" : {
+                    "aileron" : 0.4,
+                    "elevator" : 1.0
+                }
+            },
+            "grid" : {
+                "N" : 20,
+                "flap_edge_cluster" : true
+            }
+        },
+        "v_stab" : {
+            "ID" : 2,
+            "side" : "right",
+            "is_main" : false,
+            "connect_to" : {
+                "ID" : 1,
+                "dx" : -2.0,
+                "dz" : 0.25,
+                "location" : "root"
+            },
+            "semispan" : 1.0,
+            "chord" : [[0.0, 0.1],
+                       [0.5, 0.4],
+                       [1.0, 0.1]],
+            "dihedral" : 90.0,
+            "aifoil" : "NACA_0010",
+            "control_surface" : {
+                "chord_fraction" : 0.2,
+                "root_span" : 0.0,
+                "tip_span" : 1.0,
+                "control_mixing" : {
+                    "rudder" : 1.0
+                }
+            },
+            "grid" : {
+                "N" : 10
+            }
+        }
+    }
+}

@@ -22,7 +22,7 @@ if __name__=="__main__":
 
     # Specify airplane
     airplane_dict = {
-        "CG" : [0,0,0],
+        "CG" : [0.0, 0.0, 0.0],
         "weight" : 100.0,
         "controls" : {
             "aileron" : {
@@ -67,6 +67,7 @@ if __name__=="__main__":
                 },
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
+                "twist" : -3.95,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -108,7 +109,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 2.0,
+        "alpha" : 0.0,
         "beta" : 0.0
     }
     control_state = {
@@ -119,17 +120,22 @@ if __name__=="__main__":
 
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    scene.add_aircraft("plane", "test/mux_airplane.json", state=state, control_state=control_state)
+    #scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     scene.display_wireframe(show_vortices=False)
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True, stab_frame=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
 
+<<<<<<< HEAD
     ## Get derivatives
     #derivs = scene.aircraft_derivatives(coord_system="stab")
     #print(json.dumps(derivs, indent=4))
 
     # Output stl file
     scene.export_stl(filename="plane.stl")
+=======
+    scene.export_pylot_model(set_accel_derivs=True, controller_type="keyboard")
+>>>>>>> bd4575c6fa0d27ebc2463583033a0da1f3796a78
