@@ -782,11 +782,11 @@ class Airplane:
             self.l_ref_lat = 0.0
             for (_, wing_segment) in self.wing_segments.items():
                 if wing_segment.is_main and wing_segment.side == "right":
-                    self.l_ref_lat += wing_segment.b
+                    self.l_ref_lat += wing_segment.b*2.0
 
         # Longitudinal reference length
         if self.l_ref_lon == -1:
-            self.l_ref_lon = self.S_w/(2*self.l_ref_lat)
+            self.l_ref_lon = self.S_w/(self.l_ref_lat)
 
 
     def delete_wing_segment(self, wing_segment_name):

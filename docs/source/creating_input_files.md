@@ -342,7 +342,7 @@ Describes an aircraft. Stored as a .json file
 >>>Longitudinal reference length. Defaults to the main wing average geometric chord.
 >>
 >>**"lateral_length" : float, optional**
->>>Lateral reference length. Defaults to the main wing semispan.
+>>>Lateral reference length. Defaults to the main wing span.
 >
 >**"controls" : dict, optional**
 >>Defines the controls of the aircraft. The number and names of controls are arbitrary and may be specified by the user. A simple aircraft, such as a chuck glider may have no controls, whereas a more complex aircraft may have controls for aileron, elevator, rudder, and multiple flaps. Defining the controls here can be thought of as deciding which control knobs/switches/sticks you want to make available to the pilot.
