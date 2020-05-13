@@ -97,7 +97,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"filename" : str, optional**
 >>>>File to save an image of the wireframe to. If specified, the wireframe will not be automatically displayed. If not specified, the wireframe will display to the user, after which it can be manually saved.
 >>
->>**"aero_derivatives" : dict, optional**
+>>**"derivatives" : dict, optional**
 >>>Calculates the stability, damping, and control derivatives at the current state.
 >>>
 >>>**"aircraft" : list, optional**

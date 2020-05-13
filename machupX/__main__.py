@@ -52,7 +52,7 @@ def _run_prescribed_analyses(input_filename):
             print("Done")
 
         # Aerodynamic derivatives
-        elif key == "aero_derivatives":
+        elif key == "derivatives":
             filename = params.pop("filename", input_filename.replace(".json", "_derivatives.json"))
 
             print("\nCalculating aerodynamic derivatives...", end='')
