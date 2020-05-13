@@ -840,7 +840,7 @@ class WingSegment:
         am0s = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
-                am0s[:,j] = self._airfoils[j].get_am0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_efficiency=self._flap_eff, trailing_flap_fraction=self._cp_flap_chord_frac)
+                am0s[:,j] = self._airfoils[j].get_am0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_flap_chord_frac)
             else:
                 am0s[:,j] = self._airfoils[j].get_am0(Rey=Rey, Mach=Mach)
 
@@ -1000,7 +1000,7 @@ class WingSegment:
         Cms = np.zeros((self.N,self._num_airfoils))
         for j in range(self._num_airfoils):
             if self._has_control_surface:
-                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_efficiency=self._Cm_delta_flap, trailing_flap_fraction=self._cp_flap_chord_frac)
+                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_moment_deriv=self._Cm_delta_flap)
             else:
                 Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach)
 

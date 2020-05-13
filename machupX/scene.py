@@ -582,7 +582,7 @@ class Scene:
         gamma_init = np.zeros(self._N)
 
         # Get solution
-        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=True, xtol=self._solver_convergence)
+        self._gamma, info, ier, mesg = sopt.fsolve(self._lifting_line_residual, gamma_init, full_output=True)#, xtol=self._solver_convergence)
 
         # Output fsolve info
         if verbose:
@@ -594,7 +594,8 @@ class Scene:
         if ier != 1:
             print("Scipy.optimize.fsolve was unable to find a solution.")
             print("Error message: {0}".format(mesg))
-            warnings.warn("Scipy solver failed. Reverting to nonlinear solution...")
+            print("Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
+            print("Scipy solver failed. Reverting to nonlinear solution...")
             return -1
 
         end_time = time.time()
@@ -823,7 +824,7 @@ class Scene:
                 break
 
         else: # If the loop exits normally, then everything is good
-            if verbose: print("Nonlinear solver successfully converged.")
+            if verbose or kwargs.get("scipy_failed", False): print("Nonlinear solver successfully converged.")
 
         end_time = time.time()
         return end_time-start_time
@@ -1326,7 +1327,7 @@ class Scene:
 
             # Nonlinear improvement
             if self._solver_type == "nonlinear" or fsolve_time == -1:
-                nonlinear_time = self._solve_nonlinear(**kwargs)
+                nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=fsolve_time==-1)
 
             if fsolve_time == -1:
                 fsolve_time = 0.0

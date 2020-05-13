@@ -361,8 +361,8 @@ Describes an aircraft. Stored as a .json file
 >>
 >>The input for a single airfoil has the following structure:
 >
->>**"<AIRFOIL_NAME>" : dict or string**
->>>Input for a given airfoil. As a dictionary, it should have the following keys. If this is a string, it should be the path to a JSON object containing the same information.
+>>**"<AIRFOIL_NAME>" : dict or str**
+>>>Input for a given airfoil. As a dictionary, it should have the following keys. If this is a string, it should be the path to a JSON object containing the same information. The name of the airfoil should not be repeated in the file; only the coefficients and geometry information should be listed.
 >>
 >>>**"type" : string**
 >>>>The type of data used to calculate section properties for the airfoil. Can be "linear", "database", or "poly_fit". For a "database" or "poly_fit" airfoil, "input_file" must be specified. A "linear" airfoil assumes linear lift and moment curves and a quadratic drag polar. In this case, the following keys must be defined. UNITS MAY NOT BE SPECIFIED BY THE USER FOR ANY AIRFOIL PARAMETERS. THESE VALUES MUST BE SPECIFIED IN THE UNITS GIVEN HERE.
