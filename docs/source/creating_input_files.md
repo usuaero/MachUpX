@@ -339,7 +339,7 @@ Describes an aircraft. Stored as a .json file
 >>>The reference area. Defaults to the main wing planform area.
 >>
 >>**"longitudinal_length" : float, optional**
->>>Longitudinal reference length. Defaults to the main wing average geometric chord.
+>>>Longitudinal reference length. Defaults to the reference area divided by the lateral reference length.
 >>
 >>**"lateral_length" : float, optional**
 >>>Lateral reference length. Defaults to the main wing span.
