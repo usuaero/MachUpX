@@ -116,13 +116,13 @@ if __name__=="__main__":
 
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", "test/mux_airplane.json", state=state, control_state=control_state)
-    #scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    #scene.add_aircraft("plane", "test/mux_airplane.json", state=state, control_state=control_state)
+    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
 
-    ## Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True, stab_frame=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
+    # Solve forces
+    FM = scene.solve_forces(non_dimensional=False, verbose=True, stab_frame=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
 
-    scene.export_pylot_model(set_accel_derivs=True, controller_type="keyboard")
+    #scene.export_pylot_model(set_accel_derivs=True, controller_type="keyboard")
