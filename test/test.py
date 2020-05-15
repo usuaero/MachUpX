@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve",
+            "type" : "nonlinear",
         },
         "scene" : {
             "atmosphere" : {
@@ -46,6 +46,7 @@ if __name__=="__main__":
                 "is_main" : True,
                 "semispan" : 4.0,
                 "airfoil" : "NACA_4410",
+                "sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
@@ -129,11 +130,11 @@ if __name__=="__main__":
     #scene.display_wireframe(show_vortices=False)
 
     # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True, stab_frame=True)
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Pitch trim
-    pitch_trim = scene.aircraft_pitch_trim(verbose=True)
-    print(json.dumps(pitch_trim, indent=4))
+    ## Pitch trim
+    #pitch_trim = scene.aircraft_pitch_trim(verbose=True)
+    #print(json.dumps(pitch_trim, indent=4))
 
     #scene.export_pylot_model(set_accel_derivs=True, controller_type="keyboard")

@@ -548,12 +548,7 @@ class Scene:
         self._P0_joint_u_inf = P0_joint_v_inf/np.linalg.norm(P0_joint_v_inf, axis=-1, keepdims=True)
         self._P1_joint_u_inf = P1_joint_v_inf/np.linalg.norm(P1_joint_v_inf, axis=-1, keepdims=True)
 
-        self._solved = False
-
-
-    def _calc_V_ji(self):
-        # Calculates the influence of each horseshoe vortex on each control point, divided by the vortex strength
-
+        # Calculate V_ji
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
         denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
         V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis])
@@ -564,6 +559,8 @@ class Scene:
 
         # Sum and transpose
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
+
+        self._solved = False
 
 
     def _solve_w_scipy(self, **kwargs):
@@ -576,7 +573,6 @@ class Scene:
 
         # Set up flow for what won't change with changes in vorticity distribution
         self._calc_invariant_flow_properties()
-        self._calc_V_ji()
 
         # Initial guess
         gamma_init = np.zeros(self._N)
@@ -714,19 +710,21 @@ class Scene:
         # Calculate invariant properties
         self._calc_invariant_flow_properties()
 
-        # Calculate V_ji
-        self._calc_V_ji()
+        # Get effective freestream magnitude
+        v_inf_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
+        V_inf_eff = np.sqrt(np.einsum('ij,ij->i', v_inf_eff, v_inf_eff))
 
         # A matrix
+        CL_a = self._R_CL_a*self._CLa
         A = np.zeros((self._N,self._N))
-        V_ji_dot_u_n = np.einsum('ijk,ijk->ij', self._V_ji, self._u_n[:,np.newaxis])
-        A[:,:] = -(self._R_CL_a*self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
+        V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n)
+        A[:,:] = -(CL_a*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
-        u_inf_x_dl = np.cross(self._cp_u_inf, self._dl)
+        u_inf_x_dl = np.cross(v_inf_eff/V_inf_eff[:,np.newaxis], self._dl)
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = self._cp_V_inf*self._CLa*self._dS*(self._alpha_approx-self._aL0+self._esp_f_delta_f-self._delta_a_L0)
+        b = V_inf_eff*CL_a*self._dS*(self._alpha_approx-self._aL0+self._esp_f_delta_f-self._delta_a_L0)
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
@@ -755,6 +753,9 @@ class Scene:
         # Airfoil coefs
         C_LRe = np.zeros(self._N)
         C_LM = np.zeros(self._N)
+
+        # Calculate the derivative of induced velocity wrt vortex strength
+        P_V_ji = np.matmul(self._P_eff, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
 
         iteration = 0
         error = 100
@@ -789,15 +790,15 @@ class Scene:
                     index += num_cps
 
             # Intermediate calcs
-            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], self._V_ji)
+            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], P_V_ji)
 
             # Caclulate Jacobian
-            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(self._V_ji, self._dl)))
+            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(P_V_ji, self._dl)))
 
             if not phillips:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
-            CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', self._V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
+            CL_gamma_alpha = (self._R_CL_a*self._CLa)[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', P_V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', P_V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
             CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
             CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_eff)[:,np.newaxis]*v_iji
 

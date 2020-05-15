@@ -108,15 +108,16 @@ def test_sideslip():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-20.98927471159612)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-1.5652589077084862)<1e-10
-    assert abs(FM["test_plane"]["total"]["FS"]+4.058202697319103)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+0.6173859079205253)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fy"]+4.134560393266242)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]+21.023628195310923)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mx"]+3.2164216225128954)<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]+13.079933766152601)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mz"]-12.292006991932118)<1e-10
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    assert abs(FM["test_plane"]["total"]["FL"]-20.94156333437601)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-1.5649021699745385)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"]+4.054215389085199)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.6189035316196642)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"]+4.13055987928926)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+20.97594073248021)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+3.214692050656253)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+13.059105060454414)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]-12.279858552678329)<1e-10
 
 
 def test_angular_rotation():
@@ -145,15 +146,16 @@ def test_angular_rotation():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    assert abs(FM["test_plane"]["total"]["FL"]-21.595413512581455)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-1.5716677058980306)<1e-10
-    assert abs(FM["test_plane"]["total"]["FS"]+3.8272472500510584)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+0.6147079962137757)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fy"]+3.904256872993537)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]+21.63004295000927)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mx"]+2.9270807241967276)<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]+14.784258067261103)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mz"]-11.595800975104686)<1e-10
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    assert abs(FM["test_plane"]["total"]["FL"]-21.54799507617886)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-1.5713237939345306)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"]+3.8228634171595606)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.6162489366718589)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"]+3.8998610490311862)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+21.582649420795637)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+2.924780737323989)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+14.7643635669839723)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]-11.58247691212459)<1e-10
 
 
 def test_flap_deflection():
@@ -182,16 +184,15 @@ def test_flap_deflection():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    print(json.dumps(FM["test_plane"]["total"], indent=4))
-    assert abs(FM["test_plane"]["total"]["FL"]-15.371272016157597)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-2.114220201255428)<1e-10
-    assert abs(FM["test_plane"]["total"]["FS"]-0.6431730372613097)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+1.5764826183920033)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fy"]-0.6431730372613097)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]+15.4356934735053)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mx"]+9.664232700312661)<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]-2.8096839612214284)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mz"]+0.24131595145447493)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-15.371272228307886)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-2.1142210894279376)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"]-0.642970343115379)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+1.5764834986195249)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"]-0.642970343115379)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+15.435693716523126)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+9.66438577881925)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]-2.809683822032028)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]+0.24070673598985626)<1e-10
 
 
 def test_coefficients():
