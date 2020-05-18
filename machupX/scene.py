@@ -810,12 +810,14 @@ class Scene:
 
                     # Get lift coefficient and lift slopes
                     self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    self._CL[cur_slice] = segment_object.get_cp_CL(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
                     C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
                     C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                     index += num_cps
 
             # Intermediate calcs
+            self._correct_CL_for_sweep()
             v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], P_V_ji)
 
             # Caclulate Jacobian
@@ -825,7 +827,7 @@ class Scene:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             CL_gamma_alpha = (self._R_CL_a*self._CLa)[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', P_V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', P_V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
-            CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
+            CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar_swept/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
             CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_eff)[:,np.newaxis]*v_iji
 
             if phillips:

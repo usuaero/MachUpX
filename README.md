@@ -19,6 +19,8 @@ J. T. Reid and D. F. Hunsaker, "A General Approach to Lifting-Line Theory, Appli
 ## Documentation
 Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Please refer to the documentation for instructions on installation, etc. Specific help with package functions can also be found in the docstrings. Please read the documentation thoroughly before contacting the development team.
 
+Check out our introduction video [here](https://youtu.be/KLZWTqD8GhM).
+
 ## Support
 There is an active MachUp discussion forum on [Google Groups](https://groups.google.com/forum/#!categories/machup_forum). Help on using MachUpX can be found there.
 For bugs, create a new issue on the Github repo.

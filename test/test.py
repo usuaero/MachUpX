@@ -12,12 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "linear",
-        },
-        "scene" : {
-            "atmosphere" : {
-                "V_wind" : "test/scene_tests/wind_field.csv"
-            }
+            "type" : "nonlinear",
         }
     }
 
@@ -113,7 +108,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 0.0,
+        "alpha" : 5.0,
         "beta" : 0.0
     }
     control_state = {
