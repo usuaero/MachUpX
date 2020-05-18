@@ -173,9 +173,9 @@ def test_atmos_wind_field_from_file():
 
     scene = MX.Scene(input_dict)
 
-    positions = [[500,500,-500],
-                 [0,0,-1000],
-                 [500,500,0]]
+    positions = [np.array([500,500,-500]),
+                 np.array([0,0,-1000]),
+                 np.array([500,500,0])]
 
     winds = [[100,100,100],
              [100,100,100],

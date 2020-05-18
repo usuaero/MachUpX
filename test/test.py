@@ -12,10 +12,11 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear",
+            "type" : "linear",
         },
         "scene" : {
             "atmosphere" : {
+                "V_wind" : "test/scene_tests/wind_field.csv"
             }
         }
     }
@@ -38,7 +39,7 @@ if __name__=="__main__":
         "airfoils" : {
             "NACA_4410" : "test/NACA_4410.json",
             "NACA_0010" : "test/NACA_0010.json"
-        },#"test/airfoils_for_testing.json",
+        },
         "wings" : {
             "main_wing" : {
                 "ID" : 1,
@@ -50,7 +51,6 @@ if __name__=="__main__":
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
-                    "tip_span" : 0.95,
                     "control_mixing" : {
                         "aileron" : 1.0
                     }
@@ -71,7 +71,7 @@ if __name__=="__main__":
                 },
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
-                "twist" : -3.95,
+                "twist" : -2.1,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -126,6 +126,11 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     #scene.add_aircraft("plane", "test/mux_airplane.json", state=state, control_state=control_state)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    second_state = {
+        "velocity" : 100.0,
+        "position" : [0.0, 100.0, 0.0]
+    }
+    scene.add_aircraft("plane2", airplane_dict, state=second_state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
 
