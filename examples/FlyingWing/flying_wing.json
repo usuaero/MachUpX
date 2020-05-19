@@ -48,8 +48,8 @@
             },
             "grid" : {
                 "N" : 50,
-                "flap_edge_cluster" : true
-
+                "flap_edge_cluster" : true,
+                "reid_corrections" : true
             }
         },
         "winglets" : {
@@ -68,7 +68,8 @@
                        [1.0, 0.2]],
             "airfoil" : "NACA_0010",
             "grid" : {
-                "N" : 40
+                "N" : 40,
+                "reid_corrections" : true
             }
         }
     }

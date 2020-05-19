@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear",
+            "type" : "linear",
         }
     }
 
@@ -41,7 +41,7 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "semispan" : 4.0,
-                "airfoil" : "NACA_4410",
+                "airfoil" : "NACA_0010",
                 "sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
@@ -119,13 +119,7 @@ if __name__=="__main__":
 
     # Load scene with Jackson's corrections
     scene = MX.Scene(input_dict)
-    #scene.add_aircraft("plane", "test/mux_airplane.json", state=state, control_state=control_state)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-    second_state = {
-        "velocity" : 100.0,
-        "position" : [0.0, 100.0, 0.0]
-    }
-    scene.add_aircraft("plane2", airplane_dict, state=second_state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
 
@@ -133,8 +127,11 @@ if __name__=="__main__":
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    ## Pitch trim
-    #pitch_trim = scene.aircraft_pitch_trim(verbose=True)
-    #print(json.dumps(pitch_trim, indent=4))
+    new_scene = MX.Scene(input_dict)
+    airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.0
+    new_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    new_scene.solve_forces()
 
-    #scene.export_pylot_model(set_accel_derivs=True, controller_type="keyboard")
+    plt.figure()
+    plt.plot(scene._dS-new_scene._dS)
+    plt.show()

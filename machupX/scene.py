@@ -727,11 +727,11 @@ class Scene:
 
 
     def _solve_linear(self, **kwargs):
-        # Determines the vortex strengths of all horseshoe vortices in the scene using the linearize equations
+        # Determines the vortex strengths of all horseshoe vortices in the scene using the linearized equations
 
+        start_time = time.time()
         verbose = kwargs.get("verbose", False)
         if verbose: print("Running linear solver...")
-        start_time = time.time()
 
         # Calculate invariant properties
         self._calc_invariant_flow_properties()
