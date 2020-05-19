@@ -40,9 +40,11 @@ if __name__=="__main__":
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
-                "semispan" : 4.0,
+                "semispan" : 2.0,
+                "chord" : ["elliptic", 2.0],
                 "airfoil" : "NACA_0010",
-                "sweep" : 45.0,
+                "ac_offset" : "kuchemann",
+                #"sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
@@ -121,17 +123,8 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=False)
+    scene.display_wireframe(show_vortices=True)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-
-    new_scene = MX.Scene(input_dict)
-    airplane_dict["wings"]["main_wing"]["control_surface"]["root_span"] = 0.0
-    new_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-    new_scene.solve_forces()
-
-    plt.figure()
-    plt.plot(scene._dS-new_scene._dS)
-    plt.show()

@@ -482,11 +482,6 @@ class WingSegment:
                 warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
                 ac_offset_data = 0.0
 
-            # If the sweep is zero, don't calculate an offset
-            elif abs(sweep_data) < 1e-10:
-                warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of zero sweep. Reverting to no offset.")
-                ac_offset_data = 0.0
-
             # Calculate offset as a fraction of the local chord
             else:
                 
@@ -501,19 +496,23 @@ class WingSegment:
 
                 # Calculate constants
                 tan_k = m.tan(sweep_eff)
-                sweep_div = tan_k/sweep_eff
+                try:
+                    sweep_div = tan_k/sweep_eff
+                except ZeroDivisionError:
+                    sweep_div = 1.0
                 exp = m.pi/(4.0*(m.pi+2.0*abs(sweep_eff)))
                 K = (1+(CLa_root*m.cos(sweep_eff)/(m.pi*R_A))**2)**exp
 
-                # Locations in span; we'll calculate the effective ac at the node locations and let MachUp do linear interpolation to get to control point locations.
+                # Locations in span; we'll calculate the effective ac at the node locations and let MachUpX do linear interpolation to get to control point locations.
                 if self.side == "left":
                     locs = np.copy(self.node_span_locs)[::-1]
                 else:
                     locs = np.copy(self.node_span_locs)
                 z = locs*self.b
                 c = self.get_chord(locs)
-                cen_inf = z/c
-                tip_inf = (self.b-z)/c
+                with np.errstate(divide='ignore', invalid='ignore'): # If the chord goes to zero at the tip
+                    cen_inf = np.where(c != 0.0, z/c, 0.0)
+                    tip_inf = np.where(c != 0.0, (self.b-z)/c, 0.0)
 
                 # Get hyperbolic interpolation
                 two_pi = 2.0*m.pi
