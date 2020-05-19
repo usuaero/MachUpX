@@ -859,6 +859,13 @@ class Scene:
         return end_time-start_time
 
 
+    def _get_frames(self, **kwargs):
+        body_frame = kwargs.get("body_frame", True)
+        stab_frame = kwargs.get("stab_frame", False)
+        wind_frame = kwargs.get("wind_frame", True)
+        return body_frame, stab_frame, wind_frame
+
+
     def _integrate_forces_and_moments(self, **kwargs):
         # Determines the forces and moments on each lifting surface
         start_time = time.time()
@@ -867,9 +874,7 @@ class Scene:
         non_dimensional = kwargs.get("non_dimensional", True)
         dimensional = kwargs.get("dimensional", True)
         report_by_segment = kwargs.get("report_by_segment", False)
-        body_frame = kwargs.get("body_frame", True)
-        stab_frame = kwargs.get("stab_frame", False)
-        wind_frame = kwargs.get("wind_frame", True)
+        body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
 
         # Get velocities
         self._calc_v_i()
@@ -1594,6 +1599,15 @@ class Scene:
         filename : str
             File to export the results to. Defaults to no file.
 
+        body_frame : boolean, optional
+            Whether to output results in the body-fixed frame. Defaults to True.
+
+        stab_frame : boolean, optional
+            Whether to output results in the stability frame. Defaults to False.
+
+        wind_frame : boolean, optional
+            Whether to output results in the wind frame. Defaults to True.
+
         Returns
         -------
         dict
@@ -1607,13 +1621,13 @@ class Scene:
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
             # Determine stability derivatives
-            derivs[aircraft_name]["stability"] = self.aircraft_stability_derivatives(aircraft=aircraft_name)[aircraft_name]
+            derivs[aircraft_name]["stability"] = self.aircraft_stability_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
         
             # Determine damping derivatives
-            derivs[aircraft_name]["damping"] = self.aircraft_damping_derivatives(aircraft=aircraft_name)[aircraft_name]
+            derivs[aircraft_name]["damping"] = self.aircraft_damping_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
 
             # Determine control derivatives
-            derivs[aircraft_name]["control"] = self.aircraft_control_derivatives(aircraft=aircraft_name)[aircraft_name]
+            derivs[aircraft_name]["control"] = self.aircraft_control_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
 
         # Export to file
         filename = kwargs.get("filename", None)
@@ -1624,19 +1638,28 @@ class Scene:
         return derivs
 
 
-    def aircraft_stability_derivatives(self, aircraft=None, dtheta=0.5):
+    def aircraft_stability_derivatives(self, dtheta=0.5, **kwargs):
         """Determines the stability derivatives at the current state. Uses 
         a central difference sceme.
 
         Parameters
         ----------
         aircraft : str or list
-            The name(s) of the aircraft to determine the aerodynamic derivatives 
+            The name(s) of the aircraft to determine the stability derivatives 
             of. Defaults to all aircraft in the scene.
 
         dtheta : float
             The finite difference in degrees used to perturb alpha and beta
             and determine the derivatives. Defaults to 0.5
+
+        body_frame : boolean, optional
+            Whether to output results in the body-fixed frame. Defaults to True.
+
+        stab_frame : boolean, optional
+            Whether to output results in the stability frame. Defaults to False.
+
+        wind_frame : boolean, optional
+            Whether to output results in the wind frame. Defaults to True.
 
         Returns
         -------
@@ -1646,14 +1669,10 @@ class Scene:
         derivs= {}
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = list(self._airplanes.keys())
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+        aircraft_names = self._get_aircraft(**kwargs)
+
+        # Determine output frames
+        body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1662,47 +1681,70 @@ class Scene:
 
             # Perturb forward in alpha
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0+dtheta)
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dalpha_fwd = self._FM
 
             # Perturb backward in alpha
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0-dtheta)
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dalpha_bwd = self._FM
 
             # Perturb forward in beta
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0+dtheta) # We have to reset alpha on this one
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dbeta_fwd = self._FM
 
             # Perturb backward in beta
             self._airplanes[aircraft_name].set_aerodynamic_state(beta=beta_0-dtheta)
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dbeta_bwd = self._FM
 
-            # Derivatives with respect to alpha
             diff = 1/(2*np.radians(dtheta)) # The derivative is in radians
 
-            derivs[aircraft_name]["CL,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CL"]-FM_dalpha_bwd[aircraft_name]["total"]["CL"])*diff
-            derivs[aircraft_name]["CD,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CD"]-FM_dalpha_bwd[aircraft_name]["total"]["CD"])*diff
-            derivs[aircraft_name]["CS,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CS"]-FM_dalpha_bwd[aircraft_name]["total"]["CS"])*diff
-            derivs[aircraft_name]["Cx,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cx"]-FM_dalpha_bwd[aircraft_name]["total"]["Cx"])*diff
-            derivs[aircraft_name]["Cy,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cy"]-FM_dalpha_bwd[aircraft_name]["total"]["Cy"])*diff
-            derivs[aircraft_name]["Cz,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cz"]-FM_dalpha_bwd[aircraft_name]["total"]["Cz"])*diff
-            derivs[aircraft_name]["Cl,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cl"]-FM_dalpha_bwd[aircraft_name]["total"]["Cl"])*diff
-            derivs[aircraft_name]["Cm,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm"])*diff
-            derivs[aircraft_name]["Cn,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn"])*diff
+            if body_frame:
+                derivs[aircraft_name]["Cx,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cx"]-FM_dalpha_bwd[aircraft_name]["total"]["Cx"])*diff
+                derivs[aircraft_name]["Cy,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cy"]-FM_dalpha_bwd[aircraft_name]["total"]["Cy"])*diff
+                derivs[aircraft_name]["Cz,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cz"]-FM_dalpha_bwd[aircraft_name]["total"]["Cz"])*diff
+                derivs[aircraft_name]["Cl,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cl"]-FM_dalpha_bwd[aircraft_name]["total"]["Cl"])*diff
+                derivs[aircraft_name]["Cm,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm"])*diff
+                derivs[aircraft_name]["Cn,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn"])*diff
 
-            # Derivatives with respect to beta
-            derivs[aircraft_name]["CL,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CL"]-FM_dbeta_bwd[aircraft_name]["total"]["CL"])*diff
-            derivs[aircraft_name]["CD,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CD"]-FM_dbeta_bwd[aircraft_name]["total"]["CD"])*diff
-            derivs[aircraft_name]["CS,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CS"]-FM_dbeta_bwd[aircraft_name]["total"]["CS"])*diff
-            derivs[aircraft_name]["Cx,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx"])*diff
-            derivs[aircraft_name]["Cy,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy"])*diff
-            derivs[aircraft_name]["Cz,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz"])*diff
-            derivs[aircraft_name]["Cl,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl"])*diff
-            derivs[aircraft_name]["Cm,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm"])*diff
-            derivs[aircraft_name]["Cn,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn"])*diff
+                derivs[aircraft_name]["Cx,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx"])*diff
+                derivs[aircraft_name]["Cy,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy"])*diff
+                derivs[aircraft_name]["Cz,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz"])*diff
+                derivs[aircraft_name]["Cl,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl"])*diff
+                derivs[aircraft_name]["Cm,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm"])*diff
+                derivs[aircraft_name]["Cn,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn"])*diff
+
+            if stab_frame:
+                derivs[aircraft_name]["Cx_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cx_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cx_s"])*diff
+                derivs[aircraft_name]["Cy_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cy_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cy_s"])*diff
+                derivs[aircraft_name]["Cz_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cz_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cz_s"])*diff
+                derivs[aircraft_name]["Cl_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cl_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cl_s"])*diff
+                derivs[aircraft_name]["Cm_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm_s"])*diff
+                derivs[aircraft_name]["Cn_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn_s"])*diff
+
+                derivs[aircraft_name]["Cx_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx_s"])*diff
+                derivs[aircraft_name]["Cy_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy_s"])*diff
+                derivs[aircraft_name]["Cz_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz_s"])*diff
+                derivs[aircraft_name]["Cl_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_s"])*diff
+                derivs[aircraft_name]["Cm_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_s"])*diff
+                derivs[aircraft_name]["Cn_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_s"])*diff
+
+            if wind_frame:
+                derivs[aircraft_name]["CL,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CL"]-FM_dalpha_bwd[aircraft_name]["total"]["CL"])*diff
+                derivs[aircraft_name]["CD,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CD"]-FM_dalpha_bwd[aircraft_name]["total"]["CD"])*diff
+                derivs[aircraft_name]["CS,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CS"]-FM_dalpha_bwd[aircraft_name]["total"]["CS"])*diff
+                derivs[aircraft_name]["Cl_w,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cl_w"]-FM_dalpha_bwd[aircraft_name]["total"]["Cl_w"])*diff
+                derivs[aircraft_name]["Cm_w,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm_w"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm_w"])*diff
+                derivs[aircraft_name]["Cn_w,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn_w"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn_w"])*diff
+
+                derivs[aircraft_name]["CL,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CL"]-FM_dbeta_bwd[aircraft_name]["total"]["CL"])*diff
+                derivs[aircraft_name]["CD,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CD"]-FM_dbeta_bwd[aircraft_name]["total"]["CD"])*diff
+                derivs[aircraft_name]["CS,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CS"]-FM_dbeta_bwd[aircraft_name]["total"]["CS"])*diff
+                derivs[aircraft_name]["Cl_w,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_w"])*diff
+                derivs[aircraft_name]["Cm_w,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_w"])*diff
+                derivs[aircraft_name]["Cn_w,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_w"])*diff
         
             # Reset aerodynamic state
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0)
@@ -1711,7 +1753,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_damping_derivatives(self, aircraft=None, dtheta_dot=0.005):
+    def aircraft_damping_derivatives(self, aircraft=None, dtheta_dot=0.005, **kwargs):
         """Determines the damping derivatives at the current state. Uses 
         a central difference sceme. Note, the damping derivatives are non-
         dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Note
@@ -1721,12 +1763,21 @@ class Scene:
         Parameters
         ----------
         aircraft : str or list
-            The name(s) of the aircraft to determine the aerodynamic derivatives 
+            The name(s) of the aircraft to determine the damping derivatives 
             of. Defaults to all aircraft in the scene.
 
         dtheta_dot : float
             The finite difference used to perturb the angular rates of the aircraft
             and determine the derivatives. Given in radians per second. Defaults to 0.005.
+
+        body_frame : boolean, optional
+            Whether to output results in the body-fixed frame. Defaults to True.
+
+        stab_frame : boolean, optional
+            Whether to output results in the stability frame. Defaults to False.
+
+        wind_frame : boolean, optional
+            Whether to output results in the wind frame. Defaults to True.
 
         Returns
         -------
@@ -1736,14 +1787,10 @@ class Scene:
         derivs = {}
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = list(self._airplanes.keys())
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+        aircraft_names = self._get_aircraft(**kwargs)
+
+        # Determine output frames
+        body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1774,37 +1821,37 @@ class Scene:
             # Perturb forward in roll rate
             omega_pert_p_fwd = omega_0+p_pert
             aircraft_object.w = omega_pert_p_fwd
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dp_fwd = self._FM
 
             # Perturb backward in roll rate
             omega_pert_p_bwd = omega_0-p_pert
             aircraft_object.w = omega_pert_p_bwd
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dp_bwd = self._FM
 
             # Perturb forward in pitch rate
             omega_pert_q_fwd = omega_0+q_pert
             aircraft_object.w = omega_pert_q_fwd
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dq_fwd = self._FM
 
             # Perturb backward in pitch rate
             omega_pert_q_bwd = omega_0-q_pert
             aircraft_object.w = omega_pert_q_bwd
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dq_bwd = self._FM
 
             # Perturb forward in yaw rate
             omega_pert_r_fwd = omega_0+r_pert
             aircraft_object.w = omega_pert_r_fwd
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dr_fwd = self._FM
 
             # Perturb backward in yaw rate
             omega_pert_r_bwd = omega_0-r_pert
             aircraft_object.w = omega_pert_r_bwd
-            self.solve_forces(dimensional=False)
+            self.solve_forces(dimensional=False, **kwargs)
             FM_dr_bwd = self._FM
 
             # Reset state
@@ -1817,55 +1864,97 @@ class Scene:
             lon_non_dim = 2*vel_0/c
             dx_inv = 1/(2*dtheta_dot)
 
-            # With respect to roll rate
-            derivs[aircraft_name]["CL,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["CL"]-FM_dp_bwd[aircraft_name]["total"]["CL"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["CD,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["CD"]-FM_dp_bwd[aircraft_name]["total"]["CD"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["CS,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["CS"]-FM_dp_bwd[aircraft_name]["total"]["CS"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cx,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cx"]-FM_dp_bwd[aircraft_name]["total"]["Cx"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cy,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cy"]-FM_dp_bwd[aircraft_name]["total"]["Cy"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cz,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cz"]-FM_dp_bwd[aircraft_name]["total"]["Cz"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cl,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cl"]-FM_dp_bwd[aircraft_name]["total"]["Cl"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cm,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cm"]-FM_dp_bwd[aircraft_name]["total"]["Cm"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cn,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cn"]-FM_dp_bwd[aircraft_name]["total"]["Cn"])*dx_inv*lat_non_dim
+            if body_frame:
+                derivs[aircraft_name]["Cx,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cx"]-FM_dp_bwd[aircraft_name]["total"]["Cx"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cy,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cy"]-FM_dp_bwd[aircraft_name]["total"]["Cy"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cz,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cz"]-FM_dp_bwd[aircraft_name]["total"]["Cz"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cl,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cl"]-FM_dp_bwd[aircraft_name]["total"]["Cl"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cm,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cm"]-FM_dp_bwd[aircraft_name]["total"]["Cm"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cn,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cn"]-FM_dp_bwd[aircraft_name]["total"]["Cn"])*dx_inv*lat_non_dim
 
-            # With respect to pitch rate*dx_inv
-            derivs[aircraft_name]["CL,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["CL"]-FM_dq_bwd[aircraft_name]["total"]["CL"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["CD,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["CD"]-FM_dq_bwd[aircraft_name]["total"]["CD"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["CS,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["CS"]-FM_dq_bwd[aircraft_name]["total"]["CS"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["Cx,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cx"]-FM_dq_bwd[aircraft_name]["total"]["Cx"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["Cy,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cy"]-FM_dq_bwd[aircraft_name]["total"]["Cy"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["Cz,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cz"]-FM_dq_bwd[aircraft_name]["total"]["Cz"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["Cl,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cl"]-FM_dq_bwd[aircraft_name]["total"]["Cl"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["Cm,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cm"]-FM_dq_bwd[aircraft_name]["total"]["Cm"])*dx_inv*lon_non_dim
-            derivs[aircraft_name]["Cn,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cn"]-FM_dq_bwd[aircraft_name]["total"]["Cn"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cx,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cx"]-FM_dq_bwd[aircraft_name]["total"]["Cx"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cy,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cy"]-FM_dq_bwd[aircraft_name]["total"]["Cy"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cz,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cz"]-FM_dq_bwd[aircraft_name]["total"]["Cz"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cl,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cl"]-FM_dq_bwd[aircraft_name]["total"]["Cl"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cm,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cm"]-FM_dq_bwd[aircraft_name]["total"]["Cm"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cn,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cn"]-FM_dq_bwd[aircraft_name]["total"]["Cn"])*dx_inv*lon_non_dim
 
-            # With respect to yaw rate*dx_inv
-            derivs[aircraft_name]["CL,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["CL"]-FM_dr_bwd[aircraft_name]["total"]["CL"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["CD,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["CD"]-FM_dr_bwd[aircraft_name]["total"]["CD"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["CS,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["CS"]-FM_dr_bwd[aircraft_name]["total"]["CS"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cx,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cx"]-FM_dr_bwd[aircraft_name]["total"]["Cx"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cy,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cy"]-FM_dr_bwd[aircraft_name]["total"]["Cy"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cz,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cz"]-FM_dr_bwd[aircraft_name]["total"]["Cz"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cl,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cl"]-FM_dr_bwd[aircraft_name]["total"]["Cl"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cm,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cm"]-FM_dr_bwd[aircraft_name]["total"]["Cm"])*dx_inv*lat_non_dim
-            derivs[aircraft_name]["Cn,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cn"]-FM_dr_bwd[aircraft_name]["total"]["Cn"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cx,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cx"]-FM_dr_bwd[aircraft_name]["total"]["Cx"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cy,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cy"]-FM_dr_bwd[aircraft_name]["total"]["Cy"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cz,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cz"]-FM_dr_bwd[aircraft_name]["total"]["Cz"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cl,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cl"]-FM_dr_bwd[aircraft_name]["total"]["Cl"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cm,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cm"]-FM_dr_bwd[aircraft_name]["total"]["Cm"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cn,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cn"]-FM_dr_bwd[aircraft_name]["total"]["Cn"])*dx_inv*lat_non_dim
+
+            if stab_frame:
+                derivs[aircraft_name]["Cx_s,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cx_s"]-FM_dp_bwd[aircraft_name]["total"]["Cx_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cy_s,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cy_s"]-FM_dp_bwd[aircraft_name]["total"]["Cy_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cz_s,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cz_s"]-FM_dp_bwd[aircraft_name]["total"]["Cz_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cl_s,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cl_s"]-FM_dp_bwd[aircraft_name]["total"]["Cl_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cm_s,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cm_s"]-FM_dp_bwd[aircraft_name]["total"]["Cm_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cn_s,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cn_s"]-FM_dp_bwd[aircraft_name]["total"]["Cn_s"])*dx_inv*lat_non_dim
+
+                derivs[aircraft_name]["Cx_s,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cx_s"]-FM_dq_bwd[aircraft_name]["total"]["Cx_s"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cy_s,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cy_s"]-FM_dq_bwd[aircraft_name]["total"]["Cy_s"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cz_s,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cz_s"]-FM_dq_bwd[aircraft_name]["total"]["Cz_s"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cl_s,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cl_s"]-FM_dq_bwd[aircraft_name]["total"]["Cl_s"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cm_s,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cm_s"]-FM_dq_bwd[aircraft_name]["total"]["Cm_s"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cn_s,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cn_s"]-FM_dq_bwd[aircraft_name]["total"]["Cn_s"])*dx_inv*lon_non_dim
+
+                derivs[aircraft_name]["Cx_s,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cx_s"]-FM_dr_bwd[aircraft_name]["total"]["Cx_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cy_s,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cy_s"]-FM_dr_bwd[aircraft_name]["total"]["Cy_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cz_s,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cz_s"]-FM_dr_bwd[aircraft_name]["total"]["Cz_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cl_s,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cl_s"]-FM_dr_bwd[aircraft_name]["total"]["Cl_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cm_s,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cm_s"]-FM_dr_bwd[aircraft_name]["total"]["Cm_s"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cn_s,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cn_s"]-FM_dr_bwd[aircraft_name]["total"]["Cn_s"])*dx_inv*lat_non_dim
+
+            if wind_frame:
+                derivs[aircraft_name]["CL,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["CL"]-FM_dq_bwd[aircraft_name]["total"]["CL"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["CD,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["CD"]-FM_dq_bwd[aircraft_name]["total"]["CD"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["CS,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["CS"]-FM_dq_bwd[aircraft_name]["total"]["CS"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cl_w,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cl_w"]-FM_dp_bwd[aircraft_name]["total"]["Cl_w"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cm_w,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cm_w"]-FM_dp_bwd[aircraft_name]["total"]["Cm_w"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cn_w,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["Cn_w"]-FM_dp_bwd[aircraft_name]["total"]["Cn_w"])*dx_inv*lat_non_dim
+
+                derivs[aircraft_name]["CL,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["CL"]-FM_dp_bwd[aircraft_name]["total"]["CL"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["CD,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["CD"]-FM_dp_bwd[aircraft_name]["total"]["CD"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["CS,pbar"] = (FM_dp_fwd[aircraft_name]["total"]["CS"]-FM_dp_bwd[aircraft_name]["total"]["CS"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cl_w,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cl_w"]-FM_dq_bwd[aircraft_name]["total"]["Cl_w"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cm_w,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cm_w"]-FM_dq_bwd[aircraft_name]["total"]["Cm_w"])*dx_inv*lon_non_dim
+                derivs[aircraft_name]["Cn_w,qbar"] = (FM_dq_fwd[aircraft_name]["total"]["Cn_w"]-FM_dq_bwd[aircraft_name]["total"]["Cn_w"])*dx_inv*lon_non_dim
+
+                derivs[aircraft_name]["CL,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["CL"]-FM_dr_bwd[aircraft_name]["total"]["CL"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["CD,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["CD"]-FM_dr_bwd[aircraft_name]["total"]["CD"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["CS,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["CS"]-FM_dr_bwd[aircraft_name]["total"]["CS"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cl_w,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cl_w"]-FM_dr_bwd[aircraft_name]["total"]["Cl_w"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cm_w,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cm_w"]-FM_dr_bwd[aircraft_name]["total"]["Cm_w"])*dx_inv*lat_non_dim
+                derivs[aircraft_name]["Cn_w,rbar"] = (FM_dr_fwd[aircraft_name]["total"]["Cn_w"]-FM_dr_bwd[aircraft_name]["total"]["Cn_w"])*dx_inv*lat_non_dim
 
         return derivs
 
 
-    def aircraft_control_derivatives(self, aircraft=None, dtheta=0.5):
+    def aircraft_control_derivatives(self, aircraft=None, dtheta=0.5, **kwargs):
         """Determines the control derivatives at the current state. Uses 
         a central difference sceme.
 
         Parameters
         ----------
         aircraft : str or list
-            The name(s) of the aircraft to determine the aerodynamic derivatives 
+            The name(s) of the aircraft to determine the control derivatives 
             of. Defaults to all aircraft in the scene.
 
         dtheta : float
             The finite difference used to perturb the controls in degrees
             and determine the derivatives. Defaults to 0.5
+
+        body_frame : boolean, optional
+            Whether to output results in the body-fixed frame. Defaults to True.
+
+        stab_frame : boolean, optional
+            Whether to output results in the stability frame. Defaults to False.
+
+        wind_frame : boolean, optional
+            Whether to output results in the wind frame. Defaults to True.
 
         Returns
         -------
@@ -1876,14 +1965,10 @@ class Scene:
         derivs = {}
 
         # Specify the aircraft
-        if aircraft is None:
-            aircraft_names = self._airplanes.keys()
-        elif isinstance(aircraft, list):
-            aircraft_names = copy.copy(aircraft)
-        elif isinstance(aircraft, str):
-            aircraft_names = [aircraft]
-        else:
-            raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
+        aircraft_names = self._get_aircraft(**kwargs)
+
+        # Determine output frames
+        body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1899,12 +1984,12 @@ class Scene:
                 #Perturb forward
                 pert_control_state[control_name] = curr_control_val + dtheta
                 aircraft_object.set_control_state(control_state=pert_control_state)
-                FM_fwd = self.solve_forces(dimensional=False)
+                FM_fwd = self.solve_forces(dimensional=False, **kwargs)
 
                 #Perturb forward
                 pert_control_state[control_name] = curr_control_val - dtheta
                 aircraft_object.set_control_state(control_state=pert_control_state)
-                FM_bwd = self.solve_forces(dimensional=False)
+                FM_bwd = self.solve_forces(dimensional=False, **kwargs)
 
                 # Reset state
                 pert_control_state[control_name] = curr_control_val
@@ -1914,15 +1999,29 @@ class Scene:
                 # Calculate derivatives
                 diff = 2*np.radians(dtheta)
 
-                derivs[aircraft_name]["CL,d"+control_name] = (FM_fwd[aircraft_name]["total"]["CL"]-FM_bwd[aircraft_name]["total"]["CL"])/diff
-                derivs[aircraft_name]["CD,d"+control_name] = (FM_fwd[aircraft_name]["total"]["CD"]-FM_bwd[aircraft_name]["total"]["CD"])/diff
-                derivs[aircraft_name]["CS,d"+control_name] = (FM_fwd[aircraft_name]["total"]["CS"]-FM_bwd[aircraft_name]["total"]["CS"])/diff
-                derivs[aircraft_name]["Cx,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cx"]-FM_bwd[aircraft_name]["total"]["Cx"])/diff
-                derivs[aircraft_name]["Cy,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cy"]-FM_bwd[aircraft_name]["total"]["Cy"])/diff
-                derivs[aircraft_name]["Cz,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cz"]-FM_bwd[aircraft_name]["total"]["Cz"])/diff
-                derivs[aircraft_name]["Cl,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cl"]-FM_bwd[aircraft_name]["total"]["Cl"])/diff
-                derivs[aircraft_name]["Cm,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cm"]-FM_bwd[aircraft_name]["total"]["Cm"])/diff
-                derivs[aircraft_name]["Cn,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cn"]-FM_bwd[aircraft_name]["total"]["Cn"])/diff
+                if body_frame:
+                    derivs[aircraft_name]["Cx,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cx"]-FM_bwd[aircraft_name]["total"]["Cx"])/diff
+                    derivs[aircraft_name]["Cy,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cy"]-FM_bwd[aircraft_name]["total"]["Cy"])/diff
+                    derivs[aircraft_name]["Cz,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cz"]-FM_bwd[aircraft_name]["total"]["Cz"])/diff
+                    derivs[aircraft_name]["Cl,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cl"]-FM_bwd[aircraft_name]["total"]["Cl"])/diff
+                    derivs[aircraft_name]["Cm,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cm"]-FM_bwd[aircraft_name]["total"]["Cm"])/diff
+                    derivs[aircraft_name]["Cn,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cn"]-FM_bwd[aircraft_name]["total"]["Cn"])/diff
+
+                if stab_frame:
+                    derivs[aircraft_name]["Cx_s,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cx_s"]-FM_bwd[aircraft_name]["total"]["Cx_s"])/diff
+                    derivs[aircraft_name]["Cy_s,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cy_s"]-FM_bwd[aircraft_name]["total"]["Cy_s"])/diff
+                    derivs[aircraft_name]["Cz_s,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cz_s"]-FM_bwd[aircraft_name]["total"]["Cz_s"])/diff
+                    derivs[aircraft_name]["Cl_s,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cl_s"]-FM_bwd[aircraft_name]["total"]["Cl_s"])/diff
+                    derivs[aircraft_name]["Cm_s,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cm_s"]-FM_bwd[aircraft_name]["total"]["Cm_s"])/diff
+                    derivs[aircraft_name]["Cn_s,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cn_s"]-FM_bwd[aircraft_name]["total"]["Cn_s"])/diff
+
+                if wind_frame:
+                    derivs[aircraft_name]["CL,d"+control_name] = (FM_fwd[aircraft_name]["total"]["CL"]-FM_bwd[aircraft_name]["total"]["CL"])/diff
+                    derivs[aircraft_name]["CD,d"+control_name] = (FM_fwd[aircraft_name]["total"]["CD"]-FM_bwd[aircraft_name]["total"]["CD"])/diff
+                    derivs[aircraft_name]["CS,d"+control_name] = (FM_fwd[aircraft_name]["total"]["CS"]-FM_bwd[aircraft_name]["total"]["CS"])/diff
+                    derivs[aircraft_name]["Cl_w,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cl_w"]-FM_bwd[aircraft_name]["total"]["Cl_w"])/diff
+                    derivs[aircraft_name]["Cm_w,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cm_w"]-FM_bwd[aircraft_name]["total"]["Cm_w"])/diff
+                    derivs[aircraft_name]["Cn_w,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cn_w"]-FM_bwd[aircraft_name]["total"]["Cn_w"])/diff
 
         return derivs
 
