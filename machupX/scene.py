@@ -70,6 +70,7 @@ class Scene:
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
+        self._correct_sections_for_sweep = solver_params.get("correct_sections_for_sweep", True)
 
         # Store unit system
         self._unit_sys = self._input_dict.get("units", "English")
@@ -686,7 +687,8 @@ class Scene:
             index += N
 
         # Correct swept section lift
-        self._correct_CL_for_sweep()
+        if self._correct_sections_for_sweep:
+            self._correct_CL_for_sweep()
 
         # Determine Jackson's dimensionalization correction factors
         #V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
@@ -816,7 +818,8 @@ class Scene:
                     index += num_cps
 
             # Intermediate calcs
-            self._correct_CL_for_sweep()
+            if self._correct_sections_for_sweep:
+                self._correct_CL_for_sweep()
             v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], P_V_ji)
 
             # Caclulate Jacobian
@@ -925,8 +928,9 @@ class Scene:
 
         # Make sweep corrections
         C_sweep_inv = 1.0/np.cos(self._section_sweep)
-        self._correct_Cm_for_sweep()
-        self._CD *= C_sweep_inv
+        if self._correct_sections_for_sweep:
+            self._correct_Cm_for_sweep()
+        #self._CD *= C_sweep_inv
 
         # Determine viscous drag vector
         dD = self._redim*self._CD
