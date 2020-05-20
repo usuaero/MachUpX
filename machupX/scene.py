@@ -433,7 +433,7 @@ class Scene:
 
             # Get geometries
             PC = quat_inv_trans(q, airplane_object.PC)
-            self._r_CG[airplane_slice,:] = PC
+            self._r_CG[airplane_slice,:] = PC-quat_inv_trans(q, airplane_object.CG)[np.newaxis,:]
             self._PC[airplane_slice,:] = p+PC
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
 
@@ -2838,6 +2838,13 @@ class Scene:
 
         coefs = np.polyfit(CS, CD, 2)
         model_dict["coefficients"]["CD3"] = float(coefs[0])
+
+        # Put in placeholder engine
+        placeholder = {
+            "placeholder_engine" : {
+            }
+        }
+        model_dict["engines"] = model_dict.get("engines", placeholder)
 
         # Export model
         filename = kwargs.get("filename", aircraft_name+"_linearized.json")
