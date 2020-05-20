@@ -566,7 +566,6 @@ class Scene:
                 self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_swept_approx[seg_slice], self._Re_swept[seg_slice], self._M_swept[seg_slice])
                 self._aL0[seg_slice] = segment.get_cp_aL0(self._Re_swept[seg_slice], self._M_swept[seg_slice])
                 self._am0[seg_slice] = segment.get_cp_am0(self._Re_swept[seg_slice], self._M_swept[seg_slice])
-                self._esp_f_delta_f[seg_slice] = segment.get_cp_flap_eff()
                 seg_ind += seg_N
 
         # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
@@ -750,7 +749,7 @@ class Scene:
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # b vector
-        b = V_inf_eff*CL_a*self._dS*(self._alpha_swept_approx-self._aL0+self._esp_f_delta_f-self._delta_a_L0)
+        b = V_inf_eff*CL_a*self._dS*(self._alpha_swept_approx-self._aL0-self._delta_a_L0)
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
@@ -943,7 +942,7 @@ class Scene:
 
         # Loop through airplanes to gather necessary data
         index = 0
-        for i, airplane_name in enumerate(self._airplane_names):
+        for airplane_name in self._airplane_names:
             airplane_object = self._airplanes[airplane_name]
 
             if body_frame:

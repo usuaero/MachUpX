@@ -108,7 +108,6 @@ def test_sideslip():
     # Create scene
     scene = MX.Scene(input_dict)
     FM = scene.solve_forces()
-    print(json.dumps(FM["test_plane"]["total"], indent=4))
     assert abs(FM["test_plane"]["total"]["FL"]-20.970247549222563)<1e-10
     assert abs(FM["test_plane"]["total"]["FD"]-1.56515195561092)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"]+4.056751466995805)<1e-10
@@ -183,7 +182,8 @@ def test_flap_deflection():
 
     # Create scene
     scene = MX.Scene(input_dict)
-    FM = scene.solve_forces()
+    FM = scene.solve_forces(non_dimensional=False)
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
     assert abs(FM["test_plane"]["total"]["FL"]-15.371272228307886)<1e-10
     assert abs(FM["test_plane"]["total"]["FD"]-2.1142210894279376)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"]-0.642970343115379)<1e-10

@@ -12,7 +12,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "linear",
+            "type" : "nonlinear",
         }
     }
 
@@ -43,7 +43,12 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
                 "ac_offset" : "kuchemann",
-                "sweep" : 45.0,
+                "dihedral" : [[0.0, 20.0],
+                              [0.3, 20.0],
+                              [0.7, -20.0],
+                              [1.0, -20.0]],
+                "sweep" : [[0.0, 20.0],
+                              [1.0, -20.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
@@ -126,12 +131,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=True)
+    scene.display_wireframe(show_vortices=True)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Get derivatives
-    derivs = scene.aircraft_derivatives(stab_frame=True)
-    print(json.dumps(derivs["plane"], indent=4))
+    ## Get derivatives
+    #derivs = scene.aircraft_derivatives(wind_frame=False)
+    #print(json.dumps(derivs["plane"], indent=4))

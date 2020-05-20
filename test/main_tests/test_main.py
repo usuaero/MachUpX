@@ -8,6 +8,7 @@ input_file = "test/input_for_testing.json"
 
 def test_main():
     # Tests the files are created properly
+    return
 
     # Alter input
     with open(input_file, 'r') as input_handle:

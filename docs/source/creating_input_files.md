@@ -408,10 +408,10 @@ Describes an aircraft. Stored as a .json file
 >>>>>NACA designation for the airfoil. If given, MachUpX will automatically generate outline points using the NACA equations. Can only be NACA 4-digit series. Cannot be specified along with "outline_points". Will not affect aerodynamics.
 >>>>
 >>>>**"max_camber" : float, optional**
->>>>>Maximum camber of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. Required for making corrections to section properties based on sweep. Defaults to 0.0.
+>>>>>Maximum camber of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. If these are specified, the max camber will be automatically determined. Required for making corrections to section properties based on sweep. Defaults to 0.0.
 >>>>
 >>>>**"max_thickness" : float, optional**
->>>>>Maximum thickness of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. Required for making corrections to section properties based on sweep. Defaults to 0.0.
+>>>>>Maximum thickness of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. If these are specified, the max camber will be automatically determined. Required for making corrections to section properties based on sweep. Defaults to 0.0.
 >
 >**"wings" : dict**
 >>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the examples/ directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface, therefore, a wing with multiple control surfaces must be created from multiple wing segments.
@@ -497,7 +497,7 @@ Describes an aircraft. Stored as a .json file
 >>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used is "distribution" is "cosine_cluster". Defaults to no extra clustering.
 >>>>
 >>>>**"reid_corrections" : bool, optional**
->>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). For those not familiar with the general implementation of numerical lifting-line, it is highly recommended to read the paper. These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip but may cause unexpected behavior for the uninformed user. Defaults to False.
+>>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). For those not familiar with the general implementation of numerical lifting-line, it is highly recommended to read the paper. These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip but may cause unexpected behavior for the uninformed user. Defaults to True.
 >>>>
 >>>>**"joint_length" : float, optional**
 >>>>>The non-dimensional joint lengths to be used in the Reid corrections. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive.

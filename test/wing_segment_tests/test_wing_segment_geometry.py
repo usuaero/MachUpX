@@ -126,7 +126,6 @@ def test_compute_constant_swept_dihedral_wing_tip_location():
     wing_dict = scene._airplanes["test_plane"].wing_segments
     for key in wing_dict:
         tip_loc = wing_dict[key].get_tip_loc()
-        print(tip_loc[2])
         assert np.allclose(tip_loc.flatten(), correct_locations[key], rtol=0, atol=1e-10)
 
 
