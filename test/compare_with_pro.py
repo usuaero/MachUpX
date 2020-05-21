@@ -33,6 +33,8 @@ def translate_to_machup_pro(machupx_input, machupx_airplane, state, control_stat
             mu_pro_dict["run"]["forces"] = ""
         elif key == "aero_derivatives":
             mu_pro_dict["run"]["derivatives"] = ""
+        elif key == "export_stl":
+            mu_pro_dict["run"]["stl"] = ""
 
     # Condition
     mu_pro_dict["condition"]["units"] = machupx_input["units"]
@@ -103,7 +105,8 @@ if __name__=="__main__":
     input_dict = {
         "run" : {
             "solve_forces" : {},
-            "aero_derivatives" : {}
+            "aero_derivatives" : {},
+            "export_stl" : {}
         },
         "solver" : {
             "type" : "linear",
@@ -154,7 +157,7 @@ if __name__=="__main__":
                 },
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
-                "ac_offset" : "kuchemann",
+                #"ac_offset" : "kuchemann",
                 "dihedral" : 0.0,
                 "sweep" : 0.0,
                 "control_surface" : {
@@ -185,8 +188,8 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "airfoil" : "NACA_0010",
                 "twist" : -2.1,
-                "ac_offset" : "kuchemann",
-                "sweep" : 45.0,
+                #"ac_offset" : "kuchemann",
+                #"sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -213,8 +216,8 @@ if __name__=="__main__":
                 "semispan" : 2.0,
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
-                "ac_offset" : "kuchemann",
-                "sweep" : 45.0,
+                #"ac_offset" : "kuchemann",
+                #"sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -251,6 +254,7 @@ if __name__=="__main__":
     mx_scene = mx.Scene(input_dict)
     mx_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
     FM_mx = mx_scene.solve_forces(verbose=True, dimensional=False)
+    mx_scene.export_stl(filename="mux.stl")
 
     print("\nMachUp Pro Resutls")
     print("------------------")
@@ -258,3 +262,8 @@ if __name__=="__main__":
     print("\nMachUpX Resutls")
     print("---------------")
     print(json.dumps(FM_mx["plane"]["total"], indent=4))
+
+    sp.run(['rm', 'machup_pro_input'])
+    sp.run(['rm', 'machup_pro_input.json'])
+    sp.run(['rm', 'machup_pro_input_forces.json'])
+    sp.run(['rm', 'machup_pro_input_derivatives.json'])

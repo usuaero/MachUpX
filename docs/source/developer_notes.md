@@ -57,3 +57,15 @@ I have coded up both methods of determining the main wing aerodynamic center. Fo
 
 ## Definition of Sideforce
 Dr Hunsaker and Jaden have done an excellent job of standardizing the directions of lift, drag, and sideforce for the AeroLab. However, their derivation relies on calculating trigonometric values, which is computationally expensive. MachUpX, instead, uses vector definitions, which are much faster to compute. All that is required is the freestream direction vector in body-fixed coordinates, u_inf. This defines the direction of drag. Taking the cross product of this with the body-fixed y-axis vector and normalizing gives us the lift direction vector, u_lift. To complete the system, the sideforce direction vector is given by the cross product of u_lift with u_inf. This should already be normalized, but it can be normalized again to make sure. The force vector in body-fixed coordinates can then simply be dotted with each of these direction vectors to obtain L, D, and S. Taking the dot product of a vector with a unit vector gives the projection of the first vector in the direction of the unit vector.
+
+## Differences in Implementation between MachUpX and MachUp Pro
+Users will notice that differences exist between the results obtained from the two versions of MachUp. Here is a list of things which vary in the implementations and which will affect results.
+
+These can be turned off in MachUpX by the user:
+* MachUpX allows Kuchemann's LAC correction.
+* MachUpX implements Reid's swept section properties corrections.
+* MachUpX implements Reid's horseshoe vortex geometry corrections (i.e. jointed vortices and effective LAC).
+
+These cannot be turned off by the user (without diving into the source code):
+* MachUpX redimensionalizes section properties using the total (freestream plus induced) velocity at each control point. MachUp Pro uses only the freestream.
+* MachUpX has a slightly different nonlinear Jacobian (a consequence of the above).
