@@ -250,6 +250,9 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>
 >>**"max_iterations" : int, optional**
 >>>Maximum number of iterations for the nonlinear solver (the NLL algorithm is not known to have solver convergence issues). Defaults to 100. Has no effect on the linear solver or the scipy solver.
+>>
+>>**"correct_sections_for_sweep" : int, optional**
+>>>Whether to include corrections to section properties for sweep. It is highly recommended that these not be turned off. Defaults to True.
 >
 >**"units" : string, optional**
 >>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. All outputs will be given in this unit system. Defaults to "English".

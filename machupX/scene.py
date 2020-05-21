@@ -405,17 +405,18 @@ class Scene:
             index += airplane_N
 
         # Swept section corrections
-        sweep2 = self._section_sweep**2
-        sweep4 = self._section_sweep**4
-        tau2 = self._max_thickness*self._max_thickness
+        if self._correct_sections_for_sweep:
+            sweep2 = self._section_sweep**2
+            sweep4 = self._section_sweep**4
+            tau2 = self._max_thickness*self._max_thickness
 
-        self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
-        self._R_CL_a = 1.0/(1.0-0.2955*self._max_thickness**0.96*sweep2-0.1335*self._max_thickness**0.68*sweep4)
+            self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
+            self._R_CL_a = 1.0/(1.0-0.2955*self._max_thickness**0.96*sweep2-0.1335*self._max_thickness**0.68*sweep4)
 
-        self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
-        self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
+            self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
+            self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
 
-        self._c_bar_swept = self._c_bar*np.cos(self._section_sweep)
+            self._c_bar_swept = self._c_bar*np.cos(self._section_sweep)
 
 
     def _perform_geometry_and_atmos_calcs(self):
@@ -439,9 +440,10 @@ class Scene:
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
 
             # Get section vectors
-            self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
-            self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n)
-            self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s)
+            if self._correct_sections_for_sweep:
+                self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a)
+                self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n)
+                self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s)
             self._u_a_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a_unswept)
             self._u_n_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n_unswept)
             self._u_s_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s_unswept)
@@ -486,7 +488,8 @@ class Scene:
         self._r_1_r_1_joint_mag = self._r_1_mag*self._r_1_joint_mag
 
         # Effective freestream projection matrices
-        self._P_eff = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._u_s[:,:,np.newaxis], self._u_s[:,np.newaxis,:])
+        if self._correct_sections_for_sweep:
+            self._P_eff = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._u_s[:,:,np.newaxis], self._u_s[:,np.newaxis,:])
 
         # Influence of bound and jointed vortex segments
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -547,15 +550,19 @@ class Scene:
         self._cp_V_inf = np.linalg.norm(self._cp_v_inf, axis=1)
         self._cp_u_inf = self._cp_v_inf/self._cp_V_inf[:,np.newaxis]
 
-        # Get effective freesream
-        self._cp_v_inf_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
-        self._cp_V_inf_eff = np.linalg.norm(self._cp_v_inf_eff, axis=1)
-        self._cp_u_inf_eff = self._cp_v_inf_eff/self._cp_V_inf_eff[:,np.newaxis]
+        # Get effective freesream and calculate initial approximation for airfoil parameters (Re and M are only used in the linear solution)
+        if self._correct_sections_for_sweep:
+            self._cp_v_inf_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
+            self._cp_V_inf_eff = np.linalg.norm(self._cp_v_inf_eff, axis=1)
+            self._cp_u_inf_eff = self._cp_v_inf_eff/self._cp_V_inf_eff[:,np.newaxis]
 
-        # Calculate initial approximation for airfoil parameters (Re and M are only used in the linear solution)
-        self._alpha_swept_approx = np.einsum('ij,ij->i', self._cp_u_inf_eff, self._u_n)
-        self._Re_swept = self._cp_V_inf_eff*self._c_bar_swept/self._nu
-        self._M_swept = self._cp_V_inf_eff/self._a
+            self._alpha_approx = np.einsum('ij,ij->i', self._cp_u_inf_eff, self._u_n)
+            self._Re = self._cp_V_inf_eff*self._c_bar_swept/self._nu
+            self._M = self._cp_V_inf_eff/self._a
+        else:
+            self._alpha_approx = np.einsum('ij,ij->i', self._cp_u_inf, self._u_n_unswept)
+            self._Re = self._cp_V_inf*self._c_bar/self._nu
+            self._M = self._cp_V_inf/self._a
 
         # Get lift slopes and zero-lift angles of attack for each segment
         for airplane_name, airplane_slice in zip(self._airplane_names, self._airplane_slices):
@@ -564,9 +571,9 @@ class Scene:
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(airplane_slice.start+seg_ind, airplane_slice.start+seg_ind+seg_N)
-                self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_swept_approx[seg_slice], self._Re_swept[seg_slice], self._M_swept[seg_slice])
-                self._aL0[seg_slice] = segment.get_cp_aL0(self._Re_swept[seg_slice], self._M_swept[seg_slice])
-                self._am0[seg_slice] = segment.get_cp_am0(self._Re_swept[seg_slice], self._M_swept[seg_slice])
+                self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_approx[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
+                self._am0[seg_slice] = segment.get_cp_am0(self._Re[seg_slice], self._M[seg_slice])
                 seg_ind += seg_N
 
         # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
@@ -653,22 +660,28 @@ class Scene:
     def _get_section_lift(self):
         # Calculate magnitude of lift due to section properties divided by density
 
-        # Project velocity into effective airfoil section plane
-        self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-        self._V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
-        self._V_eff = np.sqrt(self._V_eff_2)
+        if self._correct_sections_for_sweep:
+            self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+            self._V_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
+            self._V_eff = np.sqrt(self._V_eff_2)
 
-        # Calculate swept airfoil parameters
-        self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-        self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-        #v_s = np.einsum('ij,ij->i', self._v_i-self._v_i_eff, self._u_s)
-        self._alpha_swept = np.arctan2(self._v_n, self._v_a)
-        #self._beta_swept = np.arctan2(v_s, self._v_a)
+            self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+            self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+            self._alpha = np.arctan2(self._v_n, self._v_a)
 
-        # Calculate lift
-        self._Re = self._V_eff*self._c_bar/self._nu
-        self._M = self._V_eff/self._a
-        self._CL = np.zeros(self._N)
+            self._Re = self._V_eff*self._c_bar_swept/self._nu
+            self._M = self._V_eff/self._a
+        else:
+            self._V_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
+            self._V = np.sqrt(self._V_2)
+
+            self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+            self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+            self._alpha = np.arctan2(self._v_n, self._v_a)
+
+            self._Re = self._V*self._c_bar/self._nu
+            self._M = self._V/self._a
+
         index = 0
 
         # Loop through airplanes
@@ -681,26 +694,27 @@ class Scene:
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
-                self._CL[seg_slice] = segment.get_cp_CL(self._alpha_swept[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice], self._M[seg_slice])
                 seg_ind += seg_N
 
             index += N
 
-        # Correct swept section lift
-        if self._correct_sections_for_sweep:
-            self._correct_CL_for_sweep()
-
         # Determine Jackson's dimensionalization correction factors
         #V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
         #R_i = np.sqrt(self._V_eff_2/V_i_2)
-        #S_a = np.sin(self._alpha_swept)
+        #S_a = np.sin(self._alpha)
         #S_B = np.sin(self._beta_swept)
         #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-S_a*S_a*S_B*S_B)
 
         #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
         #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
 
-        return 0.5*self._V_eff_2*self._CL*self._dS # Mine, which is so much cleaner...
+        # Correct swept section lift
+        if self._correct_sections_for_sweep:
+            self._correct_CL_for_sweep()
+            return 0.5*self._V_eff_2*self._CL*self._dS
+        else:
+            return 0.5*self._V_2*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):
@@ -708,11 +722,11 @@ class Scene:
 
         # Estimate lift slope
         with np.errstate(divide='ignore', invalid='ignore'):
-            CL_a_est = np.nan_to_num(self._CL/(self._alpha_swept-self._aL0))
+            CL_a_est = np.nan_to_num(self._CL/(self._alpha-self._aL0))
 
         # Get new estimate
         self._CLa = self._R_CL_a*CL_a_est
-        self._CL = self._CLa*(self._alpha_swept-self._aL0-self._delta_a_L0)
+        self._CL = self._CLa*(self._alpha-self._aL0-self._delta_a_L0)
 
 
     def _correct_Cm_for_sweep(self):
@@ -720,11 +734,11 @@ class Scene:
 
         # Estimate moment slope
         with np.errstate(divide='ignore', invalid='ignore'):
-            Cm_a_est = np.nan_to_num(self._Cm/(self._alpha_swept-self._am0))
+            Cm_a_est = np.nan_to_num(self._Cm/(self._alpha-self._am0))
 
         # Get new estimate
         self._Cma = self._R_Cm_a*Cm_a_est
-        self._Cm = np.where(self._Cm != 0.0, self._Cma*(self._alpha_swept-self._am0-self._delta_a_m0), 0.0)
+        self._Cm = np.where(self._Cm != 0.0, self._Cma*(self._alpha-self._am0-self._delta_a_m0), 0.0)
 
 
     def _solve_linear(self, **kwargs):
@@ -737,21 +751,23 @@ class Scene:
         # Calculate invariant properties
         self._calc_invariant_flow_properties()
 
-        # Get effective freestream magnitude
-        v_inf_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
-        V_inf_eff = np.sqrt(np.einsum('ij,ij->i', v_inf_eff, v_inf_eff))
+        # Get lift slope and effective freestream magnitude
+        if self._correct_sections_for_sweep:
+            CL_a = self._R_CL_a*self._CLa
+            u_inf_x_dl = np.cross(self._cp_u_inf_eff, self._dl)
+            V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n)
+            b = self._cp_V_inf_eff*CL_a*self._dS*(self._alpha_approx-self._aL0-self._delta_a_L0)
+        else:
+            CL_a = self._CLa
+            u_inf_x_dl = np.cross(self._cp_u_inf, self._dl)
+            V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n_unswept)
+            b = self._cp_V_inf*CL_a*self._dS*(self._alpha_approx-self._aL0)
 
         # A matrix
-        CL_a = self._R_CL_a*self._CLa
         A = np.zeros((self._N,self._N))
-        V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n)
         A[:,:] = -(CL_a*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         diag_ind = np.diag_indices(self._N)
-        u_inf_x_dl = np.cross(v_inf_eff/V_inf_eff[:,np.newaxis], self._dl)
         A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
-
-        # b vector
-        b = V_inf_eff*CL_a*self._dS*(self._alpha_swept_approx-self._aL0-self._delta_a_L0)
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
@@ -782,7 +798,10 @@ class Scene:
         C_LM = np.zeros(self._N)
 
         # Calculate the derivative of induced velocity wrt vortex strength
-        P_V_ji = np.matmul(self._P_eff, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
+        if self._correct_sections_for_sweep:
+            V_ji = np.matmul(self._P_eff, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
+        else:
+            V_ji = self._V_ji
 
         iteration = 0
         error = 100
@@ -794,9 +813,13 @@ class Scene:
             error = np.linalg.norm(R)
 
             # Calculate airfoil parameters
-            self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-            self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-            self._alpha_swept = np.arctan2(self._v_n, self._v_a)
+            if self._correct_sections_for_sweep:
+                self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+                self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+            else:
+                self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+                self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+            self._alpha = np.arctan2(self._v_n, self._v_a)
 
             index = 0
 
@@ -810,32 +833,40 @@ class Scene:
                     cur_slice = slice(index, index+num_cps)
 
                     # Get lift coefficient and lift slopes
-                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    self._CL[cur_slice] = segment_object.get_cp_CL(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    self._CL[cur_slice] = segment_object.get_cp_CL(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                     index += num_cps
 
             # Intermediate calcs
             if self._correct_sections_for_sweep:
                 self._correct_CL_for_sweep()
-            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], P_V_ji)
+            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], V_ji)
 
             # Caclulate Jacobian
-            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(P_V_ji, self._dl)))
+            J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(V_ji, self._dl)))
 
             if not phillips:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
-            CL_gamma_alpha = (self._R_CL_a*self._CLa)[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', P_V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', P_V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
-            CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar_swept/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
-            CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_eff)[:,np.newaxis]*v_iji
+            if self._correct_sections_for_sweep:
+                CL_gamma_alpha = (self._R_CL_a*self._CLa)[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
+                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar_swept/(self._nu*self._V_eff)[:,np.newaxis]*v_iji
+                CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_eff)[:,np.newaxis]*v_iji
+            else:
+                CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n_unswept[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a_unswept[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
+                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V)[:,np.newaxis]*v_iji
+                CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V)[:,np.newaxis]*v_iji
 
             if phillips:
                 J[:,:] -= (self._cp_V_inf*self._cp_V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
             else:
-                J[:,:] -= (self._V_eff_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
+                if self._correct_sections_for_sweep:
+                    J[:,:] -= (self._V_eff_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
+                else:
+                    J[:,:] -= (self._V_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M) # My way
 
             diag_ind = np.diag_indices(self._N)
             J[diag_ind] += 2*self._w_i_mag
@@ -889,11 +920,16 @@ class Scene:
         self._dL = np.linalg.norm(dF_inv, axis=-1)
 
         # Calculate conditions for determining viscid contributions
-        if not hasattr(self, "_alpha_swept"):
-            self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-            self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-            self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-            self._alpha_swept = np.arctan2(self._v_n, self._v_a)
+        if not hasattr(self, "_alpha"):
+            if self._correct_sections_for_sweep:
+                self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+                self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+                self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+            else:
+                self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+                self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+            self._alpha = np.arctan2(self._v_n, self._v_a)
+
         self._q_i = 0.5*self._rho*self._V_i_2
         self._redim = self._q_i*self._dS
 
@@ -919,10 +955,10 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Section drag
-                self._CD[cur_slice] = segment.get_cp_CD(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                 # Determine moment due to section moment coef
-                self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha_swept[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                 index += num_cps
 
@@ -930,7 +966,6 @@ class Scene:
         C_sweep_inv = 1.0/np.cos(self._section_sweep)
         if self._correct_sections_for_sweep:
             self._correct_Cm_for_sweep()
-        #self._CD *= C_sweep_inv
 
         # Determine viscous drag vector
         dD = self._redim*self._CD

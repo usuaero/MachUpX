@@ -13,6 +13,7 @@ if __name__=="__main__":
     input_dict = {
         "solver" : {
             "type" : "nonlinear",
+            "correct_sections_for_sweep" : False
         }
     }
 

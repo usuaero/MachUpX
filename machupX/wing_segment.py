@@ -424,19 +424,21 @@ class WingSegment:
             self._control_mixing = control_dict.get("control_mixing", {})
             is_sealed = control_dict.get("is_sealed", True)
 
-            # Determine flap efficiency for altering angle of attack
-            theta_f = np.arccos(2*self._cp_c_f-1)
-            eps_flap_ideal = 1-(theta_f-np.sin(theta_f))/np.pi
+            # TODO: Use sealed definition
 
-            # Based off of Mechanics of Flight Fig. 1.7.4
-            hinge_eff = 3.9598*np.arctan((self._cp_c_f+0.006527)*89.2574+4.898015)-5.18786
-            if not is_sealed:
-                hinge_eff *= 0.8
+            ## Determine flap efficiency for altering angle of attack
+            #theta_f = np.arccos(2*self._cp_c_f-1)
+            #eps_flap_ideal = 1-(theta_f-np.sin(theta_f))/np.pi
 
-            self._eta_h_eps_f = eps_flap_ideal*hinge_eff
+            ## Based off of Mechanics of Flight Fig. 1.7.4
+            #hinge_eff = 3.9598*np.arctan((self._cp_c_f+0.006527)*89.2574+4.898015)-5.18786
+            #if not is_sealed:
+            #    hinge_eff *= 0.8
 
-            # Determine flap efficiency for changing moment coef
-            self._Cm_delta_flap = (np.sin(2*theta_f)-2*np.sin(theta_f))/4
+            #self._eta_h_eps_f = eps_flap_ideal*hinge_eff
+
+            ## Determine flap efficiency for changing moment coef
+            #self._Cm_delta_flap = (np.sin(2*theta_f)-2*np.sin(theta_f))/4
 
 
     def _setup_cp_data(self):
@@ -1066,13 +1068,13 @@ class WingSegment:
             else:
                 self._delta_flap -= deflection*self._control_mixing.get(key, 0.0)
 
-        # Determine flap efficiency
-        # From a fit of Mechanics of Flight Fig. 1.7.5
-        if self._delta_flap < 11:
-            self._eta_defl = 1.0
-        else:
-            self._eta_defl = -8.71794871794872E-03*self._delta_flap+1.09589743589744
-        self._flap_eff = self._eta_h_eps_f*self._eta_defl
+        ## Determine flap efficiency
+        ## From a fit of Mechanics of Flight Fig. 1.7.5
+        #if self._delta_flap < 11:
+        #    self._eta_defl = 1.0
+        #else:
+        #    self._eta_defl = -8.71794871794872E-03*self._delta_flap+1.09589743589744
+        #self._flap_eff = self._eta_h_eps_f*self._eta_defl
 
         # Convert to radians
         self._delta_flap = np.radians(self._delta_flap)*self._cp_in_cntrl_surf
