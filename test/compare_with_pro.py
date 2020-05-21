@@ -170,8 +170,9 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : False
+                    "N" : 10,
+                    "reid_corrections" : False,
+                    "flap_edge_cluster" : False
                 }
             },
             "h_stab" : {
@@ -198,8 +199,9 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : False
+                    "N" : 10,
+                    "reid_corrections" : False,
+                    "flap_edge_cluster" : False
                 }
             },
             "v_stab" : {
@@ -226,8 +228,9 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : False
+                    "N" : 10,
+                    "reid_corrections" : False,
+                    "flap_edge_cluster" : False
                 }
             }
         }

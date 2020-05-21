@@ -61,11 +61,11 @@ Dr Hunsaker and Jaden have done an excellent job of standardizing the directions
 ## Differences in Implementation between MachUpX and MachUp Pro
 Users will notice that differences exist between the results obtained from the two versions of MachUp. Here is a list of things which vary in the implementations and which will affect results.
 
-These can be turned off in MachUpX by the user:
 * MachUpX allows Kuchemann's LAC correction.
 * MachUpX implements Reid's swept section properties corrections.
 * MachUpX implements Reid's horseshoe vortex geometry corrections (i.e. jointed vortices and effective LAC).
-
-These cannot be turned off by the user (without diving into the source code):
 * MachUpX redimensionalizes section properties using the total (freestream plus induced) velocity at each control point. MachUp Pro uses only the freestream.
 * MachUpX has a slightly different nonlinear Jacobian (a consequence of the above).
+* MachUpX defaults to clustering control points about flap edges.
+
+All of these can be toggled in MachUpX by the user.
