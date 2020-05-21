@@ -71,6 +71,7 @@ class Scene:
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
         self._correct_sections_for_sweep = solver_params.get("correct_sections_for_sweep", True)
+        self._phillips_deriv = solver_params.get("phillips_deriv", False)
 
         # Store unit system
         self._unit_sys = self._input_dict.get("units", "English")
@@ -375,6 +376,9 @@ class Scene:
         self._CL = np.zeros(self._N) # Lift coefficient
         self._CD = np.zeros(self._N) # Drag coefficient
         self._Cm = np.zeros(self._N) # Moment coefficient
+
+        # Misc
+        self._diag_ind = np.diag_indices(self._N)
         
 
     def _store_aircraft_properties(self):
@@ -416,7 +420,7 @@ class Scene:
             self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
             self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
 
-            self._c_bar_swept = self._c_bar*np.cos(self._section_sweep)
+            self._c_bar_swept = self._c_bar/np.cos(self._section_sweep)
 
 
     def _perform_geometry_and_atmos_calcs(self):
@@ -766,8 +770,7 @@ class Scene:
         # A matrix
         A = np.zeros((self._N,self._N))
         A[:,:] = -(CL_a*self._dS)[:,np.newaxis]*V_ji_dot_u_n
-        diag_ind = np.diag_indices(self._N)
-        A[diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
+        A[self._diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
@@ -786,10 +789,6 @@ class Scene:
             print("{0:<20}{1:<20}".format("Iteration", "Error"))
             print("".join(['-']*40))
         start_time = time.time()
-
-        # This parameter, if set to true, will revert the nonlinear solution to a dimensional version of Phillips' original Jacobian.
-        # The other way is my new (better) way.
-        phillips = False
 
         J = np.zeros((self._N, self._N))
 
@@ -848,7 +847,7 @@ class Scene:
             # Caclulate Jacobian
             J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(V_ji, self._dl)))
 
-            if not phillips:
+            if not self._phillips_deriv:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._correct_sections_for_sweep:
@@ -860,7 +859,7 @@ class Scene:
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V)[:,np.newaxis]*v_iji
                 CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V)[:,np.newaxis]*v_iji
 
-            if phillips:
+            if self._phillips_deriv:
                 J[:,:] -= (self._cp_V_inf*self._cp_V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
             else:
                 if self._correct_sections_for_sweep:
@@ -930,7 +929,10 @@ class Scene:
                 self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
             self._alpha = np.arctan2(self._v_n, self._v_a)
 
-        self._q_i = 0.5*self._rho*self._V_i_2
+        if self._phillips_deriv:
+            self._q_i = 0.5*self._rho*self._cp_V_inf*self._cp_V_inf
+        else:
+            self._q_i = 0.5*self._rho*self._V_i_2
         self._redim = self._q_i*self._dS
 
         # Store lift, drag, and moment coefficient distributions
@@ -962,10 +964,12 @@ class Scene:
 
                 index += num_cps
 
-        # Make sweep corrections
-        C_sweep_inv = 1.0/np.cos(self._section_sweep)
+        # Inviscid moment
         if self._correct_sections_for_sweep:
             self._correct_Cm_for_sweep()
+            dM_section = -(self._redim*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
+        else:
+            dM_section = -(self._redim*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s_unswept
 
         # Determine viscous drag vector
         dD = self._redim*self._CD
@@ -976,7 +980,6 @@ class Scene:
 
         # Inviscid moment
         dM_vortex = np.cross(self._r_CG, dF_inv)
-        dM_section = -(self._redim*self._c_bar*C_sweep_inv*self._Cm)[:,np.newaxis]*self._u_s
         dM_inv = dM_vortex+dM_section
 
         # Loop through airplanes to gather necessary data

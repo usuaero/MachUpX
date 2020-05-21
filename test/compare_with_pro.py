@@ -111,6 +111,7 @@ if __name__=="__main__":
         "solver" : {
             "type" : "linear",
             "correct_sections_for_sweep" : False,
+            "phillips_deriv" : True,
             "convergence" : 0.0000000001
         },
         "units" : "English",
@@ -234,7 +235,8 @@ if __name__=="__main__":
 
     state = {
         "velocity" : 100.0,
-        "alpha" : 5.0
+        "alpha" : 10.0,
+        "beta" : 0.0
     }
 
     control_state = {
@@ -256,14 +258,21 @@ if __name__=="__main__":
     FM_mx = mx_scene.solve_forces(verbose=True, dimensional=False)
     mx_scene.export_stl(filename="mux.stl")
 
-    print("\nMachUp Pro Resutls")
+    print("\nMachUp Pro Results")
     print("------------------")
     print(json.dumps(FM_pro["total"]["plane"], indent=4))
-    print("\nMachUpX Resutls")
+    print("\nMachUpX Results")
     print("---------------")
     print(json.dumps(FM_mx["plane"]["total"], indent=4))
+    print("\nError")
+    print("-----")
+    print("CL: {0}%".format(abs((FM_pro["total"]["plane"]["CL"]-FM_mx["plane"]["total"]["CL"])/FM_pro["total"]["plane"]["CL"])*100*int(abs(FM_pro["total"]["plane"]["CL"])>1e-10)))
+    print("CD: {0}%".format(abs((FM_pro["total"]["plane"]["CD"]-FM_mx["plane"]["total"]["CD"])/FM_pro["total"]["plane"]["CD"])*100*int(abs(FM_pro["total"]["plane"]["CD"])>1e-10)))
+    print("CS: {0}%".format(abs((FM_pro["total"]["plane"]["CY"]-FM_mx["plane"]["total"]["CS"])/FM_pro["total"]["plane"]["CY"])*100*int(abs(FM_pro["total"]["plane"]["CY"])>1e-10)))
+    print("Cl: {0}%".format(abs((FM_pro["total"]["plane"]["Cl"]-FM_mx["plane"]["total"]["Cl"])/FM_pro["total"]["plane"]["Cl"])*100*int(abs(FM_pro["total"]["plane"]["Cl"])>1e-10)))
+    print("Cm: {0}%".format(abs((FM_pro["total"]["plane"]["Cm"]-FM_mx["plane"]["total"]["Cm"])/FM_pro["total"]["plane"]["Cm"])*100*int(abs(FM_pro["total"]["plane"]["Cm"])>1e-10)))
+    print("Cn: {0}%".format(abs((FM_pro["total"]["plane"]["Cn"]-FM_mx["plane"]["total"]["Cn"])/FM_pro["total"]["plane"]["Cn"])*100*int(abs(FM_pro["total"]["plane"]["Cn"])>1e-10)))
 
-    sp.run(['rm', 'machup_pro_input'])
     sp.run(['rm', 'machup_pro_input.json'])
     sp.run(['rm', 'machup_pro_input_forces.json'])
     sp.run(['rm', 'machup_pro_input_derivatives.json'])

@@ -8,7 +8,7 @@
 	"Cm_alpha"	:	0.0000	,
 	"CD0"	:	0.00513	,
 	"CD0_L"	:	0.00000	,
-	"CD0_L2"	:	0.00984	,
+	"CD0_L2"	:	0.0984	,
 	"CL_max"	:	1.4	,
 	"Comments"	:	"All angles in radians and slopes in 1/radians"	 
 	}			
