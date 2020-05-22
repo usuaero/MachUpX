@@ -110,7 +110,7 @@ if __name__=="__main__":
             "export_stl" : {}
         },
         "solver" : {
-            "type" : "linear",
+            "type" : "nonlinear",
             "correct_sections_for_sweep" : False,
             "machup_pro_deriv" : True,
             "convergence" : 0.0000000001
@@ -239,13 +239,14 @@ if __name__=="__main__":
 
     state = {
         "velocity" : 100.0,
-        "alpha" : 0.0,
+        "alpha" : 10.0,
         "beta" : 0.0
     }
 
     control_state = {
-        "aileron" : 5.0,
-        "elevator" : 5.0
+        "aileron" : 0.0,
+        "elevator" : 5.0,
+        "rudder" : 0.0
     }
 
     # Get MachUp Pro results
@@ -275,12 +276,12 @@ if __name__=="__main__":
     print("-----")
     print("CL: {0}%".format(abs((FM_pro["total"]["plane"]["CL"]-FM_mx["plane"]["total"]["CL"])/FM_pro["total"]["plane"]["CL"])*100*int(abs(FM_pro["total"]["plane"]["CL"])>1e-10)))
     print("CD: {0}%".format(abs((FM_pro["total"]["plane"]["CD"]-FM_mx["plane"]["total"]["CD"])/FM_pro["total"]["plane"]["CD"])*100*int(abs(FM_pro["total"]["plane"]["CD"])>1e-10)))
-    print("CS: {0}%".format(abs((FM_pro["total"]["plane"]["CY"]-FM_mx["plane"]["total"]["CS"])/FM_pro["total"]["plane"]["CY"])*100*int(abs(FM_pro["total"]["plane"]["CY"])>1e-10)))
     print("Cl: {0}%".format(abs((FM_pro["total"]["plane"]["Cl"]-FM_mx["plane"]["total"]["Cl"])/FM_pro["total"]["plane"]["Cl"])*100*int(abs(FM_pro["total"]["plane"]["Cl"])>1e-10)))
     print("Cm: {0}%".format(abs((FM_pro["total"]["plane"]["Cm"]-FM_mx["plane"]["total"]["Cm"])/FM_pro["total"]["plane"]["Cm"])*100*int(abs(FM_pro["total"]["plane"]["Cm"])>1e-10)))
     print("Cn: {0}%".format(abs((FM_pro["total"]["plane"]["Cn"]-FM_mx["plane"]["total"]["Cn"])/FM_pro["total"]["plane"]["Cn"])*100*int(abs(FM_pro["total"]["plane"]["Cn"])>1e-10)))
-    print("Cz: {0}%".format(abs((FM_pro["total"]["plane"]["CZ"]-FM_mx["plane"]["total"]["Cz"])/FM_pro["total"]["plane"]["CZ"])*100*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
     print("Cx: {0}%".format(abs((FM_pro["total"]["plane"]["CX"]-FM_mx["plane"]["total"]["Cx"])/FM_pro["total"]["plane"]["CX"])*100*int(abs(FM_pro["total"]["plane"]["CX"])>1e-10)))
+    print("Cy: {0}%".format(abs((FM_pro["total"]["plane"]["CY"]-FM_mx["plane"]["total"]["Cy"])/FM_pro["total"]["plane"]["CY"])*100*int(abs(FM_pro["total"]["plane"]["CY"])>1e-10)))
+    print("Cz: {0}%".format(abs((FM_pro["total"]["plane"]["CZ"]-FM_mx["plane"]["total"]["Cz"])/FM_pro["total"]["plane"]["CZ"])*100*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
 
     sp.run(['rm', 'machup_pro_input.json'])
     sp.run(['rm', 'machup_pro_input_forces.json'])

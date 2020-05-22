@@ -67,5 +67,6 @@ Users will notice that differences exist between the results obtained from the t
 * MachUpX redimensionalizes section properties using the total (freestream plus induced) velocity at each control point. MachUp Pro uses only the freestream.
 * MachUpX has a slightly different nonlinear Jacobian (a consequence of the above).
 * MachUpX defaults to clustering control points about flap edges.
+* MachUpX uses CL_max to truncate section lift coefficients within the lifting-line algorithm. MachUp Pro only uses this to determine stall onset.
 
 All of these can be toggled in MachUpX by the user.

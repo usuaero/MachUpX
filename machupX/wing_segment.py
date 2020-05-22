@@ -724,7 +724,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        return np.asarray([np.zeros(span_array.size), -C_dihedral, S_dihedral]).T
+        return np.asarray([np.zeros(span_array.size), C_dihedral, S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):
