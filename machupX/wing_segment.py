@@ -1061,13 +1061,13 @@ class WingSegment:
             return # Don't even bother...
 
         # Determine flap deflection
-        self._delta_flap = 0.0
+        self._delta_flap = np.zeros(self.N)
         for key in self._control_mixing:
             deflection = import_value(key, control_state, self._unit_sys, 0.0)
             if self.side == "right" or control_symmetry[key]:
-                self._delta_flap += deflection*self._control_mixing.get(key, 0.0)
+                self._delta_flap += deflection*self._control_mixing.get(key, 0.0)*self._cp_in_cntrl_surf
             else:
-                self._delta_flap -= deflection*self._control_mixing.get(key, 0.0)
+                self._delta_flap -= deflection*self._control_mixing.get(key, 0.0)*self._cp_in_cntrl_surf
 
         ## Determine flap efficiency
         ## From a fit of Mechanics of Flight Fig. 1.7.5
@@ -1078,7 +1078,7 @@ class WingSegment:
         #self._flap_eff = self._eta_h_eps_f*self._eta_defl
 
         # Convert to radians
-        self._delta_flap = np.radians(self._delta_flap)*self._cp_in_cntrl_surf
+        self._delta_flap = np.radians(self._delta_flap)
 
 
     def get_stl_vectors(self, section_res=200):

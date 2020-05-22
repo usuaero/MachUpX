@@ -40,6 +40,7 @@ def translate_to_machup_pro(machupx_input, machupx_airplane, state, control_stat
     mu_pro_dict["condition"]["units"] = machupx_input["units"]
     mu_pro_dict["condition"]["density"] = machupx_input["scene"]["atmosphere"]["density"]
     mu_pro_dict["condition"]["W"] = machupx_airplane["weight"]
+    mu_pro_dict["condition"]["beta"] = np.degrees(np.arctan2(np.tan(np.radians(mu_pro_dict["condition"].pop("beta", 0.0))), np.cos(np.radians(mu_pro_dict["condition"].get("alpha", 0.0)))))
     w = state.get("angular_rates", [0.0, 0.0, 0.0])
     mu_pro_dict["condition"]["omega"] = {}
     mu_pro_dict["condition"]["omega"]["roll"] = w[0]
@@ -111,7 +112,7 @@ if __name__=="__main__":
         "solver" : {
             "type" : "linear",
             "correct_sections_for_sweep" : False,
-            "phillips_deriv" : True,
+            "machup_pro_deriv" : True,
             "convergence" : 0.0000000001
         },
         "units" : "English",
@@ -238,12 +239,13 @@ if __name__=="__main__":
 
     state = {
         "velocity" : 100.0,
-        "alpha" : 10.0,
+        "alpha" : 0.0,
         "beta" : 0.0
     }
 
     control_state = {
-        "aileron" : 0.0
+        "aileron" : 5.0,
+        "elevator" : 5.0
     }
 
     # Get MachUp Pro results
@@ -261,6 +263,8 @@ if __name__=="__main__":
     FM_mx = mx_scene.solve_forces(verbose=True, dimensional=False)
     mx_scene.export_stl(filename="mux.stl")
 
+    #mx_scene.display_wireframe()
+
     print("\nMachUp Pro Results")
     print("------------------")
     print(json.dumps(FM_pro["total"]["plane"], indent=4))
@@ -275,6 +279,8 @@ if __name__=="__main__":
     print("Cl: {0}%".format(abs((FM_pro["total"]["plane"]["Cl"]-FM_mx["plane"]["total"]["Cl"])/FM_pro["total"]["plane"]["Cl"])*100*int(abs(FM_pro["total"]["plane"]["Cl"])>1e-10)))
     print("Cm: {0}%".format(abs((FM_pro["total"]["plane"]["Cm"]-FM_mx["plane"]["total"]["Cm"])/FM_pro["total"]["plane"]["Cm"])*100*int(abs(FM_pro["total"]["plane"]["Cm"])>1e-10)))
     print("Cn: {0}%".format(abs((FM_pro["total"]["plane"]["Cn"]-FM_mx["plane"]["total"]["Cn"])/FM_pro["total"]["plane"]["Cn"])*100*int(abs(FM_pro["total"]["plane"]["Cn"])>1e-10)))
+    print("Cz: {0}%".format(abs((FM_pro["total"]["plane"]["CZ"]-FM_mx["plane"]["total"]["Cz"])/FM_pro["total"]["plane"]["CZ"])*100*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
+    print("Cx: {0}%".format(abs((FM_pro["total"]["plane"]["CX"]-FM_mx["plane"]["total"]["Cx"])/FM_pro["total"]["plane"]["CX"])*100*int(abs(FM_pro["total"]["plane"]["CX"])>1e-10)))
 
     sp.run(['rm', 'machup_pro_input.json'])
     sp.run(['rm', 'machup_pro_input_forces.json'])

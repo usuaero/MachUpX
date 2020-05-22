@@ -71,7 +71,7 @@ class Scene:
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
         self._correct_sections_for_sweep = solver_params.get("correct_sections_for_sweep", True)
-        self._phillips_deriv = solver_params.get("phillips_deriv", False)
+        self._match_machup_pro = solver_params.get("machup_pro_deriv", False)
 
         # Store unit system
         self._unit_sys = self._input_dict.get("units", "English")
@@ -355,7 +355,6 @@ class Scene:
         self._a = np.ones(self._N) # Speed of sound
 
         # Airfoil parameters
-        self._alpha_approx = np.zeros(self._N)
         self._Re = np.zeros(self._N) # Reynolds number
         self._M = np.zeros(self._N) # Mach number
         self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
@@ -420,7 +419,7 @@ class Scene:
             self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
             self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
 
-            self._c_bar_swept = self._c_bar/np.cos(self._section_sweep)
+            self._c_bar_swept = self._c_bar*np.cos(self._section_sweep)
 
 
     def _perform_geometry_and_atmos_calcs(self):
@@ -560,11 +559,18 @@ class Scene:
             self._cp_V_inf_eff = np.linalg.norm(self._cp_v_inf_eff, axis=1)
             self._cp_u_inf_eff = self._cp_v_inf_eff/self._cp_V_inf_eff[:,np.newaxis]
 
-            self._alpha_approx = np.einsum('ij,ij->i', self._cp_u_inf_eff, self._u_n)
+            if self._match_machup_pro:
+                self._alpha_approx = np.arctan2(np.einsum('ij,ij->i', self._cp_u_inf_eff, self._u_n), np.einsum('ij,ij->i', self._cp_u_inf_eff, self._u_a))
+            else:
+                self._alpha_approx = np.einsum('ij,ij->i', self._cp_u_inf_eff, self._u_n)
+
             self._Re = self._cp_V_inf_eff*self._c_bar_swept/self._nu
             self._M = self._cp_V_inf_eff/self._a
         else:
-            self._alpha_approx = np.einsum('ij,ij->i', self._cp_u_inf, self._u_n_unswept)
+            if self._match_machup_pro:
+                self._alpha_approx = np.arctan2(np.einsum('ij,ij->i', self._cp_u_inf, self._u_n_unswept), np.einsum('ij,ij->i', self._cp_u_inf, self._u_a_unswept))
+            else:
+                self._alpha_approx = np.einsum('ij,ij->i', self._cp_u_inf, self._u_n_unswept)
             self._Re = self._cp_V_inf*self._c_bar/self._nu
             self._M = self._cp_V_inf/self._a
 
@@ -577,7 +583,6 @@ class Scene:
                 seg_slice = slice(airplane_slice.start+seg_ind, airplane_slice.start+seg_ind+seg_N)
                 self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_approx[seg_slice], self._Re[seg_slice], self._M[seg_slice])
                 self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
-                self._am0[seg_slice] = segment.get_cp_am0(self._Re[seg_slice], self._M[seg_slice])
                 seg_ind += seg_N
 
         # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
@@ -594,6 +599,7 @@ class Scene:
         V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis])
 
         # Sum
+        # In my definition of V_ji, the first index is the control point, the second index is the horseshoe vortex, and the third index is the vector components
         self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
 
         self._solved = False
@@ -716,9 +722,15 @@ class Scene:
         # Correct swept section lift
         if self._correct_sections_for_sweep:
             self._correct_CL_for_sweep()
-            return 0.5*self._V_eff_2*self._CL*self._dS
+            if self._match_machup_pro:
+                return 0.5*self._cp_V_inf_eff*self._cp_V_inf_eff*self._CL*self._dS
+            else:
+                return 0.5*self._V_eff_2*self._CL*self._dS # in case you're wondering, this is the one you want to go for ;)
         else:
-            return 0.5*self._V_2*self._CL*self._dS
+            if self._match_machup_pro:
+                return 0.5*self._cp_V_inf*self._cp_V_inf*self._CL*self._dS
+            else:
+                return 0.5*self._V_2*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):
@@ -770,7 +782,7 @@ class Scene:
         # A matrix
         A = np.zeros((self._N,self._N))
         A[:,:] = -(CL_a*self._dS)[:,np.newaxis]*V_ji_dot_u_n
-        A[self._diag_ind] += 2*np.sqrt(np.einsum('ij,ij->i', u_inf_x_dl, u_inf_x_dl))
+        A[self._diag_ind] += 2.0*np.linalg.norm(u_inf_x_dl, axis=1)
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
@@ -847,7 +859,7 @@ class Scene:
             # Caclulate Jacobian
             J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(V_ji, self._dl)))
 
-            if not self._phillips_deriv:
+            if not self._match_machup_pro:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._correct_sections_for_sweep:
@@ -859,7 +871,7 @@ class Scene:
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V)[:,np.newaxis]*v_iji
                 CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V)[:,np.newaxis]*v_iji
 
-            if self._phillips_deriv:
+            if self._match_machup_pro:
                 J[:,:] -= (self._cp_V_inf*self._cp_V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
             else:
                 if self._correct_sections_for_sweep:
@@ -881,11 +893,18 @@ class Scene:
 
             # Check this isn't taking too long
             if iteration >= self._max_solver_iterations:
-                if verbose: print("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
+                if verbose:
+                    R = self._lifting_line_residual(self._gamma)
+                    error = np.linalg.norm(R)
+                    print("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
                 break
 
         else: # If the loop exits normally, then everything is good
-            if verbose or kwargs.get("scipy_failed", False): print("Nonlinear solver successfully converged.")
+            if verbose or kwargs.get("scipy_failed", False):
+                R = self._lifting_line_residual(self._gamma)
+                error = np.linalg.norm(R)
+                print("Nonlinear solver successfully converged. Final error: {0}".format(error))
+
 
         end_time = time.time()
         return end_time-start_time
@@ -927,9 +946,12 @@ class Scene:
             else:
                 self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
                 self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
-            self._alpha = np.arctan2(self._v_n, self._v_a)
+            if self._match_machup_pro:
+                self._alpha = np.einsum('ij,ij->i', self._u_i, self._u_n_unswept)
+            else:
+                self._alpha = np.arctan2(self._v_n, self._v_a)
 
-        if self._phillips_deriv:
+        if self._match_machup_pro:
             self._q_i = 0.5*self._rho*self._cp_V_inf*self._cp_V_inf
         else:
             self._q_i = 0.5*self._rho*self._V_i_2
@@ -960,6 +982,8 @@ class Scene:
                 self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                 # Determine moment due to section moment coef
+                if self._correct_sections_for_sweep:
+                    self._am0[cur_slice] = segment.get_cp_am0(self._Re[cur_slice], self._M[cur_slice])
                 self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
 
                 index += num_cps
@@ -1402,7 +1426,7 @@ class Scene:
 
             # Nonlinear improvement
             if self._solver_type == "nonlinear" or fsolve_time == -1:
-                nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=fsolve_time==-1)
+                nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
 
             if fsolve_time == -1:
                 fsolve_time = 0.0
@@ -2344,17 +2368,16 @@ class Scene:
             self.solve_forces()
 
         # Make sure alpha has been calculated.
-        v_i = np.sum(self._V_ji*self._gamma[:,np.newaxis,np.newaxis], axis=0)
-        v_i += self._cp_v_inf
-        v_ni = np.einsum('ij,ij->i', v_i, self._u_n)
-        v_ai = np.einsum('ij,ij->i', v_i, self._u_a)
-        self._alpha = np.arctan2(v_ni, v_ai)
+        if not hasattr(self, "_alpha"):
+            self._calc_v_i()
+            v_ni = np.einsum('ij,ij->i', self._v_i, self._u_n)
+            v_ai = np.einsum('ij,ij->i', self._v_i, self._u_a)
+            self._alpha = np.arctan2(v_ni, v_ai)
 
         dist = {}
 
-        index = 0
-
         # Setup table for saving to .txt file
+        index = 0
         filename = kwargs.get("filename", None)
         if filename is not None:
             item_types = [("aircraft", "U18"),
@@ -2678,6 +2701,8 @@ class Scene:
         We designed the input files for Pylot to be cross-compatible with MachUpX. With this in
         mind, if values are already specified in the input but those values are not used in MachUpX,
         they will still be included in the input file exported here.
+
+        Note, this will set the aircraft state to zero aerodynamic angles and zero control deflections.
 
         Parameters
         ----------
