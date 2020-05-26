@@ -65,8 +65,13 @@ Users will notice that differences exist between the results obtained from the t
 * MachUpX implements Reid's swept section properties corrections.
 * MachUpX implements Reid's horseshoe vortex geometry corrections (i.e. jointed vortices and effective LAC).
 * MachUpX redimensionalizes section properties using the total (freestream plus induced) velocity at each control point. MachUp Pro uses only the freestream.
-* MachUpX has a slightly different nonlinear Jacobian (a consequence of the above).
+* MachUpX has a slightly different nonlinear Jacobian (a consequence of the above). This does not affect the final solution, only convergence rates.
 * MachUpX defaults to clustering control points about flap edges.
 * MachUpX uses CL_max to truncate section lift coefficients within the lifting-line algorithm. MachUp Pro only uses this to determine stall onset.
 
-All of these can be toggled in MachUpX by the user.
+All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ac_offset" can be set as "kucheman n" for each wing. In the input file under "solver", "correct_sections_for_sweep" and "machup_pro_deriv" can be specified. "CL_max" is specified in the input for each airfoil.
+
+A couple minor differences which cannot be toggled are:
+
+* MachUpX uses the experimental sideslip angle whereas MachUp Pro uses the analytical sideslip angle.
+* MachUpX uses a different definition for the directions of lift, drag, and sideforce. These are guaranteed to be orthogonal, whereas those given by MachUp Pro are not.

@@ -396,6 +396,7 @@ class Airplane:
 
         # Control points
         self.PC = np.zeros((self.N,3)) # Control point location
+        self.PC_CG = np.zeros((self.N,3)) # Control point location relative to CG
         self.PC_span_locs = np.zeros(self.N) # Control point span locations
 
         # Inbound nodes
@@ -504,6 +505,9 @@ class Airplane:
         self.P1_joint = self.P1+self.P1_chord[:,np.newaxis]*delta_joint[:,np.newaxis]*self.P1_u_a*reid_corr[:,np.newaxis]
         self.P0_joint_eff[:] = np.copy(self.P0_joint)[np.newaxis,:,:]
         self.P1_joint_eff[:] = np.copy(self.P1_joint)[np.newaxis,:,:]
+
+        # Calculate control point locations relative to CG
+        self.PC_CG = self.PC-self.CG[np.newaxis,:]
 
         # Calculate control point derivative with respect to distance in the plane of the wing and perpendicular to the x-axis
         if jackson_analytic:

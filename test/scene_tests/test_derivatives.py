@@ -75,34 +75,35 @@ def test_control_derivatives():
     # Load scene
     scene = MX.Scene(input_file)
     cont_derivs = scene.aircraft_control_derivatives()
+    print(json.dumps(cont_derivs, indent=4))
 
     assert abs(cont_derivs["test_plane"]["CL,daileron"])<1e-10
     assert abs(cont_derivs["test_plane"]["CD,daileron"])<1e-10
-    assert abs(cont_derivs["test_plane"]["CS,daileron"]-0.1313168729062192)<1e-10
+    assert abs(cont_derivs["test_plane"]["CS,daileron"]-0.13133577886049178)<1e-10
     assert abs(cont_derivs["test_plane"]["Cx,daileron"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cy,daileron"]-0.1313168729062192)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cy,daileron"]-0.13133577886049178)<1e-10
     assert abs(cont_derivs["test_plane"]["Cz,daileron"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cl,daileron"]+0.4857995606752836)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cl,daileron"]+0.4830877921597109)<1e-10
     assert abs(cont_derivs["test_plane"]["Cm,daileron"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cn,daileron"]+0.013825878749484105)<1e-10
-    assert abs(cont_derivs["test_plane"]["CL,delevator"]-1.6778334029529254)<1e-10
-    assert abs(cont_derivs["test_plane"]["CD,delevator"]-0.08858215153703482)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cn,daileron"]+0.11524853834347693)<1e-10
+    assert abs(cont_derivs["test_plane"]["CL,delevator"]-1.6788585952520692)<1e-10
+    assert abs(cont_derivs["test_plane"]["CD,delevator"]-0.030922728990260714)<1e-10
     assert abs(cont_derivs["test_plane"]["CS,delevator"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cx,delevator"]+0.029972648370026285)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cx,delevator"]-0.027687428309700814)<1e-10
     assert abs(cont_derivs["test_plane"]["Cy,delevator"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cz,delevator"]+1.679902784682857)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cz,delevator"]+1.678915067635511)<1e-10
     assert abs(cont_derivs["test_plane"]["Cl,delevator"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cm,delevator"]+4.726532651401236)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cm,delevator"]+4.973554914921227)<1e-10
     assert abs(cont_derivs["test_plane"]["Cn,delevator"])<1e-10
     assert abs(cont_derivs["test_plane"]["CL,drudder"])<1e-10
     assert abs(cont_derivs["test_plane"]["CD,drudder"])<1e-10
-    assert abs(cont_derivs["test_plane"]["CS,drudder"]+0.6390800551798637)<1e-10
+    assert abs(cont_derivs["test_plane"]["CS,drudder"]+0.6389847372823805)<1e-10
     assert abs(cont_derivs["test_plane"]["Cx,drudder"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cy,drudder"]+0.6390800551798637)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cy,drudder"]+0.6389847372823805)<1e-10
     assert abs(cont_derivs["test_plane"]["Cz,drudder"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cl,drudder"]+0.1393048697552699)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cl,drudder"]+0.13927877375523967)<1e-10
     assert abs(cont_derivs["test_plane"]["Cm,drudder"])<1e-10
-    assert abs(cont_derivs["test_plane"]["Cn,drudder"]-0.479530655424395)<1e-10
+    assert abs(cont_derivs["test_plane"]["Cn,drudder"]-0.5115291589760261)<1e-10
 
 
 def test_all_derivs():

@@ -438,7 +438,7 @@ class Scene:
 
             # Get geometries
             PC = quat_inv_trans(q, airplane_object.PC)
-            self._r_CG[airplane_slice,:] = PC-quat_inv_trans(q, airplane_object.CG)[np.newaxis,:]
+            self._r_CG[airplane_slice,:] = quat_inv_trans(q, airplane_object.PC_CG)
             self._PC[airplane_slice,:] = p+PC
             self._dl[airplane_slice,:] = quat_inv_trans(q, airplane_object.dl)
 
@@ -537,20 +537,20 @@ class Scene:
             # Freestream velocity due to airplane translation
             v_trans = -airplane_object.v
 
-            wind_vels = self._cp_v_wind[airplane_slice]
-
             # Control point velocities
-            cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC))
+            cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC_CG))
+            wind_vels = self._cp_v_wind[airplane_slice]
             self._cp_v_inf[airplane_slice,:] = v_trans+wind_vels+cp_v_rot
 
-            # P0 joint velocities
-            P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint))
-            self._P0_joint_v_inf[airplane_slice,:] = v_trans+wind_vels+P0_joint_v_rot
-
-            # P1 joint velocities
-            P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint))
-            self._P1_joint_v_inf[airplane_slice,:] = v_trans+wind_vels+P1_joint_v_rot
-
+            # Joint velocities for determining trailing vortex direction
+            if self._match_machup_pro:
+                self._P0_joint_v_inf[airplane_slice,:] = v_trans+wind_vels
+                self._P1_joint_v_inf[airplane_slice,:] = v_trans+wind_vels
+            else:
+                P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint-airplane_object.CG[np.newaxis,:]))
+                P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint-airplane_object.CG[np.newaxis,:]))
+                self._P0_joint_v_inf[airplane_slice,:] = v_trans+wind_vels+P0_joint_v_rot
+                self._P1_joint_v_inf[airplane_slice,:] = v_trans+wind_vels+P1_joint_v_rot
 
         # Get freestream magnitudes and directions
         self._cp_V_inf = np.linalg.norm(self._cp_v_inf, axis=1)
@@ -728,7 +728,7 @@ class Scene:
         #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
         #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
 
-        # Correct swept section lift
+        # Return lift
         if self._match_machup_pro:
             return 0.5*self._cp_V_inf*self._cp_V_inf*self._CL*self._dS
 
@@ -776,19 +776,17 @@ class Scene:
 
         # Get lift slope and effective freestream magnitude
         if self._correct_sections_for_sweep:
-            CL_a = self._R_CL_a*self._CLa
             u_inf_x_dl = np.cross(self._cp_v_inf_eff/self._cp_V_inf_eff[:,np.newaxis], self._dl)
             V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n)
-            b = self._cp_V_inf_eff*self._dS*self._CL
+            b = self._cp_V_inf_eff*self._dS*self._CL # Using CL here instead of CL,a(a-a_L0) is consistent with Phillips' and Hunsaker's implementations. It is more accurate.
         else:
-            CL_a = self._CLa
             u_inf_x_dl = np.cross(self._cp_u_inf, self._dl)
             V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n_unswept)
             b = self._cp_V_inf*self._dS*self._CL
 
         # A matrix
         A = np.zeros((self._N,self._N))
-        A[:,:] = -(CL_a*self._dS)[:,np.newaxis]*V_ji_dot_u_n
+        A[:,:] = -(self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
         A[self._diag_ind] += 2.0*np.linalg.norm(u_inf_x_dl, axis=1)
 
         # Solve
@@ -978,12 +976,11 @@ class Scene:
                 index += num_cps
 
         # Inviscid moment due to section
-        print(self._Cm)
         if self._correct_sections_for_sweep:
             self._correct_Cm_for_sweep()
-            dM_section = -(self._redim*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
+            dM_section = (self._redim*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
         else:
-            dM_section = -(self._redim*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s_unswept
+            dM_section = (self._redim*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s_unswept
 
         # Determine viscous drag vector
         dD = self._redim*self._CD
@@ -992,7 +989,7 @@ class Scene:
         # Moment due to viscous drag
         dM_visc = np.cross(self._r_CG, dF_visc)
 
-        # Inviscid moment due vortex lift
+        # Inviscid moment due to vortex lift
         dM_vortex = np.cross(self._r_CG, dF_inv)
         dM_inv = dM_vortex+dM_section
 
