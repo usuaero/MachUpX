@@ -2785,7 +2785,7 @@ class Scene:
                         value["max_deflection"] = value["max_deflection"]
                     except KeyError:
                         if control_type == None:
-                            value["max_deflections"] = "PLEASE SPECIFY"
+                            value["max_deflection"] = "PLEASE SPECIFY"
                         pass
                     value["input_axis"] = value.get("input_axis", "PLEASE SPECIFY")
                 
