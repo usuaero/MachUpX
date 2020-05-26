@@ -267,7 +267,7 @@ if __name__=="__main__":
 
     # Get MachUp Pro results
     mu_pro_dict = translate_to_machup_pro(input_dict, airplane_dict, state, control_state)
-    filename = "machup_pro_input.json"
+    filename = "pro_input.json"
     with open(filename, 'w') as mu_pro_handle:
         json.dump(mu_pro_dict, mu_pro_handle, indent=4)
     run_machup_pro(filename)
@@ -299,6 +299,6 @@ if __name__=="__main__":
     print("Cy: {0}".format(FM_pro["total"]["plane"]["CY"]/FM_mx["plane"]["total"]["Cy"]*int(abs(FM_pro["total"]["plane"]["CY"])>1e-10)))
     print("Cz: {0}".format(FM_pro["total"]["plane"]["CZ"]/FM_mx["plane"]["total"]["Cz"]*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
 
-    #sp.run(['rm', 'machup_pro_input.json'])
-    sp.run(['rm', 'machup_pro_input_forces.json'])
-    sp.run(['rm', 'machup_pro_input_derivatives.json'])
+    #sp.run(['rm', 'pro_input.json'])
+    sp.run(['rm', 'pro_input_forces.json'])
+    sp.run(['rm', 'pro_input_derivatives.json'])
