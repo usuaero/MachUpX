@@ -728,7 +728,7 @@ class WingSegment:
 
 
     def _get_section_ac_loc(self, span):
-        #Returns the location of the section aerodynamic center at the given span fraction.
+        # Returns the location of the section aerodynamic center at the given span fraction.
         if isinstance(span, float):
             single = True
             span = np.asarray(span)[np.newaxis]
@@ -744,7 +744,7 @@ class WingSegment:
 
 
     def _get_cp_avg_chord_lengths(self):
-        #Returns the average local chord length at each control point on the segment.
+        # Returns the average local chord length at each control point on the segment.
         node_chords = self.get_chord(self.node_span_locs)
         return (node_chords[1:]+node_chords[:-1])/2
 

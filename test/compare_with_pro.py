@@ -175,8 +175,8 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
                 #"ac_offset" : "kuchemann",
-                "dihedral" : 0.0,
-                "sweep" : 0.0,
+                "dihedral" : 2.0,
+                "sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
@@ -207,7 +207,8 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "twist" : -2.1,
                 #"ac_offset" : "kuchemann",
-                #"sweep" : 45.0,
+                "sweep" : 45.0,
+                "dihedral" : -10.0,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -236,7 +237,7 @@ if __name__=="__main__":
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
                 #"ac_offset" : "kuchemann",
-                #"sweep" : 45.0,
+                "sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -254,15 +255,15 @@ if __name__=="__main__":
 
     state = {
         "velocity" : 100.0,
-        "alpha" : 0.0,
-        "beta" : 0.0,
-        "angular_rates" : [0.0, 0.0, 0.1]
+        "alpha" : -2.0,
+        "beta" : 7.0,
+        "angular_rates" : [1.0, 1.0, 1.0]
     }
 
     control_state = {
-        "aileron" : 0.0,
-        "elevator" : 0.0,
-        "rudder" : 0.0
+        "aileron" : 5.0,
+        "elevator" : -3.0,
+        "rudder" : 2.0
     }
 
     # Get MachUp Pro results
@@ -298,6 +299,16 @@ if __name__=="__main__":
     print("Cx: {0}".format(FM_pro["total"]["plane"]["CX"]/FM_mx["plane"]["total"]["Cx"]*int(abs(FM_pro["total"]["plane"]["CX"])>1e-10)))
     print("Cy: {0}".format(FM_pro["total"]["plane"]["CY"]/FM_mx["plane"]["total"]["Cy"]*int(abs(FM_pro["total"]["plane"]["CY"])>1e-10)))
     print("Cz: {0}".format(FM_pro["total"]["plane"]["CZ"]/FM_mx["plane"]["total"]["Cz"]*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
+    print("\nErrors")
+    print("-----")
+    print("CL: {0}%".format(abs((FM_pro["total"]["plane"]["CL"]-FM_mx["plane"]["total"]["CL"])/FM_pro["total"]["plane"]["CL"])*100.0*int(abs(FM_pro["total"]["plane"]["CL"])>1e-10)))
+    print("CD: {0}%".format(abs((FM_pro["total"]["plane"]["CD"]-FM_mx["plane"]["total"]["CD"])/FM_pro["total"]["plane"]["CD"])*100.0*int(abs(FM_pro["total"]["plane"]["CD"])>1e-10)))
+    print("Cl: {0}%".format(abs((FM_pro["total"]["plane"]["Cl"]-FM_mx["plane"]["total"]["Cl"])/FM_pro["total"]["plane"]["Cl"])*100.0*int(abs(FM_pro["total"]["plane"]["Cl"])>1e-10)))
+    print("Cm: {0}%".format(abs((FM_pro["total"]["plane"]["Cm"]-FM_mx["plane"]["total"]["Cm"])/FM_pro["total"]["plane"]["Cm"])*100.0*int(abs(FM_pro["total"]["plane"]["Cm"])>1e-10)))
+    print("Cn: {0}%".format(abs((FM_pro["total"]["plane"]["Cn"]-FM_mx["plane"]["total"]["Cn"])/FM_pro["total"]["plane"]["Cn"])*100.0*int(abs(FM_pro["total"]["plane"]["Cn"])>1e-10)))
+    print("Cx: {0}%".format(abs((FM_pro["total"]["plane"]["CX"]-FM_mx["plane"]["total"]["Cx"])/FM_pro["total"]["plane"]["CX"])*100.0*int(abs(FM_pro["total"]["plane"]["CX"])>1e-10)))
+    print("Cy: {0}%".format(abs((FM_pro["total"]["plane"]["CY"]-FM_mx["plane"]["total"]["Cy"])/FM_pro["total"]["plane"]["CY"])*100.0*int(abs(FM_pro["total"]["plane"]["CY"])>1e-10)))
+    print("Cz: {0}%".format(abs((FM_pro["total"]["plane"]["CZ"]-FM_mx["plane"]["total"]["Cz"])/FM_pro["total"]["plane"]["CZ"])*100.0*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
 
     #sp.run(['rm', 'pro_input.json'])
     sp.run(['rm', 'pro_input_forces.json'])

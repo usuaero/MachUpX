@@ -369,6 +369,7 @@ class Scene:
         # Velocities
         self._cp_v_wind = np.zeros((self._N,3))
         self._cp_v_inf = np.zeros((self._N,3)) # Control point freestream vector
+        self._cp_v_inf_w_o_rotation = np.zeros((self._N,3)) # Control point freestream vector minus influence of aircraft rotation
         self._P0_joint_v_inf = np.zeros((self._N,3))
         self._P1_joint_v_inf = np.zeros((self._N,3))
 
@@ -541,6 +542,8 @@ class Scene:
             cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC_CG))
             wind_vels = self._cp_v_wind[airplane_slice]
             self._cp_v_inf[airplane_slice,:] = v_trans+wind_vels+cp_v_rot
+            if self._match_machup_pro:
+                self._cp_v_inf_w_o_rotation[airplane_slice,:] = v_trans+wind_vels
 
             # Joint velocities for determining trailing vortex direction
             if self._match_machup_pro:
@@ -555,6 +558,8 @@ class Scene:
         # Get freestream magnitudes and directions
         self._cp_V_inf = np.linalg.norm(self._cp_v_inf, axis=1)
         self._cp_u_inf = self._cp_v_inf/self._cp_V_inf[:,np.newaxis]
+        if self._match_machup_pro:
+            self._cp_V_inf_w_o_rotation = np.linalg.norm(self._cp_v_inf_w_o_rotation, axis=1)
 
         # Get effective freesream and calculate initial approximation for airfoil parameters (Re and M are only used in the linear solution)
         if self._correct_sections_for_sweep:
@@ -660,7 +665,7 @@ class Scene:
 
         # Get vortex lift
         self._w_i = np.cross(self._v_i, self._dl)
-        self._w_i_mag = np.sqrt(np.einsum('ij,ij->i', self._w_i, self._w_i))
+        self._w_i_mag = np.linalg.norm(self._w_i, axis=1)
         L_vortex = self._w_i_mag*self._gamma
         
         # Get section lift
@@ -724,13 +729,12 @@ class Scene:
         #S_a = np.sin(self._alpha)
         #S_B = np.sin(self._beta_swept)
         #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-S_a*S_a*S_B*S_B)
-
         #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
         #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
 
         # Return lift
         if self._match_machup_pro:
-            return 0.5*self._cp_V_inf*self._cp_V_inf*self._CL*self._dS
+            return 0.5*self._cp_V_inf_w_o_rotation*self._cp_V_inf_w_o_rotation*self._CL*self._dS
 
         else:
             if self._correct_sections_for_sweep:
@@ -845,7 +849,10 @@ class Scene:
                     index += num_cps
 
             # Intermediate calcs
-            v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], V_ji)
+            if self._correct_sections_for_sweep:
+                v_iji = np.einsum('ijk,ijk->ij', self._v_i_eff[:,np.newaxis,:], V_ji)
+            else:
+                v_iji = np.einsum('ijk,ijk->ij', self._v_i[:,np.newaxis,:], V_ji)
 
             # Caclulate Jacobian
             J[:,:] = (2*self._gamma/self._w_i_mag)[:,np.newaxis]*(np.einsum('ijk,ijk->ij', self._w_i[:,np.newaxis,:], np.cross(V_ji, self._dl)))
@@ -873,10 +880,8 @@ class Scene:
             diag_ind = np.diag_indices(self._N)
             J[diag_ind] += 2*self._w_i_mag
 
-            # Solve for change in gamma
+            # Update gamma
             dGamma = np.linalg.solve(J, -R)
-
-            # Update gammas
             self._gamma = self._gamma+self._solver_relaxation*dGamma
 
             # Output progress
@@ -915,6 +920,10 @@ class Scene:
         dimensional = kwargs.get("dimensional", True)
         report_by_segment = kwargs.get("report_by_segment", False)
         body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
+
+        # Scale gammas
+        if self._match_machup_pro:
+            self._gamma *= (self._cp_V_inf/self._cp_V_inf_w_o_rotation)**2
 
         # Get velocities
         self._calc_v_i()
