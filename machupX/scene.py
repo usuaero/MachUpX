@@ -1760,12 +1760,12 @@ class Scene:
                 derivs[aircraft_name]["Cm,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm"])*diff
                 derivs[aircraft_name]["Cn,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn"])*diff
 
-                derivs[aircraft_name]["Cx,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx"])*diff
-                derivs[aircraft_name]["Cy,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy"])*diff
-                derivs[aircraft_name]["Cz,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz"])*diff
-                derivs[aircraft_name]["Cl,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl"])*diff
-                derivs[aircraft_name]["Cm,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm"])*diff
-                derivs[aircraft_name]["Cn,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn"])*diff
+                derivs[aircraft_name]["Cx,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx"])*diff
+                derivs[aircraft_name]["Cy,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy"])*diff
+                derivs[aircraft_name]["Cz,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz"])*diff
+                derivs[aircraft_name]["Cl,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl"])*diff
+                derivs[aircraft_name]["Cm,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm"])*diff
+                derivs[aircraft_name]["Cn,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn"])*diff
 
             if stab_frame:
                 derivs[aircraft_name]["Cx_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cx_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cx_s"])*diff
@@ -1775,12 +1775,12 @@ class Scene:
                 derivs[aircraft_name]["Cm_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm_s"])*diff
                 derivs[aircraft_name]["Cn_s,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn_s"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn_s"])*diff
 
-                derivs[aircraft_name]["Cx_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx_s"])*diff
-                derivs[aircraft_name]["Cy_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy_s"])*diff
-                derivs[aircraft_name]["Cz_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz_s"])*diff
-                derivs[aircraft_name]["Cl_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_s"])*diff
-                derivs[aircraft_name]["Cm_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_s"])*diff
-                derivs[aircraft_name]["Cn_s,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_s"])*diff
+                derivs[aircraft_name]["Cx_s,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cx_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cx_s"])*diff
+                derivs[aircraft_name]["Cy_s,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cy_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cy_s"])*diff
+                derivs[aircraft_name]["Cz_s,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cz_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cz_s"])*diff
+                derivs[aircraft_name]["Cl_s,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_s"])*diff
+                derivs[aircraft_name]["Cm_s,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_s"])*diff
+                derivs[aircraft_name]["Cn_s,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_s"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_s"])*diff
 
             if wind_frame:
                 derivs[aircraft_name]["CL,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["CL"]-FM_dalpha_bwd[aircraft_name]["total"]["CL"])*diff
@@ -1790,12 +1790,12 @@ class Scene:
                 derivs[aircraft_name]["Cm_w,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cm_w"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm_w"])*diff
                 derivs[aircraft_name]["Cn_w,a"] = (FM_dalpha_fwd[aircraft_name]["total"]["Cn_w"]-FM_dalpha_bwd[aircraft_name]["total"]["Cn_w"])*diff
 
-                derivs[aircraft_name]["CL,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CL"]-FM_dbeta_bwd[aircraft_name]["total"]["CL"])*diff
-                derivs[aircraft_name]["CD,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CD"]-FM_dbeta_bwd[aircraft_name]["total"]["CD"])*diff
-                derivs[aircraft_name]["CS,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["CS"]-FM_dbeta_bwd[aircraft_name]["total"]["CS"])*diff
-                derivs[aircraft_name]["Cl_w,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_w"])*diff
-                derivs[aircraft_name]["Cm_w,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_w"])*diff
-                derivs[aircraft_name]["Cn_w,B"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_w"])*diff
+                derivs[aircraft_name]["CL,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["CL"]-FM_dbeta_bwd[aircraft_name]["total"]["CL"])*diff
+                derivs[aircraft_name]["CD,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["CD"]-FM_dbeta_bwd[aircraft_name]["total"]["CD"])*diff
+                derivs[aircraft_name]["CS,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["CS"]-FM_dbeta_bwd[aircraft_name]["total"]["CS"])*diff
+                derivs[aircraft_name]["Cl_w,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_w"])*diff
+                derivs[aircraft_name]["Cm_w,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_w"])*diff
+                derivs[aircraft_name]["Cn_w,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_w"])*diff
         
             # Reset aerodynamic state
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0)
@@ -2823,9 +2823,9 @@ class Scene:
         model_dict["coefficients"]["Cm0"] = float(FM_ref[aircraft_name]["total"]["Cm"])
         model_dict["coefficients"]["CL,a"] = float(derivs_ref[aircraft_name]["stability"]["CL,a"])
         model_dict["coefficients"]["Cm,a"] = float(derivs_ref[aircraft_name]["stability"]["Cm,a"])
-        model_dict["coefficients"]["CS,b"] = float(derivs_ref[aircraft_name]["stability"]["CS,B"])
-        model_dict["coefficients"]["Cl,b"] = float(derivs_ref[aircraft_name]["stability"]["Cl,B"])
-        model_dict["coefficients"]["Cn,b"] = float(derivs_ref[aircraft_name]["stability"]["Cn,B"])
+        model_dict["coefficients"]["CS,b"] = float(derivs_ref[aircraft_name]["stability"]["CS,b"])
+        model_dict["coefficients"]["Cl,b"] = float(derivs_ref[aircraft_name]["stability"]["Cl,b"])
+        model_dict["coefficients"]["Cn,b"] = float(derivs_ref[aircraft_name]["stability"]["Cn,b"])
         model_dict["coefficients"]["CS,p_bar"] = float(derivs_ref[aircraft_name]["damping"]["CS,pbar"])
         model_dict["coefficients"]["Cl,p_bar"] = float(derivs_ref[aircraft_name]["damping"]["Cl,pbar"])
         model_dict["coefficients"]["Cn,p_bar"] = float(derivs_ref[aircraft_name]["damping"]["Cn,pbar"])

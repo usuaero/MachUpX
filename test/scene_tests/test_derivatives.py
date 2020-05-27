@@ -22,15 +22,15 @@ def test_stability_derivatives():
     assert abs(stab_derivs["test_plane"]["Cl,a"])<1e-10
     assert abs(stab_derivs["test_plane"]["Cm,a"]+3.946036942099846)<1e-10
     assert abs(stab_derivs["test_plane"]["Cn,a"])<1e-10
-    assert abs(stab_derivs["test_plane"]["CL,B"])<1e-10
-    assert abs(stab_derivs["test_plane"]["CD,B"])<1e-10
-    assert abs(stab_derivs["test_plane"]["CS,B"]+0.8157254960313394)<1e-9
-    assert abs(stab_derivs["test_plane"]["Cx,B"])<1e-10
-    assert abs(stab_derivs["test_plane"]["Cy,B"]+0.8304002728742348)<1e-9
-    assert abs(stab_derivs["test_plane"]["Cz,B"])<1e-10
-    assert abs(stab_derivs["test_plane"]["Cl,B"]+0.1615386223535695)<1e-10
-    assert abs(stab_derivs["test_plane"]["Cm,B"])<1e-10
-    assert abs(stab_derivs["test_plane"]["Cn,B"]-0.6171846005680138)<1e-9
+    assert abs(stab_derivs["test_plane"]["CL,b"])<1e-10
+    assert abs(stab_derivs["test_plane"]["CD,b"])<1e-10
+    assert abs(stab_derivs["test_plane"]["CS,b"]+0.8157254960313394)<1e-9
+    assert abs(stab_derivs["test_plane"]["Cx,b"])<1e-10
+    assert abs(stab_derivs["test_plane"]["Cy,b"]+0.8304002728742348)<1e-9
+    assert abs(stab_derivs["test_plane"]["Cz,b"])<1e-10
+    assert abs(stab_derivs["test_plane"]["Cl,b"]+0.1615386223535695)<1e-10
+    assert abs(stab_derivs["test_plane"]["Cm,b"])<1e-10
+    assert abs(stab_derivs["test_plane"]["Cn,b"]-0.6171846005680138)<1e-9
 
 
 def test_damping_derivatives():
@@ -122,15 +122,15 @@ def test_all_derivs():
     assert abs(derivs["test_plane"]["stability"]["Cl,a"])<1e-10
     assert abs(derivs["test_plane"]["stability"]["Cm,a"]+3.946036942099846)<1e-10
     assert abs(derivs["test_plane"]["stability"]["Cn,a"])<1e-10
-    assert abs(derivs["test_plane"]["stability"]["CL,B"])<1e-10
-    assert abs(derivs["test_plane"]["stability"]["CD,B"])<1e-10
-    assert abs(derivs["test_plane"]["stability"]["CS,B"]+0.8157254960313394)<1e-9
-    assert abs(derivs["test_plane"]["stability"]["Cx,B"])<1e-10
-    assert abs(derivs["test_plane"]["stability"]["Cy,B"]+0.8304002728742348)<1e-9
-    assert abs(derivs["test_plane"]["stability"]["Cz,B"])<1e-10
-    assert abs(derivs["test_plane"]["stability"]["Cl,B"]+0.1615386223535695)<1e-10
-    assert abs(derivs["test_plane"]["stability"]["Cm,B"])<1e-10
-    assert abs(derivs["test_plane"]["stability"]["Cn,B"]-0.6171846005680138)<1e-9
+    assert abs(derivs["test_plane"]["stability"]["CL,b"])<1e-10
+    assert abs(derivs["test_plane"]["stability"]["CD,b"])<1e-10
+    assert abs(derivs["test_plane"]["stability"]["CS,b"]+0.8157254960313394)<1e-9
+    assert abs(derivs["test_plane"]["stability"]["Cx,b"])<1e-10
+    assert abs(derivs["test_plane"]["stability"]["Cy,b"]+0.8304002728742348)<1e-9
+    assert abs(derivs["test_plane"]["stability"]["Cz,b"])<1e-10
+    assert abs(derivs["test_plane"]["stability"]["Cl,b"]+0.1615386223535695)<1e-10
+    assert abs(derivs["test_plane"]["stability"]["Cm,b"])<1e-10
+    assert abs(derivs["test_plane"]["stability"]["Cn,b"]-0.6171846005680138)<1e-9
     assert abs(derivs["test_plane"]["damping"]["CL,pbar"])<1e-10
     assert abs(derivs["test_plane"]["damping"]["CD,pbar"])<1e-10
     assert abs(derivs["test_plane"]["damping"]["CS,pbar"]+0.07876155824189048)<1e-9
