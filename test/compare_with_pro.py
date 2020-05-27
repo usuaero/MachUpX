@@ -43,9 +43,9 @@ def translate_to_machup_pro(machupx_input, machupx_airplane, state, control_stat
     mu_pro_dict["condition"]["beta"] = np.degrees(np.arctan2(np.tan(np.radians(mu_pro_dict["condition"].pop("beta", 0.0))), np.cos(np.radians(mu_pro_dict["condition"].get("alpha", 0.0)))))
     w = mu_pro_dict["condition"].pop("angular_rates", [0.0, 0.0, 0.0])
     mu_pro_dict["condition"]["omega"] = {}
-    mu_pro_dict["condition"]["omega"]["roll"] = w[0]
-    mu_pro_dict["condition"]["omega"]["pitch"] = w[1]
-    mu_pro_dict["condition"]["omega"]["yaw"] = w[2]
+    mu_pro_dict["condition"]["omega"]["roll"] = w[0]/mu_pro_dict["condition"]["velocity"]
+    mu_pro_dict["condition"]["omega"]["pitch"] = w[1]/mu_pro_dict["condition"]["velocity"]
+    mu_pro_dict["condition"]["omega"]["yaw"] = w[2]/mu_pro_dict["condition"]["velocity"]
 
     # Controls
     for key, value in mu_pro_dict["controls"].items():

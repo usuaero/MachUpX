@@ -309,13 +309,13 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>>Aerodynamic angle of attack. Defaults to 0.
 >>>>>
 >>>>>**"beta" : float, optional**
->>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. B = asin(Vy/V).
+>>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. b = asin(Vy/V).
 >>>>>
 >>>>>**"orientation" : vector, optional**
 >>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.
 >>>>>
 >>>>>**"angular_rates" : vector, optional**
->>>>>>Angular rates of the aircraft about the center of gravity, corresponding to p, q, and r. Defaults to [0.0, 0.0, 0.0].
+>>>>>>Angular rates of the aircraft about the center of gravity, corresponding to p, q, and r. These are dimensional angular rates (rad/s). Defaults to [0.0, 0.0, 0.0].
 >>>>>
 >>>>>**"angular_rate_frame" : str, optional**
 >>>>>>Frame in which the angular rates are given. Can be "body", "stab" (stability coordinates), or "wind". Defaults to "body".
