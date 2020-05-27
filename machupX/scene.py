@@ -486,6 +486,7 @@ class Scene:
         self._r_0_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0_joint, self._r_0_joint))
         self._r_1_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1, self._r_1))
         self._r_1_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1_joint, self._r_1_joint))
+        print(self._r_0_joint_mag-self._r_1_joint_mag[::-1,::-1])
 
         # Calculate magnitude products
         self._r_0_r_0_joint_mag = self._r_0_mag*self._r_0_joint_mag
@@ -1743,11 +1744,13 @@ class Scene:
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0+dtheta)
             self.solve_forces(dimensional=False, **kwargs)
             FM_dalpha_fwd = self._FM
+            print(json.dumps(FM_dalpha_fwd[aircraft_name]["total"], indent=4))
 
             # Perturb backward in alpha
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0-dtheta)
             self.solve_forces(dimensional=False, **kwargs)
             FM_dalpha_bwd = self._FM
+            print(json.dumps(FM_dalpha_bwd[aircraft_name]["total"], indent=4))
 
             # Perturb forward in beta
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0+dtheta) # We have to reset alpha on this one

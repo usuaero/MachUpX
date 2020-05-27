@@ -618,15 +618,21 @@ class Airplane:
         # Calculate differential length vectors
         self.dl = self.P1-self.P0
 
-        ## Plot effective LACs
-        #fig = plt.figure(figsize=plt.figaspect(1.0))
-        #ax = fig.gca(projection='3d')
-        #for i in range(self.N):
-        #    ax.plot(self.P0_eff[i,:,0], self.P0_eff[i,:,1], self.P0_eff[i,:,2], 'r-')
-        #    ax.plot(self.P0_joint_eff[i,:,0], self.P0_joint_eff[i,:,1], self.P0_joint_eff[i,:,2], color='orange')
-        #    ax.plot(self.P1_eff[i,:,0], self.P1_eff[i,:,1], self.P1_eff[i,:,2], 'b-')
-        #    ax.plot(self.P1_joint_eff[i,:,0], self.P1_joint_eff[i,:,1], self.P1_joint_eff[i,:,2], 'g-')
-        #plt.show()
+        # Plot effective LACs
+        if False:
+            fig = plt.figure(figsize=plt.figaspect(1.0))
+            ax = fig.gca(projection='3d')
+            for i in range(self.N):
+                ax.plot(self.P0_eff[i,:,0], self.P0_eff[i,:,1], self.P0_eff[i,:,2], 'r-')
+                ax.plot(self.P0_joint_eff[i,:,0], self.P0_joint_eff[i,:,1], self.P0_joint_eff[i,:,2], color='orange')
+                ax.plot(self.P1_eff[i,:,0], self.P1_eff[i,:,1], self.P1_eff[i,:,2], 'b-')
+                ax.plot(self.P1_joint_eff[i,:,0], self.P1_joint_eff[i,:,1], self.P1_joint_eff[i,:,2], 'g-')
+
+            lim = np.max(np.max(np.max(self.P0_joint_eff)))
+            ax.set_xlim3d(lim, -lim)
+            ax.set_ylim3d(lim, -lim)
+            ax.set_zlim3d(lim, -lim)
+            plt.show()
 
 
     def _calc_f_prime_of_z(self, z):

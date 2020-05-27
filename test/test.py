@@ -12,8 +12,8 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear",
-            "correct_sections_for_sweep" : False
+            "type" : "scipy_fsolve"
+            #"type" : "nonlinear"
         }
     }
 
@@ -43,74 +43,44 @@ if __name__=="__main__":
                 "is_main" : True,
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
-                "ac_offset" : "kuchemann",
-                "dihedral" : [[0.0, 20.0],
-                              [0.3, 20.0],
-                              [0.7, -20.0],
-                              [1.0, -20.0]],
-                "sweep" : [[0.0, 20.0],
-                              [1.0, -20.0]],
+                "chord" : [[0.0, 2.0],
+                           [0.2, 1.0],
+                           [1.0, 0.5]],
+                "sweep" : [[0.0, 0.0],
+                           [0.5, 20.0]],
+                "dihedral" : 5.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
-                    "root_span" : 0.5,
+                    "root_span" : 0.55,
+                    "tip_span" : 0.95,
                     "control_mixing" : {
-                        "aileron" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True
-                }
-            },
-            "h_stab" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -3.0
-                },
-                "semispan" : 2.0,
-                "airfoil" : "NACA_0010",
-                "twist" : -2.1,
-                "ac_offset" : "kuchemann",
-                "sweep" : 45.0,
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
+                        "aileron" : 1.0,
                         "elevator" : 1.0
                     }
                 },
                 "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True
+                    "N" : 20,
+                    "wing_ID" : 0
                 }
             },
-            "v_stab" : {
-                "ID" : 3,
-                "side" : "right",
-                "is_main" : False,
+            "winglets" : {
+                "ID" : 2,
+                "side" : "both",
+                "is_main" : True,
                 "connect_to" : {
                     "ID" : 1,
-                    "location" : "root",
-                    "dx" : -3.0,
-                    "dz" : -0.1
+                    "location" : "tip"
                 },
-                "semispan" : 2.0,
+                "semispan" : 0.5,
                 "dihedral" : 90.0,
+                "sweep" : 10.0,
+                "chord" : [[0.0, 0.5],
+                           [1.0, 0.2]],
                 "airfoil" : "NACA_0010",
-                "ac_offset" : "kuchemann",
-                "sweep" : 45.0,
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "rudder" : 1.0
-                    }
-                },
                 "grid" : {
-                    "N" : 40,
-                    "reid_corrections" : True
+                    "N" : 20,
+                    "wing_ID" : 0,
+                    "joint_length" : 10
                 }
             }
         }
@@ -138,6 +108,6 @@ if __name__=="__main__":
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    ## Get derivatives
-    #derivs = scene.aircraft_derivatives(wind_frame=False)
-    #print(json.dumps(derivs["plane"], indent=4))
+    # Get derivatives
+    derivs = scene.aircraft_derivatives(wind_frame=False)
+    print(json.dumps(derivs["plane"], indent=4))
