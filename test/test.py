@@ -48,7 +48,7 @@ if __name__=="__main__":
                            [1.0, 0.5]],
                 "sweep" : [[0.0, 0.0],
                            [0.5, 20.0]],
-                "dihedral" : 5.0,
+                "dihedral" : 10.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.55,
@@ -60,7 +60,8 @@ if __name__=="__main__":
                 },
                 "grid" : {
                     "N" : 20,
-                    "wing_ID" : 0
+                    "wing_ID" : 0,
+                    "reid_corrections" : True
                 }
             },
             "winglets" : {
@@ -72,7 +73,8 @@ if __name__=="__main__":
                     "location" : "tip"
                 },
                 "semispan" : 0.5,
-                "dihedral" : 90.0,
+                "dihedral" : [[0.0, 10.0],
+                              [0.1, 90.0]],
                 "sweep" : 10.0,
                 "chord" : [[0.0, 0.5],
                            [1.0, 0.2]],
@@ -103,10 +105,24 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=True)
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Get derivatives
-    derivs = scene.aircraft_derivatives(wind_frame=False)
-    print(json.dumps(derivs["plane"], indent=4))
+    ## Get derivatives
+    #derivs = scene.aircraft_derivatives(wind_frame=False)
+    #print(json.dumps(derivs["plane"], indent=4))
+
+    grids = [10, 20, 40, 80, 160]
+
+    plt.figure()
+    for grid in grids:
+        airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
+        scene = MX.Scene(input_dict)
+        scene.add_aircraft("jackson_wing", airplane_dict, state=state)
+        scene.solve_forces(verbose=True)
+        plt.plot(scene._PC[:,1], scene._gamma, label='MUX {0}'.format(grid))
+    plt.legend()
+    plt.xlabel("Span Location")
+    plt.ylabel("Circulation")
+    plt.show()
