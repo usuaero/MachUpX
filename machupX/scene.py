@@ -1744,13 +1744,11 @@ class Scene:
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0+dtheta)
             self.solve_forces(dimensional=False, **kwargs)
             FM_dalpha_fwd = self._FM
-            print(json.dumps(FM_dalpha_fwd[aircraft_name]["total"], indent=4))
 
             # Perturb backward in alpha
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0-dtheta)
             self.solve_forces(dimensional=False, **kwargs)
             FM_dalpha_bwd = self._FM
-            print(json.dumps(FM_dalpha_bwd[aircraft_name]["total"], indent=4))
 
             # Perturb forward in beta
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0+dtheta) # We have to reset alpha on this one
