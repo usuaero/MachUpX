@@ -587,6 +587,8 @@ class Airplane:
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
                     self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    if i == 0:
+                        u_j_first = u_j
 
                     # P1 joint
                     d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
@@ -600,7 +602,9 @@ class Airplane:
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    if i == self.N-1:
+                        u_j_last = u_j
 
 
             else:

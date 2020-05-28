@@ -462,12 +462,13 @@ class Scene:
 
             # Get node locations for other aircraft from this aircraft
             # This does not need to take the effective LAC into account
-            this_ind = range(airplane_slice.start, airplane_slice.stop)
-            other_ind = [i for i in range(self._N) if i not in this_ind] # control point indices for other airplanes
-            self._P0[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0)
-            self._P1[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1)
-            self._P0_joint[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_joint)
-            self._P1_joint[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1_joint)
+            if self._num_aircraft > 1:
+                this_ind = range(airplane_slice.start, airplane_slice.stop)
+                other_ind = [i for i in range(self._N) if i not in this_ind] # control point indices for other airplanes
+                self._P0[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0)
+                self._P1[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1)
+                self._P0_joint[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P0_joint)
+                self._P1_joint[other_ind,airplane_slice,:] = p+quat_inv_trans(q, airplane_object.P1_joint)
 
             # Spatial node vectors
             self._r_0[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.r_0)
@@ -486,7 +487,6 @@ class Scene:
         self._r_0_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0_joint, self._r_0_joint))
         self._r_1_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1, self._r_1))
         self._r_1_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1_joint, self._r_1_joint))
-        print(self._r_0_joint_mag-self._r_1_joint_mag[::-1,::-1])
 
         # Calculate magnitude products
         self._r_0_r_0_joint_mag = self._r_0_mag*self._r_0_joint_mag
@@ -667,7 +667,7 @@ class Scene:
         # Get vortex lift
         self._w_i = np.cross(self._v_i, self._dl)
         self._w_i_mag = np.linalg.norm(self._w_i, axis=1)
-        L_vortex = self._w_i_mag*self._gamma
+        L_vortex = 2.0*self._w_i_mag*self._gamma
         
         # Get section lift
         L_section = self._get_section_lift()
@@ -682,7 +682,7 @@ class Scene:
 
     
     def _get_section_lift(self):
-        # Calculate magnitude of lift due to section properties divided by density
+        # Calculate magnitude of lift due to section properties divided by 1/2 density
 
         # Get section properties
         if self._correct_sections_for_sweep:
@@ -735,14 +735,14 @@ class Scene:
 
         # Return lift
         if self._match_machup_pro:
-            return 0.5*self._cp_V_inf_w_o_rotation*self._cp_V_inf_w_o_rotation*self._CL*self._dS
+            return self._cp_V_inf_w_o_rotation*self._cp_V_inf_w_o_rotation*self._CL*self._dS
 
         else:
             if self._correct_sections_for_sweep:
                 self._correct_CL_for_sweep()
-                return 0.5*self._V_i_eff_2*self._CL*self._dS # in case you're wondering, this is the one you want to go for ;)
+                return self._V_i_eff_2*self._CL*self._dS # in case you're wondering, this is the one you want to go for ;)
             else:
-                return 0.5*self._V_i_2*self._CL*self._dS
+                return self._V_i_2*self._CL*self._dS
 
 
     def _correct_CL_for_sweep(self):
