@@ -12,8 +12,8 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve"
-            #"type" : "nonlinear"
+            #"type" : "scipy_fsolve"
+            "type" : "nonlinear"
         }
     }
 
@@ -43,46 +43,34 @@ if __name__=="__main__":
                 "is_main" : True,
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
-                "chord" : [[0.0, 2.0],
-                           [0.2, 1.0],
-                           [1.0, 0.5]],
-                "sweep" : [[0.0, 0.0],
-                           [0.5, 20.0]],
-                "dihedral" : 10.0,
-                "control_surface" : {
-                    "chord_fraction" : 0.1,
-                    "root_span" : 0.55,
-                    "tip_span" : 0.95,
-                    "control_mixing" : {
-                        "aileron" : 1.0,
-                        "elevator" : 1.0
-                    }
-                },
+                #"ac_offset" : "kuchemann",
+                "chord" : 2.0,
+                #"sweep" : 30.0,
+                "dihedral" : 35.0,
                 "grid" : {
-                    "N" : 20,
-                    "wing_ID" : 0,
-                    "reid_corrections" : True
+                    "N" : 80
                 }
-            },
-            "winglets" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : True,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "tip"
-                },
-                "semispan" : 0.5,
-                "dihedral" : [[0.0, 10.0],
-                              [0.1, 90.0]],
-                "sweep" : 10.0,
-                "chord" : [[0.0, 0.5],
-                           [1.0, 0.2]],
-                "airfoil" : "NACA_0010",
-                "grid" : {
-                    "N" : 20,
-                    "wing_ID" : 0
-                }
+            #},
+            #"winglets" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : True,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "tip",
+            #        "y_offset" : 0.01,
+            #        "dz" : -0.01
+            #    },
+            #    "semispan" : 0.5,
+            #    "dihedral" : 90.0,
+            #    "sweep" : 10.0,
+            #    "chord" : [[0.0, 0.5],
+            #               [1.0, 0.2]],
+            #    "airfoil" : "NACA_0010",
+            #    "grid" : {
+            #        "N" : 20,
+            #        "wing_ID" : 0
+            #    }
             }
         }
     }
@@ -113,7 +101,7 @@ if __name__=="__main__":
     #derivs = scene.aircraft_derivatives(wind_frame=False)
     #print(json.dumps(derivs["plane"], indent=4))
 
-    grids = [10, 20, 40, 80, 160]
+    grids = [10, 20, 40, 80, 160, 320, 640]
 
     plt.figure()
     for grid in grids:
