@@ -799,8 +799,11 @@ class Airplane:
                     self.l_ref_lat += wing_segment.b*2.0
 
         # Longitudinal reference length
-        if self.l_ref_lon == -1:
-            self.l_ref_lon = self.S_w/(self.l_ref_lat)
+        try:
+            if self.l_ref_lon == -1:
+                self.l_ref_lon = self.S_w/(self.l_ref_lat)
+        except:
+            raise IOError("No wing was specified as main for {0} so reference parameters cannot be determined.".format(self.name))
 
 
     def delete_wing_segment(self, wing_segment_name):

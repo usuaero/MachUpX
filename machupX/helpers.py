@@ -119,6 +119,9 @@ def import_value(key, dict_of_vals, system, default_value):
         else:
             raise ValueError("Did not recognize value format {0}.".format(val))
 
+    elif callable(val):
+        return_value = val
+
     else:
         raise ValueError("Did not recognize value format {0}.".format(val))
 

@@ -323,8 +323,8 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>**"control_state" : dict, optional**
 >>>>>Describes the control deflections. The number and names of controls are arbitrary and may be specified by the user. This is discussed more in depth as part of the aircraft object. If the aircraft has controls but no state is specified, all deflections will be assumed to be zero.
 >>>>
->>>>>**"<CONTROL_NAME>" : float, optional**
->>>>>>Control setting.
+>>>>>**"<CONTROL_NAME>" : float or array, optional**
+>>>>>>Control setting. If float, the setting is assumed constant across the control surface. If an array, then a distribution of deflections is assumed. This should be specified like "chord_fraction". Defaults to 0.0.
 
 ## Aircraft Object
 Describes an aircraft. Stored as a .json file

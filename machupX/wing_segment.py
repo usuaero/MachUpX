@@ -76,7 +76,7 @@ class WingSegment:
     def _initialize_params(self):
 
         # Set global params
-        self.is_main = self._input_dict.get("is_main", None)
+        self.is_main = self._input_dict.get("is_main", False)
         self.b = import_value("semispan", self._input_dict, self._unit_sys, None)
 
         # Grid parameters
@@ -404,16 +404,16 @@ class WingSegment:
             self._control_mixing = {}
 
             # Determine which control points are affected by the control surface
-            root_span = control_dict.get("root_span", 0.0)
-            tip_span = control_dict.get("tip_span", 1.0)
-            self._cp_in_cntrl_surf = (self.cp_span_locs >= root_span) & (self.cp_span_locs <= tip_span)
+            self._cntrl_root_span = control_dict.get("root_span", 0.0)
+            self._cntrl_tip_span = control_dict.get("tip_span", 1.0)
+            self._cp_in_cntrl_surf = (self.cp_span_locs >= self._cntrl_root_span) & (self.cp_span_locs <= self._cntrl_tip_span)
 
             # Determine the flap chord fractions at each control point
             chord_data = import_value("chord_fraction", control_dict, self._unit_sys, 0.25)
             if isinstance(chord_data, float): # Constant chord fraction
                 self._cp_c_f[self._cp_in_cntrl_surf] = chord_data
             else: # Variable chord fraction
-                if chord_data[0,0] != root_span or chord_data[-1,0] != tip_span:
+                if chord_data[0,0] != self._cntrl_root_span or chord_data[-1,0] != self._cntrl_tip_span:
                     raise IOError("Endpoints of flap chord distribution must match specified root and tip span locations.")
                 self._cp_c_f[self._cp_in_cntrl_surf] = np.interp(self.cp_span_locs[self._cp_in_cntrl_surf], chord_data[:,0], chord_data[:,1])
 
@@ -1063,7 +1063,21 @@ class WingSegment:
         # Determine flap deflection
         self._delta_flap = np.zeros(self.N)
         for key in self._control_mixing:
+
+            # Get input
             deflection = import_value(key, control_state, self._unit_sys, 0.0)
+
+            # Arrange distribution
+            if isinstance(deflection, np.ndarray): # Variable deflection
+                if deflection[0,0] != self._cntrl_root_span or deflection[-1,0] != self._cntrl_tip_span:
+                    raise IOError("Endpoints of flap deflection distribution must match specified root and tip span locations.")
+                new_deflection = np.zeros(self.N)
+                new_deflection[self._cp_in_cntrl_surf] = np.interp(self.cp_span_locs[self._cp_in_cntrl_surf], deflection[:,0], deflection[:,1])
+                deflection = new_deflection
+            elif callable(deflection):
+                deflection = deflection(self.cp_span_locs)
+
+            # Check for distribution
             if self.side == "right" or control_symmetry[key]:
                 self._delta_flap += deflection*self._control_mixing.get(key, 0.0)*self._cp_in_cntrl_surf
             else:

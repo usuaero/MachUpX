@@ -796,6 +796,10 @@ class Scene:
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
+        
+        # Check for nans
+        if np.isnan(self._gamma).any():
+            print("Linear solver exceeded the bounds of the airfoil database.")
 
         return time.time()-start_time
 
@@ -881,8 +885,15 @@ class Scene:
             diag_ind = np.diag_indices(self._N)
             J[diag_ind] += 2*self._w_i_mag
 
-            # Update gamma
+            # Get gamma update
             dGamma = np.linalg.solve(J, -R)
+
+            # Check for nan
+            if np.isnan(error):
+                print("Nonlinear solver exceeded the bounds of the airfoil database. Stopping iteration.")
+                break
+
+            # Update gamma
             self._gamma = self._gamma+self._solver_relaxation*dGamma
 
             # Output progress
@@ -896,7 +907,7 @@ class Scene:
                     print("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
                 break
 
-        else: # If the loop exits normally, then everything is good
+        else: # If the loop exits normally, then check for nan
             if verbose or kwargs.get("scipy_failed", False):
                 R = self._lifting_line_residual(self._gamma)
                 error = np.linalg.norm(R)

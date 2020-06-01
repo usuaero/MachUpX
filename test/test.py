@@ -12,15 +12,16 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve"
-            #"type" : "nonlinear"
-        }
+            #"type" : "scipy_fsolve"
+            "type" : "nonlinear"
+        },
+        "units" : "SI"
     }
 
     # Specify airplane
     airplane_dict = {
-        "CG" : [0.0, 0.0, 0.0],
         "weight" : 50.0,
+        "units" : "SI",
         "controls" : {
             "aileron" : {
                 "is_symmetric" : False
@@ -43,12 +44,9 @@ if __name__=="__main__":
                 "is_main" : True,
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
-                "chord" : [[0.0, 2.0],
-                           [0.2, 1.0],
-                           [1.0, 0.5]],
-                "sweep" : [[0.0, 0.0],
-                           [0.5, 20.0]],
-                "dihedral" : 5.0,
+                "chord" : 1.0,
+                "sweep" : -20.0,
+                "dihedral" : 0.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.55,
@@ -62,25 +60,25 @@ if __name__=="__main__":
                     "N" : 20,
                     "wing_ID" : 0
                 }
-            },
-            "winglets" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : True,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "tip"
-                },
-                "semispan" : 0.5,
-                "dihedral" : 90.0,
-                "sweep" : 10.0,
-                "chord" : [[0.0, 0.5],
-                           [1.0, 0.2]],
-                "airfoil" : "NACA_0010",
-                "grid" : {
-                    "N" : 20,
-                    "wing_ID" : 0
-                }
+            #},
+            #"winglets" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : True,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "tip"
+            #    },
+            #    "semispan" : 0.5,
+            #    "dihedral" : 90.0,
+            #    "sweep" : 10.0,
+            #    "chord" : [[0.0, 0.5],
+            #               [1.0, 0.2]],
+            #    "airfoil" : "NACA_0010",
+            #    "grid" : {
+            #        "N" : 20,
+            #        "wing_ID" : 0
+            #    }
             }
         }
     }
@@ -91,8 +89,12 @@ if __name__=="__main__":
         "alpha" : 5.0,
         "beta" : 0.0
     }
+
+    def elevator_deflection(s):
+        return 30*s**2
+
     control_state = {
-        "elevator" : 0.0,
+        "elevator" : elevator_deflection,
         "aileron" : 0.0,
         "rudder" : 0.0
     }
@@ -107,6 +109,6 @@ if __name__=="__main__":
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Get derivatives
-    derivs = scene.aircraft_derivatives(wind_frame=False)
-    print(json.dumps(derivs["plane"], indent=4))
+    ## Get derivatives
+    #derivs = scene.aircraft_derivatives(wind_frame=False)
+    #print(json.dumps(derivs["plane"], indent=4))
