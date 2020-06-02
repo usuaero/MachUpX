@@ -10,7 +10,7 @@ if __name__=="__main__":
     # Parameters
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve"
+            "type" : "nonlinear"
         },
         "units" : "English",
         "scene" : {}
@@ -49,7 +49,7 @@ if __name__=="__main__":
     # Select comparison case
     case_no = 3
     if case_no == 0:
-        with open("test/10_a_10_b_circ.dat", 'r') as jackson_file:
+        with open("test/jackson_data/10_a_10_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)
         state = {
             "velocity" : 1.0,
@@ -57,7 +57,7 @@ if __name__=="__main__":
             "beta" : 10.0
         }
     elif case_no == 1:
-        with open("test/4.2_a_0_b_circ.dat", 'r') as jackson_file:
+        with open("test/jackson_data/4.2_a_0_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)
         state = {
             "velocity" : 1.0,
@@ -65,7 +65,7 @@ if __name__=="__main__":
             "beta" : 0.0
         }
     elif case_no == 2:
-        with open("test/10_a_0_b_circ.dat", 'r') as jackson_file:
+        with open("test/jackson_data/10_a_0_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)
         state = {
             "velocity" : 1.0,
@@ -73,7 +73,7 @@ if __name__=="__main__":
             "beta" : 0.0
         }
     elif case_no == 3:
-        with open("test/15_a_15_b_circ.dat", 'r') as jackson_file:
+        with open("test/jackson_data/15_a_15_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)
         state = {
             "velocity" : 1.0,

@@ -2988,3 +2988,48 @@ class Scene:
             raise IOError("{0} is not an allowable aircraft name specification.".format(aircraft))
 
         return aircraft_names
+
+    def out_gamma(self):
+        """Plots the induced velocities and writes the circulation distribution to a file.
+
+        Author: Francois Fortin
+        """
+
+        y_locs = np.zeros(self._N)
+        index = 0
+        
+        # Loop through airplanes
+        for i, airplane_name in enumerate(self._airplane_names):
+            airplane_object = self._airplanes[airplane_name]
+
+            # Loop through segments
+            for segment_object in airplane_object.segments:
+                num_cps = segment_object.N
+                cur_slice = slice(index, index+num_cps)
+
+                # Get lift coefficient and lift slopes
+                y_locs[cur_slice]  = self._PC[cur_slice,1]
+                index += num_cps 
+
+        with open('gamma_dist.txt','w') as f1:
+
+            # Output gammas
+            for i in range(self._N):
+                print(i, y_locs[i], self._gamma[i], file=f1)
+
+            # Output velocities
+            print('i  y  v_i  V_i', file=f1)
+            for i in range(self._N):
+                print(y_locs[i], self._v_i[i,:], self._V_i[i], file=f1)          
+
+            # Plot velocity magnitudes
+            plt.figure()
+            plt.plot(y_locs, self._V_i)
+            plt.ylabel('V_i')
+            plt.show()
+
+            # Plot gamma
+            plt.figure()
+            plt.plot(y_locs, self._gamma)
+            plt.ylabel('gamma')
+            plt.show()
