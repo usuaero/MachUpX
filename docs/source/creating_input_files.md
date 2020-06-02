@@ -154,7 +154,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"verbose" : boolean, optional**
 >>>>Defaults to false
 >>
->>**"stl" : dict, optional"**
+>>**"export_stl" : dict, optional"**
 >>>Exports a 3D model of the aircraft/scene using the stl format.
 >>>
 >>>**"filename" : str, optional**
@@ -166,7 +166,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
 >>
->>**"stp" : dict, optional"**
+>>**"export_stp" : dict, optional"**
 >>>Exports a STEP file describing each wing segment for the specified aircraft
 >>>
 >>>**"file_tag" : str, optional**
@@ -184,7 +184,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"maintain_sections" : bool, optional**
 >>>>Whether the section outlines should be maintained in the loft of each wing segment. Defaults to True. This again can help with importing the resulting STEP file into other CAD packages.
 >>
->>**"dxf" : dict, optional"**
+>>**"export_dxf" : dict, optional"**
 >>>Exports a dxf file describing each wing segment for the specified aircraft
 >>>
 >>>**"file_tag" : str, optional**
@@ -454,20 +454,22 @@ Describes an aircraft. Stored as a .json file
 >>>**"semispan" : float**
 >>>>Length of the wing segment in the y-direction (i.e. discounting sweep). If "side" is specified as "both", the total span of the segment is twice this value.
 >>>
->>>**"twist" : float, array, or string, optional**
+>>>**"twist" : float, array, string, or func, optional**
 >>>>Gives the GEOMETRIC twist of the wing, meaning the angle of the chord line of each airfoil section relative to the body x-axis. If specified as a float, then all sections will make that angle with the horizontal and it will be as if the wing is untwisted but mounted at that angle. If specified as an array, the array gives the local twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value, as below:
 >>>>
 >>>>>**"twist" : [[0.0, 0.0], [0.5, 0.0], [0.5, 2.0], [1.0, 2.0]]**
 >>>>
 >>>>In the above example, the twist will be 0 degrees for the inner half of the wing and 2 degrees for the outer half of the wing. Note that this parameter also determines the mounting angle and washout of the wing segment. Defaults to 0.
+>>>>
+>>>>Alternatively, if MachUpX is being used as a module imported into a script, this value can be a function which accepts an array of span fractions and returns the corresponding twist angles *in radians*.
 >>>
->>>**"dihedral" : float, array, or string, optional**
+>>>**"dihedral" : float, array, string, or func optional**
 >>>>Gives the dihedral of the wing segment. Defined the same as "twist". If defined as a distribution, this specifies the local dihedral angle at each point along the wing. Defaults to 0.
 >>>
->>>**"sweep" : float, array, or string, optional**
+>>>**"sweep" : float, array, string, or func optional**
 >>>>Gives the sweep angle of the wing segment. Sweeping the wing is a shear transformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from thex-z plane. Defined the same as "twist". Defaults to 0.
 >>>
->>>**"chord" : float, array, or string, optional**
+>>>**"chord" : float, array, string, or func optional**
 >>>>Gives the chord length of the wing segment. Defined the same as "twist", except that it can also be specified as elliptic using the following definition:
 >>>
 >>>>>**"chord" : ["elliptic", 1.0]**
@@ -478,8 +480,8 @@ Describes an aircraft. Stored as a .json file
 >>>
 >>>>Defaults to 1.0.
 >>>
->>>**"ac_offset" : float, array, or string, optional**
->>>>Gives the offset of the section aerodynamic center from the quarter chord. By default, MachUpX assumes the locus of aerodynamic centers for a given wing segment falls on the quarter chord line. This allows shifting the locus along the chord line for greater accuracy. This shift is given as a fraction of the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist", except that it may also be specified as "kuchemann" *for wings of constant sweep*, in which case the locus of aerodynamic centers will be specified using Kuchemann's equations (has no effect on straight wings, but is recommended for wings with constant sweep). Specifying "kuchemann" for a wing segment with variable sweep will result in an error. Defaults to 0.
+>>>**"ac_offset" : float, array, string, or func optional**
+>>>>Gives the offset of the section aerodynamic center from the quarter chord. By default, MachUpX assumes the locus of aerodynamic centers for a given wing segment falls on the quarter chord line. This allows shifting the locus along the chord line for greater accuracy. This shift is given as a fraction of the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist", except that it may also be specified as "kuchemann" *for wings of constant sweep, including zero sweep*, in which case the locus of aerodynamic centers will be specified using Kuchemann's equations. Specifying "kuchemann" for a wing segment with variable sweep will result in an error. If Kuchemann's equations are selected, the user should ensure the number of control points for this wing is large enough to capture the nonlinear locus of aerodynamic centers at the wing root and tips. MachUpX will cosine cluster these points by default, but a very small number of control points may still fail to sufficiently capture Kuchemann's correction. Defaults to 0.
 >>>
 >>>**"airfoil" : string or array, optional**
 >>>>Gives the section airfoil(s) of the wing segment. Can be the name of any airfoil defined under "airfoils" within the parent aircraft object, in which case the section properties will be constant across the span. If specified as an array, the array gives the airfoil as a function of span. The first column gives the span location, as with "twist", and the second column gives the name of the airfoil at that location. MachUpX will interpolate airfoil properties between the given points. Can also be the path to a csv file containing the airfoil distribution formatted in columns, as with the array. Defaults to the name of the first airfoil listed under "airfoils". Cannot have units.

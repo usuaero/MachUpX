@@ -56,7 +56,7 @@ def _run_prescribed_analyses(input_filename):
             filename = params.pop("filename", input_filename.replace(".json", "_derivatives.json"))
 
             print("\nCalculating aerodynamic derivatives...", end='')
-            scene.aircraft_derivatives(filename=filename, **params)
+            scene.derivatives(filename=filename, **params)
             print("Done")
 
         # Distributions
@@ -72,7 +72,7 @@ def _run_prescribed_analyses(input_filename):
             filename = params.pop("filename", input_filename.replace(".json", "_pitch_trim.json"))
 
             print("\nTrimming aircraft in pitch...", end='')
-            scene.aircraft_pitch_trim(filename=filename, **params)
+            scene.pitch_trim(filename=filename, **params)
             print("Done")
 
         # Aerodynamic center
@@ -80,7 +80,7 @@ def _run_prescribed_analyses(input_filename):
             filename = params.pop("filename", input_filename.replace(".json", "_aero_center.json"))
 
             print("\nCalculating location of aerodynamic center...", end='')
-            scene.aircraft_aero_center(filename=filename, **params)
+            scene.aero_center(filename=filename, **params)
             print("Done")
 
         # MAC
@@ -88,11 +88,11 @@ def _run_prescribed_analyses(input_filename):
             filename = params.pop("filename", input_filename.replace(".json", "_MAC.json"))
 
             print("\nCalculating mean aerodynamic chord...", end='')
-            scene.aircraft_mean_aerodynamic_chord(filename=filename, **params)
+            scene.MAC(filename=filename, **params)
             print("Done")
 
         # Export .stl
-        elif key == "stl":
+        elif key == "export_stl":
             filename = params.pop("filename", input_filename.replace(".json", ".stl"))
 
             print("\nExporting stl...", end='')
@@ -100,17 +100,17 @@ def _run_prescribed_analyses(input_filename):
             print("Done")
 
         # Export .stp
-        elif key == "stp":
+        elif key == "export_stp":
 
             print("\nExporting stp...", end='')
-            scene.export_aircraft_stp(**params)
+            scene.export_stp(**params)
             print("Done")
 
         # Export dxf
-        elif key == "dxf":
+        elif key == "export_dxf":
 
             print("\nExporting dxf...", end='')
-            scene.export_aircraft_dxf(**params)
+            scene.export_dxf(**params)
             print("Done")
 
         # Export linearized model

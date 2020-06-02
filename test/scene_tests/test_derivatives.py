@@ -11,7 +11,7 @@ def test_stability_derivatives():
 
     # Load scene
     scene = MX.Scene(input_file)
-    stab_derivs = scene.aircraft_stability_derivatives()
+    stab_derivs = scene.stability_derivatives()
 
     assert abs(stab_derivs["test_plane"]["CL,a"]-6.322012906729068)<1e-10
     assert abs(stab_derivs["test_plane"]["CD,a"]-0.3246111615552763)<1e-10
@@ -38,7 +38,7 @@ def test_damping_derivatives():
 
     # Load scene
     scene = MX.Scene(input_file)
-    damp_derivs = scene.aircraft_damping_derivatives()
+    damp_derivs = scene.damping_derivatives()
 
     assert abs(damp_derivs["test_plane"]["CL,pbar"])<1e-10
     assert abs(damp_derivs["test_plane"]["CD,pbar"])<1e-10
@@ -74,7 +74,7 @@ def test_control_derivatives():
 
     # Load scene
     scene = MX.Scene(input_file)
-    cont_derivs = scene.aircraft_control_derivatives()
+    cont_derivs = scene.control_derivatives()
     print(json.dumps(cont_derivs, indent=4))
 
     assert abs(cont_derivs["test_plane"]["CL,daileron"])<1e-10
@@ -111,7 +111,7 @@ def test_all_derivs():
 
     # Load scene
     scene = MX.Scene(input_file)
-    derivs = scene.aircraft_derivatives()
+    derivs = scene.derivatives()
 
     assert abs(derivs["test_plane"]["stability"]["CL,a"]-6.322012906729068)<1e-10
     assert abs(derivs["test_plane"]["stability"]["CD,a"]-0.3246111615552763)<1e-10

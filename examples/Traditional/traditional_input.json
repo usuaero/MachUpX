@@ -10,7 +10,7 @@
         "pitch_trim" : {
             "set_state_to_trim" : true
         },
-        "aero_derivatives" : {}
+        "derivatives" : {}
     },
     "solver" : {
         "type" : "nonlinear",

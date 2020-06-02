@@ -40,9 +40,9 @@ if __name__=="__main__":
     # Now let's get the airplane to its trim state in pitch. MachUpX will default to 
     # Using the 'elevator' control to trim out the airplane. We can use set_trim_state 
     # to have MachUpX set the trim state to be the new state of the airplane.
-    trim_state = my_scene.aircraft_pitch_trim(set_trim_state=True, verbose=True)
+    trim_state = my_scene.pitch_trim(set_trim_state=True, verbose=True)
     print(json.dumps(trim_state["traditional_airplane"], indent=4))
 
     # Now that we're trimmed, let's see what our aerodynamic derivatives are.
-    derivs = my_scene.aircraft_derivatives()
+    derivs = my_scene.derivatives()
     print(json.dumps(derivs["traditional_airplane"], indent=4))

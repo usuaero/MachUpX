@@ -204,25 +204,45 @@ class WingSegment:
         self._discont = []
 
         # Twist
-        twist_data = import_value("twist", self._input_dict, self._unit_sys, 0)
-        self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True) # Side is not specified because this is always positive
+        twist_data = import_value("twist", self._input_dict, self._unit_sys, 0.0)
+        if callable(twist_data):
+            self.get_twist = twist_data
+        else:
+            self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True) # Side is not specified because this is always positive
 
         # Dihedral
-        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, 0)
-        self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, side=self.side)
-        self._add_discontinuities(self._getter_data["dihedral"], self._discont)
+        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, 0.0)
+        if callable(dihedral_data):
+            def get_dihedral(s):
+                if self.side == "left":
+                    return -dihedral_data(s)
+                else:
+                    return dihedral_data(s)
+            self.get_dihedral = get_dihedral
+        else:
+            self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, side=self.side)
+            self._add_discontinuities(self._getter_data["dihedral"], self._discont)
 
         # Sweep
-        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, 0)
-        self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
-        self._add_discontinuities(self._getter_data["sweep"], self._discont)
+        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, 0.0)
+        if callable(sweep_data):
+            def get_sweep(s):
+                if self.side == "left":
+                    return -sweep_data(s)
+                else:
+                    return sweep_data(s)
+            self.get_sweep = get_sweep
+        else:
+            self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
+            self._add_discontinuities(self._getter_data["sweep"], self._discont)
 
         # Chord
         chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0) # Side is not specified because this is always positive
 
         if isinstance(chord_data, tuple): # Elliptic distribution
             self.get_chord = self._build_elliptic_chord_dist(chord_data[1])
-
+        elif callable(chord_data):
+            self.get_chord = chord_data
         else: # Linear distribution
             self.get_chord = self._build_getter_linear_f_of_span(chord_data, "chord")
             
@@ -480,8 +500,12 @@ class WingSegment:
         if ac_offset_data == "kuchemann":
 
             # If the sweep is not constant, don't calculate an offset
-            sweep_data = self._getter_data["sweep"]
-            if not isinstance(sweep_data, float):
+            try:
+                sweep_data = self._getter_data["sweep"]
+                if not isinstance(sweep_data, float):
+                    warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
+                    ac_offset_data = 0.0
+            except KeyError:
                 warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
                 ac_offset_data = 0.0
 
@@ -530,7 +554,10 @@ class WingSegment:
                 ac_offset_data = np.concatenate((locs[:,np.newaxis], ac_offset[:,np.newaxis]), axis=1)
 
         # Create getter
-        self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
+        if callable(ac_offset_data):
+            self._get_ac_offset = ac_offset_data
+        else:
+            self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
 
         # Store control points
         self.control_points = self._get_section_ac_loc(self.cp_span_locs)
@@ -1147,7 +1174,7 @@ class WingSegment:
         # Collect airfoil outlines
         airfoil_outlines = []
         for i, airfoil in enumerate(self._airfoils):
-            airfoil_outlines.append(airfoil.get_outline_points(N))
+            airfoil_outlines.append(airfoil.get_outline_points(N=N))
 
         # Linearly interpolate outlines, ignoring twist, etc for now
         if self._num_airfoils == 1:

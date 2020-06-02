@@ -8,7 +8,7 @@
         "solve_forces" : {
             "non_dimensional" : false
         },
-        "aero_derivatives" : {}
+        "derivatives" : {}
     },
     "solver" : {
         "type" : "linear"

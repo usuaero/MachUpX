@@ -45,7 +45,7 @@ if __name__=="__main__":
     print(json.dumps(FM_results["drone3"]["total"], indent=4))
 
     # Let's see what our aerodynamic derivatives are.
-    derivs = my_scene.aircraft_derivatives()
+    derivs = my_scene.derivatives()
     print("---Drone0---")
     print(json.dumps(derivs["drone0"], indent=4))
     print("---Drone1---")

@@ -18,6 +18,15 @@ if __name__=="__main__":
         "units" : "SI"
     }
 
+    def dihedral(s):
+        return 0.25*s*np.pi
+
+    def sweep(s):
+        return 0.25*s*np.pi
+
+    def ac_offset(s):
+        return 0.5*(s-0.5)
+
     # Specify airplane
     airplane_dict = {
         "weight" : 50.0,
@@ -44,9 +53,9 @@ if __name__=="__main__":
                 "is_main" : True,
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
-                "chord" : 1.0,
-                "sweep" : -20.0,
-                "dihedral" : 0.0,
+                "sweep" : sweep,
+                "dihedral" : dihedral,
+                "ac_offset" : ac_offset,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.55,
@@ -103,11 +112,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=True)
+    scene.display_wireframe(show_vortices=True)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
+    #scene.distributions(filename="dist.txt")
 
     ## Get derivatives
     #derivs = scene.aircraft_derivatives(wind_frame=False)

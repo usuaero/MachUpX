@@ -1656,7 +1656,7 @@ class Scene:
             plt.show()
 
 
-    def aircraft_derivatives(self, **kwargs):
+    def derivatives(self, **kwargs):
         """Determines the stability, damping, and control derivatives at the 
         current state. Uses a central difference sceme. Note that the angular
         rates for the damping derivatives will be in the frame the angular
@@ -1693,13 +1693,13 @@ class Scene:
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
             # Determine stability derivatives
-            derivs[aircraft_name]["stability"] = self.aircraft_stability_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
+            derivs[aircraft_name]["stability"] = self.stability_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
         
             # Determine damping derivatives
-            derivs[aircraft_name]["damping"] = self.aircraft_damping_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
+            derivs[aircraft_name]["damping"] = self.damping_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
 
             # Determine control derivatives
-            derivs[aircraft_name]["control"] = self.aircraft_control_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
+            derivs[aircraft_name]["control"] = self.control_derivatives(aircraft=aircraft_name, **kwargs)[aircraft_name]
 
         # Export to file
         filename = kwargs.get("filename", None)
@@ -1710,7 +1710,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_stability_derivatives(self, dtheta=0.5, **kwargs):
+    def stability_derivatives(self, dtheta=0.5, **kwargs):
         """Determines the stability derivatives at the current state. Uses 
         a central difference sceme.
 
@@ -1825,7 +1825,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_damping_derivatives(self, aircraft=None, dtheta_dot=0.005, **kwargs):
+    def damping_derivatives(self, aircraft=None, dtheta_dot=0.005, **kwargs):
         """Determines the damping derivatives at the current state. Uses 
         a central difference sceme. Note, the damping derivatives are non-
         dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Note
@@ -2005,7 +2005,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_control_derivatives(self, aircraft=None, dtheta=0.5, **kwargs):
+    def control_derivatives(self, aircraft=None, dtheta=0.5, **kwargs):
         """Determines the control derivatives at the current state. Uses 
         a central difference sceme.
 
@@ -2098,7 +2098,7 @@ class Scene:
         return derivs
 
 
-    def aircraft_pitch_trim(self, **kwargs):
+    def pitch_trim(self, **kwargs):
         """Returns the required angle of attack and elevator deflection for trim at the current state.
         THIS SHOULD ONLY BE USED IN THE CASE OF ONE AIRCRAFT IN THE SCENE AND NO WIND.
 
@@ -2172,8 +2172,8 @@ class Scene:
         while (abs(R)>1e-10).any():
 
             # Determine Jacobian
-            stab_derivs = self.aircraft_stability_derivatives()
-            cont_derivs = self.aircraft_control_derivatives()
+            stab_derivs = self.stability_derivatives()
+            cont_derivs = self.control_derivatives()
             J[0,0] = stab_derivs[aircraft_name]["CL,a"]
             J[0,1] = cont_derivs[aircraft_name]["CL,d"+pitch_control]
             J[1,0] = stab_derivs[aircraft_name]["Cm,a"]
@@ -2245,7 +2245,7 @@ class Scene:
         return 0.5*rho*V*V
 
 
-    def aircraft_aero_center(self, **kwargs):
+    def aero_center(self, **kwargs):
         """Returns the location of the aerodynamic center of the aircraft at the current state.
 
         Parameters
@@ -2345,8 +2345,33 @@ class Scene:
 
     def distributions(self, **kwargs):
         """Returns various parameters, as well as forces and moments, at each control point for all
-        aircraft at the current state. solve_forces() should be called before this function. 
-        Angular distributions are given in radians.
+        aircraft at the current state. Angular values are given in radians. Note that if 
+        "correct_sections_for_sweep" (default True) is set to True, the section *aerodynamic* properties
+        given here will be the swept section properties.
+        
+        The following properties are stored as distributions:
+        
+            "span_frac" : fraction along the span
+            "cpx" : control point x location
+            "cpy" : control point x location
+            "cpz" : control point x location
+            "chord" : section geometric chord
+            "twist" : section geometric twist
+            "dihedral" : section geometric dihedral
+            "sweep" : section geometric sweep
+            "aero_sweep" : section aerodynamic sweep (based on the locus of aerodynamic centers)
+            "area" : section differential planform area
+            "alpha" : angle of attack
+            "u" : body-x velocity
+            "v" : body-y velocity
+            "w" : body-z velocity
+            "Re" : Reynolds number
+            "M" : Mach number
+            "section_CL" : lift coefficient
+            "section_Cm" : moment coefficient
+            "section_parasitic_CD" : drag coefficient
+            "section_aL0" : zero-lift angle of attack
+
 
         Parameters
         ----------
@@ -2364,10 +2389,8 @@ class Scene:
         Returns
         -------
         dist : dict
-            A dictionary containing lists of each parameter at each control point. The keys are the
-            aircraft names. The nested keys are then "span_frac", "cpx", "cpy", "cpz", "chord", "twist", 
-            "dihedral", "sweep", "area", "alpha", "Re", "M", "section_CL", "section_Cm", "section_parasitic_CD", 
-            and "section_aL0".
+            A dictionary containing lists of each parameter at each control point. The distributions are
+            organized by aircraft then by wing segment. The nested keys are then each parameter.
         """
 
         # Make sure the LL equations have been solved in this state
@@ -2377,8 +2400,12 @@ class Scene:
         # Make sure alpha has been calculated.
         if not hasattr(self, "_alpha"):
             self._calc_v_i()
-            v_ni = np.einsum('ij,ij->i', self._v_i, self._u_n)
-            v_ai = np.einsum('ij,ij->i', self._v_i, self._u_a)
+            if self._correct_sections_for_sweep:
+                v_ni = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
+                v_ai = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
+            else:
+                v_ni = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+                v_ai = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
             self._alpha = np.arctan2(v_ni, v_ai)
 
         dist = {}
@@ -2397,8 +2424,12 @@ class Scene:
                           ("twist", "float"),
                           ("dihedral", "float"),
                           ("sweep", "float"),
+                          ("aero_sweep", "float"),
                           ("area", "float"),
                           ("alpha", "float"),
+                          ("u", "float"),
+                          ("v", "float"),
+                          ("w", "float"),
                           ("Re", "float"),
                           ("M", "float"),
                           ("section_CL", "float"),
@@ -2432,14 +2463,19 @@ class Scene:
                 dist[airplane_name][segment_name]["twist"] = list(segment_object.twist_cp)
                 dist[airplane_name][segment_name]["dihedral"] = list(segment_object.dihedral_cp)
                 dist[airplane_name][segment_name]["sweep"] = list(segment_object.sweep_cp)
+                dist[airplane_name][segment_name]["aero_sweep"] = list(self._section_sweep[cur_slice])
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
 
                 # Airfoil info
+                v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
                 dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/(self._q_i[cur_slice]*self._dS[cur_slice]))
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
                 dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
+                dist[airplane_name][segment_name]["u"] = list(v[:,0])
+                dist[airplane_name][segment_name]["v"] = list(v[:,1])
+                dist[airplane_name][segment_name]["w"] = list(v[:,2])
                 dist[airplane_name][segment_name]["Re"] = list(self._Re[cur_slice])
                 dist[airplane_name][segment_name]["M"] = list(self._M[cur_slice])
 
@@ -2460,6 +2496,7 @@ class Scene:
                     table_data[cur_slice]["twist"] = dist[airplane_name][segment_name]["twist"]
                     table_data[cur_slice]["dihedral"] = dist[airplane_name][segment_name]["dihedral"]
                     table_data[cur_slice]["sweep"] = dist[airplane_name][segment_name]["sweep"]
+                    table_data[cur_slice]["aero_sweep"] = dist[airplane_name][segment_name]["aero_sweep"]
                     table_data[cur_slice]["area"] = dist[airplane_name][segment_name]["area"]
 
                     # Airfoil info
@@ -2470,6 +2507,9 @@ class Scene:
                     table_data[cur_slice]["alpha"] = dist[airplane_name][segment_name]["alpha"]
                     table_data[cur_slice]["Re"] = dist[airplane_name][segment_name]["Re"]
                     table_data[cur_slice]["M"] = dist[airplane_name][segment_name]["M"]
+                    table_data[cur_slice]["u"] = dist[airplane_name][segment_name]["u"]
+                    table_data[cur_slice]["v"] = dist[airplane_name][segment_name]["v"]
+                    table_data[cur_slice]["w"] = dist[airplane_name][segment_name]["w"]
 
                 index += num_cps
 
@@ -2477,10 +2517,10 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
-                "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Area", "Alpha",
-                "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+                "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
+                "u", "v", "w", "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)
@@ -2502,6 +2542,7 @@ class Scene:
                     plt.close()
 
         return dist
+
 
     def get_aircraft_reference_geometry(self, aircraft=None):
         """Returns the reference geometries for the specified aircraft.
@@ -2600,7 +2641,7 @@ class Scene:
             model_mesh.save(filename)
 
 
-    def aircraft_mean_aerodynamic_chord(self, **kwargs):
+    def MAC(self, **kwargs):
         """Returns the mean aerodynamic chord (MAC) for the specified aircraft.
 
         Parameters
@@ -2644,7 +2685,7 @@ class Scene:
         return MAC
 
 
-    def export_aircraft_stp(self, **kwargs):
+    def export_stp(self, **kwargs):
         """Creates a .stp file representing each lifting surface of the specified aircraft.
         NOTE: FreeCAD must be installed and configured to use this function.
 
@@ -2675,7 +2716,7 @@ class Scene:
             self._airplanes[aircraft_name].export_stp(**kwargs)
 
 
-    def export_aircraft_dxf(self, **kwargs):
+    def export_dxf(self, **kwargs):
         """Creates a .dxf file representing each lifting surface of the specified aircraft.
 
         Parameters
@@ -2836,7 +2877,7 @@ class Scene:
 
         # Get forces and derivatives at reference state
         FM_ref = self.solve_forces(dimensional=False)
-        derivs_ref = self.aircraft_derivatives()
+        derivs_ref = self.derivatives()
 
         # Get reference coefficients, stability and damping derivatives
         model_dict["coefficients"] = {}
