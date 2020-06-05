@@ -12,8 +12,8 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            #"type" : "scipy_fsolve"
-            "type" : "nonlinear"
+            "type" : "scipy_fsolve"
+            #"type" : "nonlinear"
         },
         "units" : "SI"
     }
@@ -52,10 +52,14 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "semispan" : 4.0,
-                "airfoil" : "NACA_0010",
-                "sweep" : sweep,
-                "dihedral" : dihedral,
-                "ac_offset" : ac_offset,
+                "airfoil" : [[0.0, "NACA_0010"],
+                             [1.0, "NACA_4410"]],
+                "dihedral" : [[0.0, 0.0],
+                              [0.8, 0.0],
+                              [0.9, 20.0],
+                              [1.0, -50.0]],
+                "twist" : [[0.0, 0.0],
+                           [1.0, 10.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.55,
@@ -112,7 +116,8 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=True)
+    #scene.display_wireframe(show_vortices=True)
+    scene.export_stl(filename="test.stl")
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

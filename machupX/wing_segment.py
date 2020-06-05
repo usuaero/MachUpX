@@ -144,11 +144,11 @@ class WingSegment:
             num_sec = len(discont)-1
             sec_N = []
             for i in range(num_sec):
-                N = round(self.N*(discont[i+1]-discont[i]))
+                N = int(round(self.N*(discont[i+1]-discont[i])))
                 sec_N.append(N)
 
             # Check all the points are accounted for
-            diff = sum(sec_N)-self.N
+            diff = int(sum(sec_N)-self.N)
             if diff != 0:
                 sec_N[0] -= diff # Use the root segment to make up the difference
 
@@ -258,7 +258,7 @@ class WingSegment:
                     discont.append(data[i,0].item())
 
 
-    def _build_getter_linear_f_of_span(self, data, name, angular_data=False, side="right"):
+    def _build_getter_linear_f_of_span(self, data, name, angular_data=False, side=None):
         # Defines a getter function for data which is a function of span
 
         if isinstance(data, float): # Constant
@@ -1190,17 +1190,13 @@ class WingSegment:
                     break
                 index += 1
 
-        # Add twist, dihedral, and chord
+        # Get twist, dihedral, and chord
         twist = self.get_twist(span)
         dihedral = self.get_dihedral(span)
         chord = self.get_chord(span)
 
-        # Transform to body-fixed coordinates
-        if self.side == "left":
-            q = euler_to_quat(np.array([dihedral, twist, 0.0]))
-        else:
-            q = euler_to_quat(np.array([-dihedral, twist, 0.0]))
-
+        # Scale to chord and transform to body-fixed coordinates
+        q = euler_to_quat(np.array([-dihedral, twist, 0.0]))
         untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
         coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)
 
