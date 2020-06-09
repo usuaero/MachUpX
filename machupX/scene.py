@@ -332,14 +332,19 @@ class Scene:
         self._P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location
 
         # Spatial node vectors
-        self._r_0 = np.empty((self._N,self._N,3))
-        self._r_1 = np.empty((self._N,self._N,3))
-        self._r_0_joint = np.empty((self._N,self._N,3))
-        self._r_1_joint = np.empty((self._N,self._N,3))
-        self._r_0[:] = np.nan
-        self._r_1[:] = np.nan
-        self._r_0_joint[:] = np.nan
-        self._r_1_joint[:] = np.nan
+        self._r_0 = np.zeros((self._N,self._N,3))
+        self._r_1 = np.zeros((self._N,self._N,3))
+        self._r_0_joint = np.zeros((self._N,self._N,3))
+        self._r_1_joint = np.zeros((self._N,self._N,3))
+        self._r_0_mag = np.zeros((self._N,self._N))
+        self._r_0_joint_mag = np.zeros((self._N,self._N))
+        self._r_1_mag = np.zeros((self._N,self._N))
+        self._r_1_joint_mag = np.zeros((self._N,self._N))
+
+        # Calculate magnitude products
+        self._r_0_r_0_joint_mag = np.zeros((self._N,self._N))
+        self._r_0_r_1_mag = np.zeros((self._N,self._N))
+        self._r_1_r_1_joint_mag = np.zeros((self._N,self._N))
 
         # Section unit vectors
         if self._correct_sections_for_sweep:
@@ -476,22 +481,39 @@ class Scene:
             self._r_0_joint[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.r_0_joint)
             self._r_1_joint[airplane_slice,airplane_slice,:] = quat_inv_trans(q, airplane_object.r_1_joint)
 
+            # Spatial node vector magnitudes
+            self._r_0_mag[airplane_slice,airplane_slice] = airplane_object.r_0_mag
+            self._r_0_joint_mag[airplane_slice,airplane_slice] = airplane_object.r_0_joint_mag
+            self._r_1_mag[airplane_slice,airplane_slice] = airplane_object.r_1_mag
+            self._r_1_joint_mag[airplane_slice,airplane_slice] = airplane_object.r_1_joint_mag
+
+            # Spatial node vector magnitude products
+            self._r_0_r_0_joint_mag[airplane_slice,airplane_slice] = airplane_object.r_0_r_0_joint_mag
+            self._r_0_r_1_mag[airplane_slice,airplane_slice] = airplane_object.r_0_r_1_mag
+            self._r_1_r_1_joint_mag[airplane_slice,airplane_slice] = airplane_object.r_1_r_1_joint_mag
+
         # Fill in spatial node vectors between airplanes
-        self._r_0 = np.where(np.isnan(self._r_0), self._PC[:,np.newaxis,:]-self._P0, self._r_0)
-        self._r_1 = np.where(np.isnan(self._r_1), self._PC[:,np.newaxis,:]-self._P1, self._r_1)
-        self._r_0_joint = np.where(np.isnan(self._r_0_joint), self._PC[:,np.newaxis,:]-self._P0_joint, self._r_0_joint)
-        self._r_1_joint = np.where(np.isnan(self._r_1_joint), self._PC[:,np.newaxis,:]-self._P1_joint, self._r_1_joint)
+        if self._num_aircraft > 1:
+            for airplane_slice in self._airplane_slices:
+                this_ind = range(airplane_slice.start, airplane_slice.stop)
+                other_ind = [i for i in range(self._N) if i not in this_ind] # control point indices for other airplanes
 
-        # Calculate spatial node vector magnitudes
-        self._r_0_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0, self._r_0))
-        self._r_0_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0_joint, self._r_0_joint))
-        self._r_1_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1, self._r_1))
-        self._r_1_joint_mag = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1_joint, self._r_1_joint))
+                # Spatial node vectors
+                self._r_0[airplane_slice,other_ind,:] = self._PC[airplane_slice,np.newaxis,:]-self._P0[airplane_slice,other_ind,:]
+                self._r_1[airplane_slice,other_ind,:] = self._PC[airplane_slice,np.newaxis,:]-self._P1[airplane_slice,other_ind,:]
+                self._r_0_joint[airplane_slice,other_ind,:] = self._PC[airplane_slice,np.newaxis,:]-self._P0_joint[airplane_slice,other_ind,:]
+                self._r_1_joint[airplane_slice,other_ind,:] = self._PC[airplane_slice,np.newaxis,:]-self._P1_joint[airplane_slice,other_ind,:]
 
-        # Calculate magnitude products
-        self._r_0_r_0_joint_mag = self._r_0_mag*self._r_0_joint_mag
-        self._r_0_r_1_mag = self._r_0_mag*self._r_1_mag
-        self._r_1_r_1_joint_mag = self._r_1_mag*self._r_1_joint_mag
+                # Calculate spatial node vector magnitudes
+                self._r_0_mag[airplane_slice,other_ind] = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0[airplane_slice,other_ind,:], self._r_0[airplane_slice,other_ind,:]))
+                self._r_0_joint_mag[airplane_slice,other_ind] = np.sqrt(np.einsum('ijk,ijk->ij', self._r_0_joint[airplane_slice,other_ind,:], self._r_0_joint[airplane_slice,other_ind,:]))
+                self._r_1_mag[airplane_slice,other_ind] = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1[airplane_slice,other_ind,:], self._r_1[airplane_slice,other_ind,:]))
+                self._r_1_joint_mag[airplane_slice,other_ind] = np.sqrt(np.einsum('ijk,ijk->ij', self._r_1_joint[airplane_slice,other_ind,:], self._r_1_joint[airplane_slice,other_ind,:]))
+
+                # Calculate magnitude products
+                self._r_0_r_0_joint_mag[airplane_slice,other_ind] = self._r_0_mag[airplane_slice,other_ind]*self._r_0_joint_mag[airplane_slice,other_ind]
+                self._r_0_r_1_mag[airplane_slice,other_ind] = self._r_0_mag[airplane_slice,other_ind]*self._r_1_mag[airplane_slice,other_ind]
+                self._r_1_r_1_joint_mag[airplane_slice,other_ind] = self._r_1_mag[airplane_slice,other_ind]*self._r_1_joint_mag[airplane_slice,other_ind]
 
         # Effective freestream projection matrices
         if self._correct_sections_for_sweep:

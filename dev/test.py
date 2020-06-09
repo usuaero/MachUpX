@@ -96,8 +96,8 @@ if __name__=="__main__":
     }
 
     control_state = {
-        "elevator" : 44.0,
-        "aileron" : 44.0,
+        "elevator" : 0.0,
+        "aileron" : 0.0,
         "rudder" : 0.0
     }
 
@@ -105,8 +105,8 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=False)
-    scene.export_stl(filename="plane.stl")
+    scene.display_wireframe(show_vortices=False)
+    #scene.export_stl(filename="plane.stl")
 
     # Solve forces
     #FM = scene.solve_forces(non_dimensional=False, verbose=True)
