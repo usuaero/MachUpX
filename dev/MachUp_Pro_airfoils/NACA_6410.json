@@ -1,0 +1,16 @@
+{				
+    "NACA_6410"	:	{	
+	"properties"	:	{	
+	"type"	:	"linear"	,
+	"alpha_L0"	:	-0.1116	,
+	"CL_alpha"	:	6.1295	,
+	"Cm_L0"	:	-0.1548	,
+	"Cm_alpha"	:	0.0309	,
+	"CD0"	:	0.01233	,
+	"CD0_L"	:	-0.01571	,
+	"CD0_L2"	:	0.01040	,
+	"CL_max"	:	1.4	,
+	"Comments"	:	"All angles in radians and slopes in 1/radians"	 
+	}			
+	}			
+}				
