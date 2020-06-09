@@ -12,20 +12,11 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "scipy_fsolve"
-            #"type" : "nonlinear"
+            #"type" : "scipy_fsolve"
+            "type" : "nonlinear"
         },
-        "units" : "SI"
+        "units" : "English"
     }
-
-    def dihedral(s):
-        return 0.25*s*np.pi
-
-    def sweep(s):
-        return 0.25*s*np.pi
-
-    def ac_offset(s):
-        return 0.5*(s-0.5)
 
     # Specify airplane
     airplane_dict = {
@@ -43,8 +34,8 @@ if __name__=="__main__":
             }
         },
         "airfoils" : {
-            "NACA_4410" : "test/NACA_4410.json",
-            "NACA_0010" : "test/NACA_0010.json"
+            "NACA_4410" : "dev/NACA_4410.json",
+            "NACA_0010" : "dev/NACA_0010.json"
         },
         "wings" : {
             "winglets" : {
@@ -71,16 +62,18 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "semispan" : 4.0,
-                "airfoil" : [[0.0, "NACA_0010"],
-                             [1.0, "NACA_4410"]],
+                "airfoil" : "NACA_0010",
+                "sweep" : [[0.0, 0.0],
+                           [1.0, 30.0]],
                 "dihedral" : [[0.0, 0.0],
-                              [0.8, 0.0],
-                              [0.9, 20.0],
-                              [1.0, -50.0]],
-                "twist" : [[0.0, 0.0],
-                           [1.0, 10.0]],
+                              [1.0, 5.0]],
+                "chord" : [[0.0, 2.0],
+                           [0.2, 1.0],
+                           [1.0, 0.5]],
+                "twist" : 0.0,
                 "control_surface" : {
-                    "chord_fraction" : 0.1,
+                    "chord_fraction" : [[0.55, 0.1],
+                                        [0.95, 0.2]],
                     "root_span" : 0.55,
                     "tip_span" : 0.95,
                     "control_mixing" : {
@@ -99,25 +92,21 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 5.0,
+        "alpha" : 0.0,
         "beta" : 0.0
     }
 
-    def elevator_deflection(s):
-        return 30*s**2
-
     control_state = {
-        "elevator" : elevator_deflection,
+        "elevator" : 0.0,
         "aileron" : 0.0,
         "rudder" : 0.0
     }
 
-    # Load scene with Jackson's corrections
+    # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=True)
-    scene.export_stl(filename="test.stl")
+    scene.display_wireframe(show_vortices=False)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)

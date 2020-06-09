@@ -1572,7 +1572,13 @@ class Scene:
             for segment_name, segment_object in airplane_object.wing_segments.items():
 
                 # Get the outline points and transform to earth-fixed
-                points = airplane_object.p_bar+quat_inv_trans(airplane_object.q, segment_object.get_outline_points())
+                points, cntrl_points = segment_object.get_outline_points()
+                points = airplane_object.p_bar+quat_inv_trans(airplane_object.q, points)
+
+                # Plot control surfaces
+                if cntrl_points is not None:
+                    cntrl_points = airplane_object.p_bar+quat_inv_trans(airplane_object.q, cntrl_points)
+                    ax.plot(cntrl_points[:,0], cntrl_points[:,1], cntrl_points[:,2], 'k-')
 
                 # Decide if colors matter and the segment names need to be stored
                 if show_legend:

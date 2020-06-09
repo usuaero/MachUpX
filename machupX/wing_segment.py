@@ -416,7 +416,6 @@ class WingSegment:
         self._delta_flap = np.zeros(self.N) # Positive deflection is down
         self._cp_c_f = np.zeros(self.N)
         self._has_control_surface = False
-        #self._Cm_delta_flap = 0.0
 
         if control_dict is not None:
             self._has_control_surface = True
@@ -428,14 +427,17 @@ class WingSegment:
             self._cntrl_tip_span = control_dict.get("tip_span", 1.0)
             self._cp_in_cntrl_surf = (self.cp_span_locs >= self._cntrl_root_span) & (self.cp_span_locs <= self._cntrl_tip_span)
 
-            # Determine the flap chord fractions at each control point
+            # Get chord data
             chord_data = import_value("chord_fraction", control_dict, self._unit_sys, 0.25)
-            if isinstance(chord_data, float): # Constant chord fraction
-                self._cp_c_f[self._cp_in_cntrl_surf] = chord_data
-            else: # Variable chord fraction
+
+            # Make sure endpoints line up
+            if not isinstance(chord_data, float): # Array
                 if chord_data[0,0] != self._cntrl_root_span or chord_data[-1,0] != self._cntrl_tip_span:
                     raise IOError("Endpoints of flap chord distribution must match specified root and tip span locations.")
-                self._cp_c_f[self._cp_in_cntrl_surf] = np.interp(self.cp_span_locs[self._cp_in_cntrl_surf], chord_data[:,0], chord_data[:,1])
+
+            # Determine the flap chord fractions at each control point
+            self.get_c_f = self._build_getter_linear_f_of_span(chord_data, "flap_chord_fraction")
+            self._cp_c_f[self._cp_in_cntrl_surf] = self.get_c_f(self.cp_span_locs[self._cp_in_cntrl_surf])
 
             # Store mixing
             self._control_mixing = control_dict.get("control_mixing", {})
@@ -1040,7 +1042,7 @@ class WingSegment:
 
 
     def get_outline_points(self):
-        """Returns a set of points that represents the outline of the wing segment.
+        """Returns a set of points that represents the planar outline of the wing segment.
         
         Returns
         -------
@@ -1063,9 +1065,18 @@ class WingSegment:
         # Complete the circle
         points[-1,:] = points[0,:]
 
-        #TODO: Add control surface
+        # Add control surface
+        if self._has_control_surface:
+            in_cntrl_surf = (spans >= self._cntrl_root_span) & (spans <= self._cntrl_tip_span)
+            num_cntrl_points = np.sum(in_cntrl_surf)+2
+            cntrl_points = np.zeros((num_cntrl_points,3))
+            cntrl_points[1:num_cntrl_points-1,:] = (qc_points + (0.75-self.get_c_f(spans))[:,np.newaxis]*(axial_vecs*chords[:,np.newaxis]))[in_cntrl_surf]
+            cntrl_points[0,:] = (qc_points + 0.75*(axial_vecs*chords[:,np.newaxis]))[in_cntrl_surf][0]
+            cntrl_points[-1,:] = (qc_points + 0.75*(axial_vecs*chords[:,np.newaxis]))[in_cntrl_surf][-1]
+        else:
+            cntrl_points = None
 
-        return points
+        return points, cntrl_points
 
 
     def apply_control(self, control_state, control_symmetry):
