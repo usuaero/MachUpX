@@ -39,13 +39,13 @@ def test_main():
     assert os.path.exists(altered_input_name.replace(".json", ".stl"))
 
     # Cleanup
-    sp.run(["rm", altered_input_name.replace(".json", "_forces.json")])
-    sp.run(["rm", altered_input_name.replace(".json", "_derivatives.json")])
-    sp.run(["rm", altered_input_name.replace(".json", "_distributions.txt")])
-    sp.run(["rm", altered_input_name.replace(".json", "_pitch_trim.json")])
-    sp.run(["rm", altered_input_name.replace(".json", "_aero_center.json")])
-    sp.run(["rm", altered_input_name.replace(".json", ".stl")])
-    sp.run(["rm", altered_input_name])
+    os.remove(altered_input_name.replace(".json", "_forces.json"))
+    os.remove(altered_input_name.replace(".json", "_derivatives.json"))
+    os.remove(altered_input_name.replace(".json", "_distributions.txt"))
+    os.remove(altered_input_name.replace(".json", "_pitch_trim.json"))
+    os.remove(altered_input_name.replace(".json", "_aero_center.json"))
+    os.remove(altered_input_name.replace(".json", ".stl"))
+    os.remove(altered_input_name)
 
 
 if __name__=="__main__":

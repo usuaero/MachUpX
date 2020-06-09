@@ -11,12 +11,7 @@ def test_all_wing_segments_get_added():
     # Tests that all wing segments have been added and are available through 
     # both the tree and the dict.
 
-    # Load wing segments
-    with open(input_file, 'r') as input_handle:
-        input_dict = json.load(input_handle)
-
-    with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
-        airplane_dict = json.load(airplane_file_handle)
+    _,_,airplane_dict,_,_ = MX.helpers.parse_input(input_file)
 
     wing_segments = []
     wing_segment_sides = []

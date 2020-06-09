@@ -11,17 +11,9 @@ def test_two_aircraft():
     # Tests that two aircraft flying side by side are properly modelled
 
     # Load input
-    with open(input_file, 'r') as input_handle:
-        input_dict = json.load(input_handle)
-
-    with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
-        airplane_dict = json.load(airplane_file_handle)
+    input_dict,_,airplane_dict,state,control_state = MX.helpers.parse_input(input_file)
 
     input_dict["solver"]["type"] = "nonlinear"
-
-    airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
-    state = airplane_state.get("state", {})
-    control_state = airplane_state.get("control_state", {})
 
     # Load scene
     scene = MX.Scene(input_dict)
@@ -50,18 +42,9 @@ def test_add_two_aircraft_really_far_away():
     # Test that two aircraft really far away from each other are almost the same as a single aircraft
 
     # Load input
-    with open(input_file, 'r') as input_handle:
-        input_dict = json.load(input_handle)
-
-    with open(input_dict["scene"]["aircraft"]["test_plane"]["file"], 'r') as airplane_file_handle:
-        airplane_dict = json.load(airplane_file_handle)
+    input_dict,_,airplane_dict,state,control_state = MX.helpers.parse_input(input_file)
 
     input_dict["solver"]["type"] = "nonlinear"
-
-    airplane_state = input_dict["scene"]["aircraft"].pop("test_plane")
-    state = airplane_state.get("state", {})
-    control_state = airplane_state.get("control_state", {})
-
 
     # Load single scene
     scene = MX.Scene(input_dict)

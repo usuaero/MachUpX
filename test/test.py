@@ -47,6 +47,25 @@ if __name__=="__main__":
             "NACA_0010" : "test/NACA_0010.json"
         },
         "wings" : {
+            "winglets" : {
+                "ID" : 2,
+                "side" : "both",
+                "is_main" : True,
+                "connect_to" : {
+                    "ID" : 1,
+                    "location" : "tip"
+                },
+                "semispan" : 0.5,
+                "dihedral" : 90.0,
+                "sweep" : 10.0,
+                "chord" : [[0.0, 0.5],
+                           [1.0, 0.2]],
+                "airfoil" : "NACA_0010",
+                "grid" : {
+                    "N" : 20,
+                    "wing_ID" : 0
+                }
+            },
             "main_wing" : {
                 "ID" : 1,
                 "side" : "both",
@@ -73,25 +92,6 @@ if __name__=="__main__":
                     "N" : 20,
                     "wing_ID" : 0
                 }
-            #},
-            #"winglets" : {
-            #    "ID" : 2,
-            #    "side" : "both",
-            #    "is_main" : True,
-            #    "connect_to" : {
-            #        "ID" : 1,
-            #        "location" : "tip"
-            #    },
-            #    "semispan" : 0.5,
-            #    "dihedral" : 90.0,
-            #    "sweep" : 10.0,
-            #    "chord" : [[0.0, 0.5],
-            #               [1.0, 0.2]],
-            #    "airfoil" : "NACA_0010",
-            #    "grid" : {
-            #        "N" : 20,
-            #        "wing_ID" : 0
-            #    }
             }
         }
     }

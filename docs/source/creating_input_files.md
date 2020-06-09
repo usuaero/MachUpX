@@ -514,7 +514,7 @@ Describes an aircraft. Stored as a .json file
 >>>>>ID of the wing this wing segment belongs to. This is only needed if the Reid corrections are being used. This is not the same as the ID of the wing segment that this wing segment connects to. Rather, this parameter is used to group wing segments into contiguous wings that share a single locus of aerodynamic centers. This is required for the general implementation of numerical lifting-line. If this is not specified, MachUpX will assume this wing segment is isolated in space, except from its mirror image if the two halves are contiguous. Must be positive and should start at 0. Defaults to None.
 >>>
 >>>**"control_surface" : dict, optional**
->>>>Defines a control surface on the trailing edge of the wing segment. Uses Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
+>>>>Defines a control surface on the trailing edge of the wing segment. The flap aerodynamics are determined by the airfoil type given for the wing segment. A "linear" airfoil will use Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
 >>>
 >>>>**"root_span" : float, optional**
 >>>>>The span location, as a fraction of total span, where the control surface begins. Defaults to 0.0.
@@ -526,7 +526,7 @@ Describes an aircraft. Stored as a .json file
 >>>>>The depth of the control surface, as a fraction of the local chord length. Defined the same as "twist". If an array or file is specified, however, the start and end of the data must coincide with "root_span" and "tip_span", respectively. Defaults to 0.25.
 >>>
 >>>>**"is_sealed" : bool, optional**
->>>>>Whether or not the flap is sealed. Affects how parasitic drag is modelled. Defaults to true.
+>>>>>Whether or not the flap is sealed. Affects the effectiveness of the flap. Defaults to true.
 >>>
 >>>>**"control_mixing" : dict**
 >>>>>Determines which control inputs move this control surface. A control surface can be affected by any number of controls.

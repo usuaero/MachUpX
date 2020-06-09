@@ -3,6 +3,8 @@
 import os
 import numpy as np
 import copy
+import json
+
 
 def check_filepath(input_filename, correct_ext):
     # Check correct file extension and that file exists
@@ -10,6 +12,7 @@ def check_filepath(input_filename, correct_ext):
         raise IOError("File {0} has the wrong extension. Expected a {1} file.".format(input_filename, correct_ext))
     if not os.path.exists(input_filename):
         raise IOError("Cannot find file {0}.".format(input_filename))
+
 
 def convert_units(in_value, units, system):
     # Converts the given value from the specified units to the default for the system chosen
@@ -138,6 +141,7 @@ def import_value(key, dict_of_vals, system, default_value):
 
     return return_value
 
+
 vectorized_convert_units = np.vectorize(convert_units)
 
 
@@ -253,3 +257,59 @@ def quat_to_euler(q):
 
 def quat_conj(q):
     return [q[0], -q[1], -q[2], -q[3]]
+
+
+def parse_input(mux_input):
+    """Takes an input to MachUpX and converts it to a scene dictionary and lists of airplanes, states, and control states.
+    This is really just used to simplify things in the unit tests.
+
+    Parameters
+    ----------
+    mux_input : dict or str
+        Scene input to MachUpX
+
+    Returns
+    -------
+    dict
+        Scene input stripped of airplanes
+
+    list
+        Airplane names
+
+    list
+        Airplane dictionaries
+
+    list
+        State dictionaries
+
+    list
+        Control state dictionaries
+    """
+
+    # Load input
+    if isinstance(mux_input, str):
+        with open(mux_input, 'r') as input_handle:
+            scene_dict = json.load(input_handle)
+
+    else:
+        scene_dict = copy.deepcopy(mux_input)
+
+    # Get aircraft
+    airplane_names = []
+    airplanes = []
+    states = []
+    control_states = []
+    for key, value in scene_dict["scene"].pop("aircraft", {}).items():
+        airplane_names.append(key)
+
+        # Load airplane object
+        with open(value["file"], 'r') as airplane_file:
+            airplanes.append(json.load(airplane_file))
+
+        states.append(value.get("state", {}))
+        control_states.append(value.get("control_state", {}))
+
+    if len(airplane_names) == 1:
+        return scene_dict, airplane_names[0], airplanes[0], states[0], control_states[0]
+    else:
+        return scene_dict, airplane_names, airplanes, states, control_states

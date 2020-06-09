@@ -4,6 +4,7 @@ import subprocess as sp
 import machupX as mx
 import json
 import copy
+import os
 
 
 def translate_to_machup_pro(machupx_input, machupx_airplane, state, control_state):
@@ -311,5 +312,5 @@ if __name__=="__main__":
     print("Cz: {0}%".format(abs((FM_pro["total"]["plane"]["CZ"]-FM_mx["plane"]["total"]["Cz"])/FM_pro["total"]["plane"]["CZ"])*100.0*int(abs(FM_pro["total"]["plane"]["CZ"])>1e-10)))
 
     #sp.run(['rm', 'pro_input.json'])
-    sp.run(['rm', 'pro_input_forces.json'])
-    sp.run(['rm', 'pro_input_derivatives.json'])
+    os.remove('pro_input_forces.json')
+    os.remove('pro_input_derivatives.json')

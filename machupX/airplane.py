@@ -372,8 +372,28 @@ class Airplane:
 
     def _load_wing_segments(self):
         # Reads in the wing segments from the input dict and attaches them
-        for key in self._input_dict.get("wings", {}):
-            self.add_wing_segment(key, self._input_dict["wings"][key], recalculate_geometry=False)
+
+        # Decide in what order to add the segments, since some are defined relative to others
+        wing_dict = self._input_dict.get("wings", {})
+        seg_names = []
+        for key, value in wing_dict.items():
+
+            # Find out if any of the segments already added to the list are dependent upon this one
+            curr_ID = value["ID"]
+            found_dependent = False
+            for i, seg_name in enumerate(seg_names):
+                if wing_dict[seg_name].get("connect_to", {}).get("ID", 0) == curr_ID:
+                    seg_names.insert(i, key)
+                    found_dependent = True
+                    break
+
+            # Add the wing segment to the end if nothing is dependent on it
+            if not found_dependent:
+                seg_names.append(key)
+
+        # Add segments
+        for seg_name in seg_names:
+            self.add_wing_segment(seg_name, self._input_dict["wings"][seg_name], recalculate_geometry=False)
 
         # Perform geometry calculations
         self._calculate_geometry()
