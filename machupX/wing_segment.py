@@ -1182,23 +1182,38 @@ class WingSegment:
     def _get_airfoil_outline_coords_at_span(self, span, N):
         # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction with the specified number of points
 
-        # Collect airfoil outlines
-        airfoil_outlines = []
-        for i, airfoil in enumerate(self._airfoils):
-            airfoil_outlines.append(airfoil.get_outline_points(N=N))
+        # Determine flap deflection and fraction at this point
+        if self._has_control_surface and span >= self._cntrl_root_span and span <= self._cntrl_tip_span:
+            if self.side == "left":
+                d_f = np.interp(span, self.cp_span_locs[::-1], self._delta_flap[::-1])
+            else:
+                d_f = np.interp(span, self.cp_span_locs, self._delta_flap)
+            c_f = self.get_c_f(span)
+        else:
+            d_f = 0.0
+            c_f = 0.0
 
         # Linearly interpolate outlines, ignoring twist, etc for now
         if self._num_airfoils == 1:
-            points = airfoil_outlines[0]
+            points = self._airfoils[0].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
         else:
             index = 0
             while True:
                 if span >= self._airfoil_spans[index] and span <= self._airfoil_spans[index+1]:
                     total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+
+                    # Get weights
                     root_weight = 1-abs(span-self._airfoil_spans[index])/total_span
                     tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
-                    points = root_weight*airfoil_outlines[index]+tip_weight*airfoil_outlines[index+1]
+
+                    # Get outlines
+                    root_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
+                    tip_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
+
+                    # Interpolate
+                    points = root_weight*root_outline+tip_weight*tip_outline
                     break
+
                 index += 1
 
         # Get twist, dihedral, and chord

@@ -72,8 +72,7 @@ if __name__=="__main__":
                            [1.0, 0.5]],
                 "twist" : 0.0,
                 "control_surface" : {
-                    "chord_fraction" : [[0.55, 0.1],
-                                        [0.95, 0.2]],
+                    "chord_fraction" : 0.4,
                     "root_span" : 0.55,
                     "tip_span" : 0.95,
                     "control_mixing" : {
@@ -97,8 +96,8 @@ if __name__=="__main__":
     }
 
     control_state = {
-        "elevator" : 0.0,
-        "aileron" : 0.0,
+        "elevator" : 44.0,
+        "aileron" : 44.0,
         "rudder" : 0.0
     }
 
@@ -106,11 +105,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=False)
+    #scene.display_wireframe(show_vortices=False)
+    scene.export_stl(filename="plane.stl")
 
     # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
     #scene.distributions(filename="dist.txt")
 
     ## Get derivatives
