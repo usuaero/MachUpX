@@ -366,7 +366,6 @@ class Scene:
         self._M = np.zeros(self._N) # Mach number
         self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
         self._CLa = np.zeros(self._N) # Lift slope
-        self._am0 = np.zeros(self._N) # Zero-moment angle of attack
         self._CL = np.zeros(self._N) # Lift coefficient
         self._CD = np.zeros(self._N) # Drag coefficient
         self._Cm = np.zeros(self._N) # Moment coefficient
@@ -413,17 +412,20 @@ class Scene:
 
         # Swept section corrections
         if self._correct_sections_for_sweep:
-            sweep2 = self._section_sweep**2
-            sweep4 = self._section_sweep**4
-            tau2 = self._max_thickness*self._max_thickness
+            # What are commented out are Jackson's corrections. We've decided to not go with them for now...
+            #sweep2 = self._section_sweep**2
+            #sweep4 = self._section_sweep**4
+            #tau2 = self._max_thickness*self._max_thickness
 
-            self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
-            self._R_CL_a = 1.0/(1.0-0.2955*self._max_thickness**0.96*sweep2-0.1335*self._max_thickness**0.68*sweep4)
+            #self._delta_a_L0 = 1.0/(1.0+0.5824*self._max_camber**0.92*sweep2+1.3892*self._max_camber**1.16*sweep4)-1
+            #self._R_CL_a = 1.0/(1.0-0.2955*self._max_thickness**0.96*sweep2-0.1335*self._max_thickness**0.68*sweep4)
 
-            self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
-            self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
+            #self._delta_a_m0 = 1.0/(1.0+1.07*self._max_camber**0.95*sweep2+0.56*self._max_camber**0.83*sweep4)-1
+            #self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
 
-            self._c_bar_swept = self._c_bar*np.cos(self._section_sweep)
+            C_lambda = np.cos(self._section_sweep)
+            self._c_bar_swept = self._c_bar*C_lambda
+            self._C_sweep_inv = 1.0/C_lambda
 
         self._solved = False
 
@@ -612,16 +614,15 @@ class Scene:
                 self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
                 seg_ind += seg_N
 
-        # Correct CL estimate for sweep
+        # Correct CL estimate for sweep (we don't use self._correct_CL_for_sweep() here because we are dealing with alpha_inf rather than true alpha)
         if self._correct_sections_for_sweep:
 
             # Estimate lift slope
             with np.errstate(divide='ignore', invalid='ignore'):
-                CL_a_est = np.nan_to_num(self._CL/(self._alpha_inf-self._aL0))
+                self._CLa = np.nan_to_num(self._CL/(self._alpha_inf-self._aL0))
 
             # Get new estimate
-            self._CLa = self._R_CL_a*CL_a_est
-            self._CL = self._CLa*(self._alpha_inf-self._aL0-self._delta_a_L0)
+            self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
 
         # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
         self._P0_joint_u_inf = self._P0_joint_v_inf/np.linalg.norm(self._P0_joint_v_inf, axis=-1, keepdims=True)
@@ -772,23 +773,10 @@ class Scene:
 
         # Estimate lift slope
         with np.errstate(divide='ignore', invalid='ignore'):
-            CL_a_est = np.nan_to_num(self._CL/(self._alpha-self._aL0))
+            self._CLa = np.nan_to_num(self._CL/(self._alpha-self._aL0))
 
         # Get new estimate
-        self._CLa = self._R_CL_a*CL_a_est
-        self._CL = self._CLa*(self._alpha-self._aL0-self._delta_a_L0)
-
-
-    def _correct_Cm_for_sweep(self):
-        # Applies Jackson's corrections for swept section moment
-
-        # Estimate moment slope
-        with np.errstate(divide='ignore', invalid='ignore'):
-            Cm_a_est = np.nan_to_num(self._Cm/(self._alpha-self._am0))
-
-        # Get new estimate
-        self._Cma = self._R_Cm_a*Cm_a_est
-        self._Cm = np.where(self._Cm != 0.0, self._Cma*(self._alpha-self._am0-self._delta_a_m0), 0.0)
+        self._CL = self._CLa*(self._alpha-self._aL0*self._C_sweep_inv)
 
 
     def _solve_linear(self, **kwargs):
@@ -888,7 +876,7 @@ class Scene:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._correct_sections_for_sweep:
-                CL_gamma_alpha = (self._R_CL_a*self._CLa)[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
+                CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar_swept/(self._nu*self._V_i_eff)[:,np.newaxis]*v_iji
                 CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_i_eff)[:,np.newaxis]*v_iji
             else:
@@ -1013,14 +1001,12 @@ class Scene:
 
                 # Section moment coefficient
                 self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                if self._correct_sections_for_sweep:
-                    self._am0[cur_slice] = segment.get_cp_am0(self._Re[cur_slice], self._M[cur_slice])
 
                 index += num_cps
 
         # Inviscid moment due to section
         if self._correct_sections_for_sweep:
-            self._correct_Cm_for_sweep()
+            self._Cm = self._Cm*self._C_sweep_inv
             dM_section = (self._redim*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
         else:
             dM_section = (self._redim*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s_unswept

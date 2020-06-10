@@ -24,7 +24,7 @@ def translate_to_machup_pro(machupx_input, machupx_airplane, state, control_stat
         "reference" : copy.deepcopy(machupx_airplane["reference"]),
         "condition" : copy.deepcopy(state),
         "controls" : copy.deepcopy(machupx_airplane["controls"]),
-        "airfoil_DB" : "test/MachUp_Pro_airfoils",
+        "airfoil_DB" : "dev/MachUp_Pro_airfoils",
         "wings" : {}
     }
 
@@ -36,6 +36,10 @@ def translate_to_machup_pro(machupx_input, machupx_airplane, state, control_stat
             mu_pro_dict["run"]["derivatives"] = ""
         elif key == "export_stl":
             mu_pro_dict["run"]["stl"] = ""
+        elif key == "pitch_trim":
+            mu_pro_dict["run"]["pitchtrim"] = {
+                "CL" : machupx_airplane["weight"]/(0.5*machupx_input["scene"]["atmosphere"]["density"]*mu_pro_dict["condition"]["velocity"]**2*machupx_airplane["reference"]["area"])
+            }
 
     # Condition
     mu_pro_dict["condition"]["units"] = machupx_input["units"]
@@ -87,7 +91,7 @@ def run_machup_pro(input_filename):
     try:
         # Run executable
         print("MachUp is executing {0}...".format(input_filename))
-        completed = sp.run(["./test/Machup.out",input_filename])
+        completed = sp.run(["./dev/Machup.out",input_filename])
 
         # Unexpected completion
         if completed.returncode < 0:
@@ -110,11 +114,12 @@ if __name__=="__main__":
             "solve_forces" : {},
             "aero_derivatives" : {},
             #"export_stl" : {}
+            "pitch_trim" : {}
         },
         "solver" : {
             "type" : "nonlinear",
-            "correct_sections_for_sweep" : False,
-            "machup_pro_deriv" : True,
+            "correct_sections_for_sweep" : True,
+            "machup_pro_deriv" : False,
             "convergence" : 0.0000000001
         },
         "units" : "English",
@@ -124,6 +129,8 @@ if __name__=="__main__":
             }
         }
     }
+    reid_corrections = True
+    flap_edge_cluster = True
 
     # Specify airplane
     airplane_dict = {
@@ -177,7 +184,7 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 #"ac_offset" : "kuchemann",
                 "dihedral" : 2.0,
-                "sweep" : 45.0,
+                "sweep" : 20.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
@@ -188,8 +195,8 @@ if __name__=="__main__":
                 },
                 "grid" : {
                     "N" : 10,
-                    "reid_corrections" : False,
-                    "flap_edge_cluster" : False
+                    "reid_corrections" : reid_corrections,
+                    "flap_edge_cluster" : flap_edge_cluster
                 }
             },
             "h_stab" : {
@@ -218,8 +225,8 @@ if __name__=="__main__":
                 },
                 "grid" : {
                     "N" : 10,
-                    "reid_corrections" : False,
-                    "flap_edge_cluster" : False
+                    "reid_corrections" : reid_corrections,
+                    "flap_edge_cluster" : flap_edge_cluster
                 }
             },
             "v_stab" : {
@@ -247,8 +254,8 @@ if __name__=="__main__":
                 },
                 "grid" : {
                     "N" : 10,
-                    "reid_corrections" : False,
-                    "flap_edge_cluster" : False
+                    "reid_corrections" : reid_corrections,
+                    "flap_edge_cluster" : flap_edge_cluster
                 }
             }
         }
@@ -258,7 +265,7 @@ if __name__=="__main__":
         "velocity" : 100.0,
         "alpha" : -2.0,
         "beta" : 7.0,
-        "angular_rates" : [1.0, 1.0, 1.0]
+        "angular_rates" : [0.0, 0.0, 0.0]
     }
 
     control_state = {
@@ -275,11 +282,14 @@ if __name__=="__main__":
     run_machup_pro(filename)
     with open(filename.replace(".json", "_forces.json")) as force_handle:
         FM_pro = json.load(force_handle)
+    with open(filename.replace(".json", "_pitchtrim.json")) as trim_handle:
+        trim = json.load(trim_handle)
 
     # Get MachUpX results
     mx_scene = mx.Scene(input_dict)
     mx_scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
     FM_mx = mx_scene.solve_forces(verbose=True, dimensional=False)
+    pitch_trim = mx_scene.pitch_trim(verbose=True)
     #mx_scene.export_stl(filename="mux.stl")
 
     #mx_scene.display_wireframe()
@@ -287,9 +297,11 @@ if __name__=="__main__":
     print("\nMachUp Pro Results")
     print("------------------")
     print(json.dumps(FM_pro["total"]["plane"], indent=4))
+    print(json.dumps(trim, indent=4))
     print("\nMachUpX Results")
     print("---------------")
     print(json.dumps(FM_mx["plane"]["total"], indent=4))
+    print(json.dumps(pitch_trim, indent=4))
     print("\nRatios")
     print("-----")
     print("CL: {0}".format(FM_pro["total"]["plane"]["CL"]/FM_mx["plane"]["total"]["CL"]*int(abs(FM_pro["total"]["plane"]["CL"])>1e-10)))
@@ -314,3 +326,4 @@ if __name__=="__main__":
     #sp.run(['rm', 'pro_input.json'])
     os.remove('pro_input_forces.json')
     os.remove('pro_input_derivatives.json')
+    os.remove('pro_input_pitchtrim.json')
