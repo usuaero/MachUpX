@@ -2390,6 +2390,7 @@ class Scene:
             "aero_sweep" : section aerodynamic sweep (based on the locus of aerodynamic centers)
             "area" : section differential planform area
             "alpha" : angle of attack
+            "delta_flap" : flap deflection
             "u" : body-x velocity
             "v" : body-y velocity
             "w" : body-z velocity
@@ -2455,6 +2456,7 @@ class Scene:
                           ("aero_sweep", "float"),
                           ("area", "float"),
                           ("alpha", "float"),
+                          ("delta_flap", "float"),
                           ("u", "float"),
                           ("v", "float"),
                           ("w", "float"),
@@ -2501,6 +2503,7 @@ class Scene:
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
                 dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
+                dist[airplane_name][segment_name]["delta_flap"] = list(np.degrees(segment_object._delta_flap))
                 dist[airplane_name][segment_name]["u"] = list(v[:,0])
                 dist[airplane_name][segment_name]["v"] = list(v[:,1])
                 dist[airplane_name][segment_name]["w"] = list(v[:,2])
@@ -2533,6 +2536,7 @@ class Scene:
                     table_data[cur_slice]["section_parasitic_CD"] = dist[airplane_name][segment_name]["section_parasitic_CD"]
                     table_data[cur_slice]["section_aL0"] = dist[airplane_name][segment_name]["section_aL0"]
                     table_data[cur_slice]["alpha"] = dist[airplane_name][segment_name]["alpha"]
+                    table_data[cur_slice]["delta_flap"] = dist[airplane_name][segment_name]["delta_flap"]
                     table_data[cur_slice]["Re"] = dist[airplane_name][segment_name]["Re"]
                     table_data[cur_slice]["M"] = dist[airplane_name][segment_name]["M"]
                     table_data[cur_slice]["u"] = dist[airplane_name][segment_name]["u"]
@@ -2545,10 +2549,10 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
                 "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
-                "u", "v", "w", "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+                "Flap Defl.", "u", "v", "w", "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)

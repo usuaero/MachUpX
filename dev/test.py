@@ -96,7 +96,7 @@ if __name__=="__main__":
     }
 
     control_state = {
-        "elevator" : 0.0,
+        "elevator" : 15.0,
         "aileron" : 0.0,
         "rudder" : 0.0
     }
@@ -109,9 +109,9 @@ if __name__=="__main__":
     #scene.export_stl(filename="plane.stl")
 
     # Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-    #scene.distributions(filename="dist.txt")
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    scene.distributions(filename="dist.txt")
 
     ## Get derivatives
     #derivs = scene.aircraft_derivatives(wind_frame=False)
