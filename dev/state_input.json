@@ -10,7 +10,7 @@
     },
     "aircraft" : {
         "name" : "my_airplane",
-        "file" : "plane_linearized.json",
+        "file" : "dev/mux_airplane.json",
         "initial_state" : {
             "velocity" : [200.0, 0.0, 0.0],
             "angular_rates" : [0.0, 0.0, 0.0],
@@ -23,6 +23,6 @@
                 "rudder" : 0.0
             }
         },
-        "controller" : "keyboard"
+        "controller" : "joystick"
     }
 }
