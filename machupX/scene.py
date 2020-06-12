@@ -590,16 +590,14 @@ class Scene:
         if self._correct_sections_for_sweep:
             self._cp_v_inf_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
             self._cp_V_inf_eff = np.linalg.norm(self._cp_v_inf_eff, axis=1)
-            self._v_n_inf = np.einsum('ij,ij->i', self._cp_v_inf_eff, self._u_n)
-            self._v_a_inf = np.einsum('ij,ij->i', self._cp_v_inf_eff, self._u_a)
             self._Re = self._cp_V_inf_eff*self._c_bar_swept/self._nu
             self._M = self._cp_V_inf_eff/self._a
         else:
-            self._v_n_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n)
-            self._v_a_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a)
             self._Re = self._cp_V_inf*self._c_bar/self._nu
             self._M = self._cp_V_inf/self._a
 
+        self._v_n_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n)
+        self._v_a_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a)
         self._alpha_inf = np.arctan2(self._v_n_inf, self._v_a_inf)
 
         # Get lift slopes and zero-lift angles of attack for each segment
@@ -713,22 +711,18 @@ class Scene:
             self._V_i_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
             self._V_i_eff = np.sqrt(self._V_i_eff_2)
 
-            self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-            self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-
             self._Re = self._V_i_eff*self._c_bar_swept/self._nu
             self._M = self._V_i_eff/self._a
         else:
             self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
             self._V_i = np.sqrt(self._V_i_2)
 
-            self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
-            self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
-
             self._Re = self._V_i*self._c_bar/self._nu
             self._M = self._V_i/self._a
 
         # Calculate angle of attack
+        self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
+        self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
         self._alpha = np.arctan2(self._v_n, self._v_a)
 
         # Loop through airplanes
@@ -959,16 +953,11 @@ class Scene:
 
         # Calculate conditions for determining viscid contributions
         if not hasattr(self, "_alpha"):
-            if self._correct_sections_for_sweep:
-                self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
-                self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-                self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-            else:
-                self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
-                self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
-
+            self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
+            self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
             self._alpha = np.arctan2(self._v_n, self._v_a)
 
+        # Redimensionalization parameters
         if self._match_machup_pro:
             self._q_i = 0.5*self._rho*self._cp_V_inf*self._cp_V_inf
         else:
@@ -2415,12 +2404,8 @@ class Scene:
         # Make sure alpha has been calculated.
         if not hasattr(self, "_alpha"):
             self._calc_v_i()
-            if self._correct_sections_for_sweep:
-                v_ni = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
-                v_ai = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
-            else:
-                v_ni = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
-                v_ai = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
+            v_ni = np.einsum('ij,ij->i', self._v_i, self._u_n)
+            v_ai = np.einsum('ij,ij->i', self._v_i, self._u_a)
             self._alpha = np.arctan2(v_ni, v_ai)
 
         dist = {}
