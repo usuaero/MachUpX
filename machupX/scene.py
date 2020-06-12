@@ -456,9 +456,9 @@ class Scene:
                 self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n)
                 self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s)
             else:
-                self._u_a_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a_unswept)
-                self._u_n_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n_unswept)
-                self._u_s_unswept[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s_unswept)
+                self._u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a_unswept)
+                self._u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n_unswept)
+                self._u_s[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_s_unswept)
 
             # Node locations
             # Note the first index indicates which control point this is the effective LAC for
@@ -595,8 +595,8 @@ class Scene:
             self._Re = self._cp_V_inf_eff*self._c_bar_swept/self._nu
             self._M = self._cp_V_inf_eff/self._a
         else:
-            self._v_n_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n_unswept)
-            self._v_a_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a_unswept)
+            self._v_n_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n)
+            self._v_a_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a)
             self._Re = self._cp_V_inf*self._c_bar/self._nu
             self._M = self._cp_V_inf/self._a
 
@@ -722,8 +722,8 @@ class Scene:
             self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
             self._V_i = np.sqrt(self._V_i_2)
 
-            self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
-            self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+            self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
+            self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
 
             self._Re = self._V_i*self._c_bar/self._nu
             self._M = self._V_i/self._a
@@ -876,13 +876,13 @@ class Scene:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._correct_sections_for_sweep:
-                CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar_swept/(self._nu*self._V_i_eff)[:,np.newaxis]*v_iji
                 CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_i_eff)[:,np.newaxis]*v_iji
             else:
-                CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n_unswept[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a_unswept[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
                 CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_i)[:,np.newaxis]*v_iji
+
+            CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
 
             if self._match_machup_pro:
                 J[:,:] -= (self._cp_V_inf*self._cp_V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha) # Phillips' way
@@ -964,8 +964,8 @@ class Scene:
                 self._v_a = np.einsum('ij,ij->i', self._v_i_eff, self._u_a)
                 self._v_n = np.einsum('ij,ij->i', self._v_i_eff, self._u_n)
             else:
-                self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a_unswept)
-                self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n_unswept)
+                self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
+                self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
 
             self._alpha = np.arctan2(self._v_n, self._v_a)
 
