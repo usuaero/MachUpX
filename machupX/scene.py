@@ -763,7 +763,7 @@ class Scene:
 
 
     def _correct_CL_for_sweep(self):
-        # Applies Jackson's corrections for swept section lift
+        # Applies thin-airfoil corrections for swept section lift
 
         # Estimate lift slope
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -2472,7 +2472,10 @@ class Scene:
                 dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/(self._q_i[cur_slice]*self._dS[cur_slice]))
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
-                dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
+                if self._correct_sections_for_sweep:
+                    dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice]*self._C_sweep_inv[cur_slice])
+                else:
+                    dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
                 dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
                 dist[airplane_name][segment_name]["delta_flap"] = list(np.degrees(segment_object._delta_flap))
                 dist[airplane_name][segment_name]["u"] = list(v[:,0])
