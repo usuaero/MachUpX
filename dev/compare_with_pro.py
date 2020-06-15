@@ -120,7 +120,7 @@ if __name__=="__main__":
             "type" : "nonlinear",
             "use_swept_sections" : False,
             "use_total_velocity" : False,
-            "machup_pro_deriv" : True,
+            "match_machup_pro" : True,
             "convergence" : 0.0000000001
         },
         "units" : "English",
@@ -271,8 +271,8 @@ if __name__=="__main__":
 
     control_state = {
         "aileron" : 5.0,
-        "elevator" : -3.0,
-        "rudder" : 2.0
+        "elevator" : -2.0,
+        "rudder" : 3.0
     }
 
     # Get MachUp Pro results

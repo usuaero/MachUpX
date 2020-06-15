@@ -367,9 +367,9 @@ class Scene:
         self._Cm = np.zeros(self._N) # Moment coefficient
 
         # Velocities
-        self._cp_v_wind = np.zeros((self._N,3))
-        self._cp_v_inf = np.zeros((self._N,3)) # Control point freestream vector
-        self._cp_v_inf_w_o_rotation = np.zeros((self._N,3)) # Control point freestream vector minus influence of aircraft rotation
+        self._v_wind = np.zeros((self._N,3))
+        self._v_inf = np.zeros((self._N,3)) # Control point freestream vector
+        self._v_inf_w_o_rotation = np.zeros((self._N,3)) # Control point freestream vector minus influence of aircraft rotation
         self._P0_joint_v_inf = np.zeros((self._N,3))
         self._P1_joint_v_inf = np.zeros((self._N,3))
 
@@ -543,7 +543,7 @@ class Scene:
         self._rho = self._get_density(self._PC)
         self._a = self._get_sos(self._PC)
         self._nu = self._get_viscosity(self._PC)
-        self._cp_v_wind[:,:] = self._get_wind(self._PC)
+        self._v_wind[:,:] = self._get_wind(self._PC)
 
         self._solved = False
 
@@ -560,40 +560,40 @@ class Scene:
             v_trans = -airplane_object.v
 
             # Control point velocities
-            cp_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC_CG))
-            wind_vels = self._cp_v_wind[airplane_slice]
-            self._cp_v_inf[airplane_slice,:] = v_trans+wind_vels+cp_v_rot
+            v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.PC_CG))
+            v_wind = self._v_wind[airplane_slice]
+            self._v_inf[airplane_slice,:] = v_trans+v_wind+v_rot
             if self._match_machup_pro:
-                self._cp_v_inf_w_o_rotation[airplane_slice,:] = v_trans+wind_vels
+                self._v_inf_w_o_rotation[airplane_slice,:] = v_trans+v_wind
 
             # Joint velocities for determining trailing vortex direction
             if self._match_machup_pro:
-                self._P0_joint_v_inf[airplane_slice,:] = v_trans+wind_vels
-                self._P1_joint_v_inf[airplane_slice,:] = v_trans+wind_vels
+                self._P0_joint_v_inf[airplane_slice,:] = v_trans+v_wind
+                self._P1_joint_v_inf[airplane_slice,:] = v_trans+v_wind
             else:
                 P0_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P0_joint-airplane_object.CG[np.newaxis,:]))
                 P1_joint_v_rot = quat_inv_trans(airplane_object.q, -np.cross(airplane_object.w, airplane_object.P1_joint-airplane_object.CG[np.newaxis,:]))
-                self._P0_joint_v_inf[airplane_slice,:] = v_trans+wind_vels+P0_joint_v_rot
-                self._P1_joint_v_inf[airplane_slice,:] = v_trans+wind_vels+P1_joint_v_rot
+                self._P0_joint_v_inf[airplane_slice,:] = v_trans+v_wind+P0_joint_v_rot
+                self._P1_joint_v_inf[airplane_slice,:] = v_trans+v_wind+P1_joint_v_rot
 
         # Get freestream magnitudes and directions
-        self._V_inf = np.linalg.norm(self._cp_v_inf, axis=1)
-        self._u_inf = self._cp_v_inf/self._V_inf[:,np.newaxis]
+        self._V_inf = np.linalg.norm(self._v_inf, axis=1)
+        self._u_inf = self._v_inf/self._V_inf[:,np.newaxis]
         if self._match_machup_pro:
-            self._cp_V_inf_w_o_rotation = np.linalg.norm(self._cp_v_inf_w_o_rotation, axis=1)
+            self._V_inf_w_o_rotation = np.linalg.norm(self._v_inf_w_o_rotation, axis=1)
 
         # Get effective freesream and calculate initial approximation for airfoil parameters (Re and M are only used in the linear solution)
         if self._use_swept_sections:
-            self._cp_v_inf_eff = np.matmul(self._P_eff, self._cp_v_inf[:,:,np.newaxis]).reshape((self._N,3))
-            self._V_inf_eff = np.linalg.norm(self._cp_v_inf_eff, axis=1)
+            self._v_inf_eff = np.matmul(self._P_eff, self._v_inf[:,:,np.newaxis]).reshape((self._N,3))
+            self._V_inf_eff = np.linalg.norm(self._v_inf_eff, axis=1)
             self._Re = self._V_inf_eff*self._c_bar_swept/self._nu
             self._M = self._V_inf_eff/self._a
         else:
             self._Re = self._V_inf*self._c_bar/self._nu
             self._M = self._V_inf/self._a
 
-        self._v_n_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_n)
-        self._v_a_inf = np.einsum('ij,ij->i', self._cp_v_inf, self._u_a)
+        self._v_n_inf = np.einsum('ij,ij->i', self._v_inf, self._u_n)
+        self._v_a_inf = np.einsum('ij,ij->i', self._v_inf, self._u_a)
         self._alpha_inf = np.arctan2(self._v_n_inf, self._v_a_inf)
 
         # Get lift slopes and zero-lift angles of attack for each segment
@@ -695,7 +695,7 @@ class Scene:
 
     def _calc_v_i(self):
         # Determines the local velocity at each control point
-        self._v_i = self._cp_v_inf+(self._V_ji.transpose((2,0,1))@self._gamma).T
+        self._v_i = self._v_inf+(self._V_ji.transpose((2,0,1))@self._gamma).T
 
     
     def _get_section_lift(self):
@@ -743,12 +743,12 @@ class Scene:
         #S_a = np.sin(self._alpha)
         #S_B = np.sin(self._beta_swept)
         #R_i_lambda = np.cos(self._beta_swept)/np.sqrt(1-S_a*S_a*S_B*S_B)
-        #V_inf_2 = np.einsum('ij,ij->i', self._cp_v_inf, self._cp_v_inf)
+        #V_inf_2 = np.einsum('ij,ij->i', self._v_inf, self._v_inf)
         #return 0.5*V_inf_2*R_i_lambda*R_i*self._CL*self._dS # Jackson's definition
 
         # Return lift
         if self._match_machup_pro:
-            return self._cp_V_inf_w_o_rotation*self._cp_V_inf_w_o_rotation*self._CL*self._dS
+            return self._V_inf_w_o_rotation*self._V_inf_w_o_rotation*self._CL*self._dS
 
         elif self._use_total_velocity:
             if self._use_swept_sections:
@@ -788,7 +788,7 @@ class Scene:
 
         # Get lift slope and effective freestream magnitude
         if self._use_swept_sections:
-            u_inf_x_dl = np.cross(self._cp_v_inf_eff/self._V_inf_eff[:,np.newaxis], self._dl)
+            u_inf_x_dl = np.cross(self._v_inf_eff/self._V_inf_eff[:,np.newaxis], self._dl)
             b = self._V_inf_eff*self._dS*self._CL # Using CL here instead of CL,a(a-a_L0) is consistent with Phillips' and Hunsaker's implementations. It is more accurate.
         else:
             u_inf_x_dl = np.cross(self._u_inf, self._dl)
@@ -944,10 +944,10 @@ class Scene:
 
         # Scale gammas
         if self._match_machup_pro:
-            self._gamma *= (self._V_inf/self._cp_V_inf_w_o_rotation)**2
+            self._gamma *= (self._V_inf/self._V_inf_w_o_rotation)**2
 
         # Get velocities
-        if self._use_total_velocity:
+        if self._use_total_velocity or self._match_machup_pro:
             self._calc_v_i()
             self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
             self._V_i = np.sqrt(self._V_i_2)
@@ -2484,7 +2484,10 @@ class Scene:
 
                 # Airfoil info
                 v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
-                dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/(self._q_i[cur_slice]*self._dS[cur_slice]))
+                if self._use_swept_sections:
+                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_swept[cur_slice])
+                else:
+                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_unswept[cur_slice])
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 if self._use_swept_sections:
