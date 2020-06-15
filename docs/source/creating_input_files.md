@@ -251,8 +251,14 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>**"max_iterations" : int, optional**
 >>>Maximum number of iterations for the nonlinear solver (the NLL algorithm is not known to have solver convergence issues). Defaults to 100. Has no effect on the linear solver or the scipy solver.
 >>
->>**"correct_sections_for_sweep" : int, optional**
->>>Whether to include corrections to section properties for sweep. It is highly recommended that these not be turned off. Defaults to True.
+>>**"use_swept_sections" : int, optional**
+>>>Whether to include corrections to section properties and local velocities for sweep. It is highly recommended that this not be turned off, even for straight wings. Defaults to True.
+>>
+>>**"use_total_velocity" : int, optional**
+>>>Whether to include induced velocities when redimensionalizing section coefficients. It is highly recommended that this not be turned off. Defaults to True.
+>>
+>>**"match_machup_pro" : int, optional**
+>>>Changes how aircraft rotation is handled to match the nondimensional derivation used in MachUp Pro. Defaults to False.
 >
 >**"units" : string, optional**
 >>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. All outputs will be given in this unit system. Defaults to "English".

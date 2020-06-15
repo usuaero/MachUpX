@@ -354,7 +354,7 @@ class Airplane:
         if wing_segment_name in self.wing_segments.keys():
             raise IOError("Wing segment {0} already exists in this airplane.".format(wing_segment_name))
 
-        side = input_dict.get("side")
+        side = input_dict.get("side", "both")
         if not (side == "left" or side == "right" or side == "both"):
             raise IOError("{0} is not a proper side designation.".format(side))
 
