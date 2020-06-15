@@ -118,9 +118,9 @@ if __name__=="__main__":
         },
         "solver" : {
             "type" : "nonlinear",
-            "use_swept_sections" : False,
-            "use_total_velocity" : False,
-            "match_machup_pro" : True,
+            "use_swept_sections" : True,
+            "use_total_velocity" : True,
+            "match_machup_pro" : False,
             "convergence" : 0.0000000001
         },
         "units" : "English",
@@ -130,8 +130,8 @@ if __name__=="__main__":
             }
         }
     }
-    reid_corrections = False
-    flap_edge_cluster = False
+    reid_corrections = True
+    flap_edge_cluster = True
 
     # Specify airplane
     airplane_dict = {
@@ -184,8 +184,8 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
                 #"ac_offset" : "kuchemann",
-                #"dihedral" : 2.0,
-                #"sweep" : 20.0,
+                "dihedral" : 2.0,
+                "sweep" : 20.0,
                 "control_surface" : {
                     "chord_fraction" : 0.1,
                     "root_span" : 0.5,
@@ -216,8 +216,8 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "twist" : -2.1,
                 #"ac_offset" : "kuchemann",
-                #"sweep" : 45.0,
-                #"dihedral" : -10.0,
+                "sweep" : 45.0,
+                "dihedral" : -10.0,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {
@@ -246,7 +246,7 @@ if __name__=="__main__":
                 "dihedral" : 90.0,
                 "airfoil" : "NACA_0010",
                 #"ac_offset" : "kuchemann",
-                #"sweep" : 45.0,
+                "sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.5,
                     "control_mixing" : {

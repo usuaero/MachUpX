@@ -68,8 +68,9 @@ Users will notice that differences exist between the results obtained from the t
 * MachUpX has a slightly different nonlinear Jacobian (a consequence of the above). This does not affect the final solution, only convergence rates.
 * MachUpX defaults to clustering control points about flap edges.
 * MachUpX uses CL_max to truncate section lift coefficients within the lifting-line algorithm. MachUp Pro only uses this to determine stall onset.
+* MachUp Pro scales section coefficients by the magnitude of the freestream including rotation. MachUpX doesn't need to do this.
 
-All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ac_offset" can be set as "kuchemann" for each wing. In the input file under "solver", "correct_sections_for_sweep" and "machup_pro_deriv" can be specified. "CL_max" is specified in the input for each airfoil.
+All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ac_offset" can be set as "kuchemann" for each wing. In the input file under "solver", "use_swept_sections", "use_total_velocity", and "match_machup_pro" can be specified. "CL_max" is specified in the input for each airfoil.
 
 A couple minor differences which cannot be toggled are:
 
