@@ -332,7 +332,7 @@ class Scene:
         self._P1 = np.zeros((self._N,self._N,3)) # Outbound vortex node location
         self._P1_joint = np.zeros((self._N,self._N,3)) # Outbound vortex joint node location
 
-        # Spatial node vectors
+        # Spatial node vectors and magnitudes
         self._r_0 = np.zeros((self._N,self._N,3))
         self._r_1 = np.zeros((self._N,self._N,3))
         self._r_0_joint = np.zeros((self._N,self._N,3))
@@ -342,7 +342,7 @@ class Scene:
         self._r_1_mag = np.zeros((self._N,self._N))
         self._r_1_joint_mag = np.zeros((self._N,self._N))
 
-        # Calculate magnitude products
+        # Spatial node vector magnitude products
         self._r_0_r_0_joint_mag = np.zeros((self._N,self._N))
         self._r_0_r_1_mag = np.zeros((self._N,self._N))
         self._r_1_r_1_joint_mag = np.zeros((self._N,self._N))
@@ -369,7 +369,8 @@ class Scene:
         # Velocities
         self._v_wind = np.zeros((self._N,3))
         self._v_inf = np.zeros((self._N,3)) # Control point freestream vector
-        self._v_inf_w_o_rotation = np.zeros((self._N,3)) # Control point freestream vector minus influence of aircraft rotation
+        if self._match_machup_pro:
+            self._v_inf_w_o_rotation = np.zeros((self._N,3)) # Control point freestream vector minus influence of aircraft rotation
         self._P0_joint_v_inf = np.zeros((self._N,3))
         self._P1_joint_v_inf = np.zeros((self._N,3))
 
@@ -383,14 +384,14 @@ class Scene:
         # Get properties of the aircraft that don't change with state
 
         index = 0
-        self._airplane_names = []
+        self._airplane_objects = []
         self._airplane_slices = []
 
         # Loop through airplanes
         for airplane_name, airplane_object in self._airplanes.items():
 
-            # Store airplane and segment names to make sure they are always accessed in the same order
-            self._airplane_names.append(airplane_name)
+            # Store airplane objects to make sure they are always accessed in the same order
+            self._airplane_objects.append(airplane_object)
 
             # Section of the arrays belonging to this airplane
             airplane_N = airplane_object.N
@@ -433,10 +434,9 @@ class Scene:
         # of an aircraft changes. Note that all calculations occur in the Earth-fixed frame.
 
         # Loop through airplanes
-        for airplane_name, airplane_slice in zip(self._airplane_names, self._airplane_slices):
+        for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
 
             # Get airplane
-            airplane_object = self._airplanes[airplane_name]
             q = airplane_object.q
             p = airplane_object.p_bar
 
@@ -553,8 +553,7 @@ class Scene:
         # dependent upon aircraft velocity and angular rate.
 
         # Loop through airplanes
-        for airplane_name, airplane_slice in zip(self._airplane_names, self._airplane_slices):
-            airplane_object = self._airplanes[airplane_name]
+        for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
 
             # Freestream velocity due to airplane translation
             v_trans = -airplane_object.v
@@ -597,8 +596,7 @@ class Scene:
         self._alpha_inf = np.arctan2(self._v_n_inf, self._v_a_inf)
 
         # Get lift slopes and zero-lift angles of attack for each segment
-        for airplane_name, airplane_slice in zip(self._airplane_names, self._airplane_slices):
-            airplane_object = self._airplanes[airplane_name]
+        for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
             seg_ind = 0
             for segment in airplane_object.segments:
                 seg_N = segment.N
@@ -723,12 +721,11 @@ class Scene:
 
         # Loop through airplanes
         index = 0
-        for airplane_name in self._airplane_names:
-            airplane_object = self._airplanes[airplane_name]
+        for airplane_object in self._airplane_objects:
             N = airplane_object.N
-            seg_ind = 0
 
             # Loop through segments
+            seg_ind = 0
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
@@ -844,8 +841,7 @@ class Scene:
 
             # Loop through airplanes
             index = 0
-            for airplane_name in self._airplane_names:
-                airplane_object = self._airplanes[airplane_name]
+            for airplane_object in self._airplane_objects:
 
                 # Loop through segments
                 for segment_object in airplane_object.segments:
@@ -968,13 +964,13 @@ class Scene:
 
         # Redimensionalization parameters
         if self._use_total_velocity:
-            self._redim_unswept = 0.5*self._rho*self._V_i_2*self._dS
+            self._redim_full = 0.5*self._rho*self._V_i_2*self._dS
             if self._use_swept_sections:
-                self._redim_swept = 0.5*self._rho*self._V_i_eff_2*self._dS
+                self._redim_in_plane = 0.5*self._rho*self._V_i_eff_2*self._dS
         else:
-            self._redim_unswept = 0.5*self._rho*self._V_inf*self._V_inf*self._dS
+            self._redim_full = 0.5*self._rho*self._V_inf*self._V_inf*self._dS
             if self._use_swept_sections:
-                self._redim_swept = 0.5*self._rho*self._V_inf_eff*self._V_inf_eff*self._dS
+                self._redim_in_plane = 0.5*self._rho*self._V_inf_eff*self._V_inf_eff*self._dS
 
         # Store lift, drag, and moment coefficient distributions
         self._FM = {}
@@ -992,8 +988,8 @@ class Scene:
 
         # Get section moment and drag coefficients
         index = 0
-        for airplane_name in self._airplane_names:
-            for segment in self._airplanes[airplane_name].segments:
+        for airplane_object in self._airplane_objects:
+            for segment in airplane_object.segments:
                 num_cps = segment.N
                 cur_slice = slice(index, index+num_cps)
 
@@ -1008,12 +1004,12 @@ class Scene:
         # Inviscid moment due to section
         if self._use_swept_sections:
             self._Cm = self._Cm*self._C_sweep_inv
-            dM_section = (self._redim_swept*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
+            dM_section = (self._redim_in_plane*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
         else:
-            dM_section = (self._redim_unswept*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s
+            dM_section = (self._redim_full*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s
 
         # Determine viscous drag vector
-        dD = self._redim_unswept*self._CD
+        dD = self._redim_full*self._CD
         if self._use_total_velocity or self._match_machup_pro:
             dF_visc = dD[:,np.newaxis]*self._u_i
         else:
@@ -1028,9 +1024,10 @@ class Scene:
 
         # Loop through airplanes to gather necessary data
         index = 0
-        for airplane_name in self._airplane_names:
-            airplane_object = self._airplanes[airplane_name]
+        for airplane_object in self._airplane_objects:
+            airplane_name = airplane_object.name
 
+            # Initialize totals
             if body_frame:
                 FM_b_inv_airplane_total = np.zeros(6)
                 FM_b_vis_airplane_total = np.zeros(6)
@@ -2457,8 +2454,8 @@ class Scene:
 
 
         # Loop through airplanes
-        for airplane_name in self._airplane_names:
-            airplane_object = self._airplanes[airplane_name]
+        for airplane_object in self._airplane_objects:
+            airplane_name = airplane_object.name
             dist[airplane_name] = {}
 
             # Loop through segments
@@ -2485,9 +2482,9 @@ class Scene:
                 # Airfoil info
                 v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
                 if self._use_swept_sections:
-                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_swept[cur_slice])
+                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_in_plane[cur_slice])
                 else:
-                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_unswept[cur_slice])
+                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_full[cur_slice])
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 if self._use_swept_sections:
@@ -2985,6 +2982,13 @@ class Scene:
         }
         model_dict["engines"] = model_dict.get("engines", placeholder)
 
+        # Put in placeholder landing gear
+        placeholder = {
+            "placeholder_landing_gear" : {
+            }
+        }
+        model_dict["landing_gear"] = model_dict.get("landing_gear", placeholder)
+
         # Export model
         filename = kwargs.get("filename", aircraft_name+"_linearized.json")
         with open(filename, 'w') as output_handle:
@@ -3019,32 +3023,19 @@ class Scene:
         Author: Francois Fortin
         """
 
-        y_locs = np.zeros(self._N)
-        index = 0
-        
-        # Loop through airplanes
-        for i, airplane_name in enumerate(self._airplane_names):
-            airplane_object = self._airplanes[airplane_name]
+        # Get span locations
+        y_locs = self._PC[:,1]
 
-            # Loop through segments
-            for segment_object in airplane_object.segments:
-                num_cps = segment_object.N
-                cur_slice = slice(index, index+num_cps)
-
-                # Get lift coefficient and lift slopes
-                y_locs[cur_slice]  = self._PC[cur_slice,1]
-                index += num_cps 
-
-        with open('gamma_dist.txt','w') as f1:
+        with open('gamma_dist.txt','w') as output_handle:
 
             # Output gammas
             for i in range(self._N):
-                print(i, y_locs[i], self._gamma[i], file=f1)
+                print(i, y_locs[i], self._gamma[i], file=output_handle)
 
             # Output velocities
-            print('i  y  v_i  V_i', file=f1)
+            print('i  y  v_i  V_i', file=output_handle)
             for i in range(self._N):
-                print(y_locs[i], self._v_i[i,:], self._V_i[i], file=f1)          
+                print(y_locs[i], self._v_i[i,:], self._V_i[i], file=output_handle)          
 
             # Plot velocity magnitudes
             plt.figure()

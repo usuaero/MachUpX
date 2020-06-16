@@ -135,7 +135,7 @@ if __name__=="__main__":
     print('|        M    A     C     H     U     P                                                    |')
     print('|      _____________       _____________                                                   |')
     print('|      \            \     /            /                                                   |')
-    print('|       \            \   /            /                    MachUpX 2.0.0                   |')
+    print('|       \            \   /            /                    MachUpX 2.2.1                   |')
     print('|        \            \ /            /                                                     |')
     print('|         \            X            /                  (c) USU Aero Lab, 2020              |')
     print('|          \          / \          /                                                       |')

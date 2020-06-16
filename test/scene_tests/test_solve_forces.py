@@ -193,9 +193,9 @@ def test_flap_deflection():
     assert abs(FM["test_plane"]["total"]["Fx"]+1.6331810571592724)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"]-0.640734030322335)<1e-10
     assert abs(FM["test_plane"]["total"]["Fz"]+15.447860023042152)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mx"]+9.613302174142486)<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]-3.615216727608891)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mz"]+2.2740074284582685)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+9.613302174142484)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]-3.615122963872464)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]+2.2740074284582805)<1e-10
 
 
 def test_coefficients():
@@ -292,9 +292,9 @@ def test_swept_wing_with_controls():
     assert abs(FM["test_plane"]["total"]["Fx"]+3.1566015424291995)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"]+4.3977072399917425)<1e-10
     assert abs(FM["test_plane"]["total"]["Fz"]+32.26407512573988)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mx"]+17.366814873801857)<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]+76.49497505309436)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mz"]-13.872197071843553)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+17.910786767633237)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+76.03674820597931)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]-13.868978522091632)<1e-10
 
 
 def test_tapered_wing():
@@ -327,7 +327,7 @@ def test_tapered_wing():
 
 def test_jackson_compare():
     # Tests that the circulation distribution for a swept wing matches Jackson's result (quickly becoming obsolete...)
-    return
+    return # This test is obsolete
 
     # Inputs
     input_dict = {

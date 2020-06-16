@@ -1208,7 +1208,7 @@ class WingSegment:
 
                     # Get outlines
                     root_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
-                    tip_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
+                    tip_outline = self._airfoils[index+1].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
 
                     # Interpolate
                     points = root_weight*root_outline+tip_weight*tip_outline

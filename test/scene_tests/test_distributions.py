@@ -11,6 +11,7 @@ def test_distributions():
     #Load scene
     scene = MX.Scene(input_file)
     dist = scene.distributions()
+    print(json.dumps(dist, indent=4))
 
     assert np.allclose(dist["test_plane"]["main_wing_right"]["chord"], 1.0, rtol=0.0, atol=1e-10)
     assert np.allclose(dist["test_plane"]["main_wing_right"]["sweep"], 0.0, rtol=0.0, atol=1e-10)

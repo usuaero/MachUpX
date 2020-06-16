@@ -111,7 +111,7 @@ if __name__=="__main__":
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.distributions(filename="dist.txt")
+    scene.out_gamma()
 
     ## Get derivatives
     #derivs = scene.aircraft_derivatives(wind_frame=False)
