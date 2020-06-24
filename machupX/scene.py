@@ -388,7 +388,7 @@ class Scene:
         self._airplane_slices = []
 
         # Loop through airplanes
-        for airplane_name, airplane_object in self._airplanes.items():
+        for _, airplane_object in self._airplanes.items():
 
             # Store airplane objects to make sure they are always accessed in the same order
             self._airplane_objects.append(airplane_object)
@@ -421,7 +421,7 @@ class Scene:
             #self._R_Cm_a = 1.0+(-2.37*self._max_thickness+0.91)*(np.cos((6.62*tau2+1.06)*self._section_sweep)-1.0)
 
             C_lambda = np.cos(self._section_sweep)
-            self._c_bar_swept = self._c_bar*C_lambda
+            self._c_bar *= C_lambda
             self._C_sweep_inv = 1.0/C_lambda
 
         self._solved = False
@@ -513,9 +513,9 @@ class Scene:
                 self._r_0_r_1_mag[airplane_slice,other_ind] = self._r_0_mag[airplane_slice,other_ind]*self._r_1_mag[airplane_slice,other_ind]
                 self._r_1_r_1_joint_mag[airplane_slice,other_ind] = self._r_1_mag[airplane_slice,other_ind]*self._r_1_joint_mag[airplane_slice,other_ind]
 
-        # Effective freestream projection matrices
-        if self._use_swept_sections:
-            self._P_eff = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._u_s[:,:,np.newaxis], self._u_s[:,np.newaxis,:])
+        # In-plane projection matrices
+        if not self._match_machup_pro:
+            self._P_in_plane = np.repeat(np.identity(3)[np.newaxis,:,:], self._N, axis=0)-np.matmul(self._u_s[:,:,np.newaxis], self._u_s[:,np.newaxis,:])
 
         # Influence of bound and jointed vortex segments
         with np.errstate(divide='ignore', invalid='ignore'):
@@ -583,9 +583,9 @@ class Scene:
 
         # Get effective freesream and calculate initial approximation for airfoil parameters (Re and M are only used in the linear solution)
         if self._use_swept_sections:
-            self._v_inf_eff = np.matmul(self._P_eff, self._v_inf[:,:,np.newaxis]).reshape((self._N,3))
+            self._v_inf_eff = np.matmul(self._P_in_plane, self._v_inf[:,:,np.newaxis]).reshape((self._N,3))
             self._V_inf_eff = np.linalg.norm(self._v_inf_eff, axis=1)
-            self._Re = self._V_inf_eff*self._c_bar_swept/self._nu
+            self._Re = self._V_inf_eff*self._c_bar/self._nu
             self._M = self._V_inf_eff/self._a
         else:
             self._Re = self._V_inf*self._c_bar/self._nu
@@ -701,11 +701,11 @@ class Scene:
 
         # Get section properties
         if self._use_swept_sections:
-            self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+            self._v_i_eff = np.matmul(self._P_in_plane, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
             self._V_i_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
             self._V_i_eff = np.sqrt(self._V_i_eff_2)
 
-            self._Re = self._V_i_eff*self._c_bar_swept/self._nu
+            self._Re = self._V_i_eff*self._c_bar/self._nu
             self._M = self._V_i_eff/self._a
         else:
             self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
@@ -826,7 +826,7 @@ class Scene:
 
         # Calculate the derivative of induced velocity wrt vortex strength
         if self._use_swept_sections:
-            V_ji = np.matmul(self._P_eff, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
+            V_ji = np.matmul(self._P_in_plane, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
         else:
             V_ji = self._V_ji
 
@@ -868,7 +868,7 @@ class Scene:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._use_swept_sections:
-                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar_swept/(self._nu*self._V_i_eff)[:,np.newaxis]*v_iji
+                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i_eff)[:,np.newaxis]*v_iji
                 CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_i_eff)[:,np.newaxis]*v_iji
             else:
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
@@ -949,7 +949,7 @@ class Scene:
             self._V_i = np.sqrt(self._V_i_2)
             self._u_i = self._v_i/self._V_i[:,np.newaxis]
             if self._use_swept_sections:
-                self._v_i_eff = np.matmul(self._P_eff, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
+                self._v_i_eff = np.matmul(self._P_in_plane, self._v_i[:,:,np.newaxis]).reshape((self._N,3))
                 self._V_i_eff_2 = np.einsum('ij,ij->i', self._v_i_eff, self._v_i_eff)
 
         # Calculate vortex force differential elements
@@ -1004,7 +1004,7 @@ class Scene:
         # Inviscid moment due to section
         if self._use_swept_sections:
             self._Cm = self._Cm*self._C_sweep_inv
-            dM_section = (self._redim_in_plane*self._c_bar_swept*self._Cm)[:,np.newaxis]*self._u_s
+            dM_section = (self._redim_in_plane*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s
         else:
             dM_section = (self._redim_full*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s
 

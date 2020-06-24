@@ -164,3 +164,11 @@ if __name__=="__main__":
 
         # Run
         _run_prescribed_analyses(input_filename)
+
+
+    # Print quit message
+    print()
+    print("----------------------------------------------------")
+    print("|          MachUpX exited successfully.            |")
+    print("|                  Thank you!                      |")
+    print("----------------------------------------------------")
