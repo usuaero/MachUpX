@@ -66,7 +66,7 @@ class Scene:
 
         # Store solver parameters
         solver_params = self._input_dict.get("solver", {})
-        self._solver_type = solver_params.get("type", "linear")
+        self._solver_type = solver_params.get("type", "nonlinear")
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
@@ -2412,13 +2412,6 @@ class Scene:
         # Make sure the LL equations have been solved in this state
         if not self._solved:
             self.solve_forces()
-
-        # Make sure alpha has been calculated.
-        if not hasattr(self, "_alpha"):
-            self._calc_v_i()
-            v_ni = np.einsum('ij,ij->i', self._v_i, self._u_n)
-            v_ai = np.einsum('ij,ij->i', self._v_i, self._u_a)
-            self._alpha = np.arctan2(v_ni, v_ai)
 
         dist = {}
 

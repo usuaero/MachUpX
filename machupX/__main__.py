@@ -24,13 +24,17 @@ def _run_prescribed_analyses(input_filename):
     # Runs the analyses specified in the .json file
 
     # Initialize scene
+    print("\nLoading aircraft and scene...", end='')
     scene = Scene(input_filename)
+    print("Done")
     
     # Import JSON to determine which analyses the user wants to run
     with open(input_filename) as json_file_handle:
         input_dict = json.load(json_file_handle)
     
     # Run analyses
+    print("\nRunning prescribed analyses")
+    print("---------------------------")
     for key in input_dict["run"]:
 
         # Get options
@@ -124,7 +128,7 @@ def _run_prescribed_analyses(input_filename):
         else:
             print("{0} is not recognized as a valid run command. Skipping...".format(key))
 
-    print("\nCompleted prescribed analyses. Exiting...")
+    print("\nCompleted prescribed analyses.")
 
 
 if __name__=="__main__":
