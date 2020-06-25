@@ -68,14 +68,16 @@ Users will notice that differences exist between the results obtained from the t
 * MachUpX has a slightly different nonlinear Jacobian (a consequence of the above). This does not affect the final solution, only convergence rates.
 * MachUpX defaults to clustering control points about flap edges.
 * MachUpX uses CL_max to truncate section lift coefficients within the lifting-line algorithm. MachUp Pro only uses this to determine stall onset.
+* MachUpX uses only the in-plane velocity for determining section behavior.
 * MachUp Pro scales section coefficients by the magnitude of the freestream including rotation. MachUpX doesn't need to do this.
 
-All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ac_offset" can be set as "kuchemann" for each wing. In the input file under "solver", "use_swept_sections", "use_total_velocity", and "match_machup_pro" can be specified. "CL_max" is specified in the input for each airfoil.
+All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ac_offset" can be set as "kuchemann" for each wing. In the input file under "solver", "use_swept_sections", "use_total_velocity", "use_in_plane", and "match_machup_pro" can be specified. "CL_max" is specified in the input for each airfoil.
 
 A couple minor differences which cannot be toggled are:
 
 * MachUpX uses the experimental sideslip angle whereas MachUp Pro uses the analytical sideslip angle.
 * MachUpX uses a different definition for the directions of lift, drag, and sideforce. These are guaranteed to be orthogonal, whereas those given by MachUp Pro are not.
+* MachUp Pro is an inherently nondimensional derivation which ignores increases in local freestream velocity due to aircraft rotation. At this point (June 2020), we have been unable to determine exactly how to alter the dimensional derivation in MachUpX to correct for this.
 
 ## Correcting Section Properties for Sweep
 Jackson's original GNLL uses empirical fits of data he obtained from vortex panel method to correct airfoil sections for sweep. However, he did it such that the corrections for the moment coefficient apply to the moment about the leading edge. This is very inconvenient, especially when using "database" or "poly_fit" type airfoils. For this reason, MachUpX corrects the section coefficients using thin-airfoil theory. These corrections are summarized here (see Goates, et al. "A Practical Implementation of General Numerical Lifting-Line Theory", *AIAA SciTech Conference*, 2020 for a more in-depth discussion).

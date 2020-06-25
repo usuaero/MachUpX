@@ -118,9 +118,10 @@ if __name__=="__main__":
         },
         "solver" : {
             "type" : "nonlinear",
-            "use_swept_sections" : True,
-            "use_total_velocity" : True,
-            "match_machup_pro" : False,
+            "use_swept_sections" : False,
+            "use_total_velocity" : False,
+            "use_in_plane" : False,
+            "match_machup_pro" : True,
             "convergence" : 0.0000000001
         },
         "units" : "English",
@@ -130,13 +131,13 @@ if __name__=="__main__":
             }
         }
     }
-    reid_corrections = True
-    flap_edge_cluster = True
+    reid_corrections = False
+    flap_edge_cluster = False
 
     # Specify airplane
     airplane_dict = {
         "CG" : [0.0, 0.0, 0.0],
-        "weight" : 50.0,
+        "weight" : 10.0,
         "controls" : {
             "aileron" : {
                 "is_symmetric" : False
@@ -187,39 +188,9 @@ if __name__=="__main__":
                 "dihedral" : 2.0,
                 "sweep" : 20.0,
                 "control_surface" : {
-                    "chord_fraction" : 0.1,
+                    "chord_fraction" : 0.3,
                     "root_span" : 0.5,
                     "tip_span" : 1.0,
-                    "control_mixing" : {
-                        "aileron" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : reid_corrections,
-                    "flap_edge_cluster" : flap_edge_cluster
-                }
-            },
-            "h_stab" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -3.0,
-                    "dy" : 0.0,
-                    "dz" : 0.0,
-                    "yoffset" : 0.0
-                },
-                "semispan" : 2.0,
-                "airfoil" : "NACA_0010",
-                "twist" : -2.1,
-                #"ac_offset" : "kuchemann",
-                "sweep" : 45.0,
-                "dihedral" : -10.0,
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
                     "control_mixing" : {
                         "elevator" : 1.0
                     }
@@ -229,50 +200,80 @@ if __name__=="__main__":
                     "reid_corrections" : reid_corrections,
                     "flap_edge_cluster" : flap_edge_cluster
                 }
-            },
-            "v_stab" : {
-                "ID" : 3,
-                "side" : "right",
-                "is_main" : False,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -3.0,
-                    "dy" : 0.0,
-                    "dz" : -0.1,
-                    "yoffset" : 0.0
-                },
-                "semispan" : 2.0,
-                "dihedral" : 90.0,
-                "airfoil" : "NACA_0010",
-                #"ac_offset" : "kuchemann",
-                "sweep" : 45.0,
-                "control_surface" : {
-                    "chord_fraction" : 0.5,
-                    "control_mixing" : {
-                        "rudder" : 1.0
-                    }
-                },
-                "grid" : {
-                    "N" : 10,
-                    "reid_corrections" : reid_corrections,
-                    "flap_edge_cluster" : flap_edge_cluster
-                }
+            #},
+            #"h_stab" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -3.0,
+            #        "dy" : 0.0,
+            #        "dz" : 0.0,
+            #        "yoffset" : 0.0
+            #    },
+            #    "semispan" : 2.0,
+            #    "airfoil" : "NACA_0010",
+            #    "twist" : -2.1,
+            #    #"ac_offset" : "kuchemann",
+            #    "sweep" : 45.0,
+            #    "dihedral" : -10.0,
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "elevator" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 10,
+            #        "reid_corrections" : reid_corrections,
+            #        "flap_edge_cluster" : flap_edge_cluster
+            #    }
+            #},
+            #"v_stab" : {
+            #    "ID" : 3,
+            #    "side" : "right",
+            #    "is_main" : False,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -3.0,
+            #        "dy" : 0.0,
+            #        "dz" : -0.1,
+            #        "yoffset" : 0.0
+            #    },
+            #    "semispan" : 2.0,
+            #    "dihedral" : 90.0,
+            #    "airfoil" : "NACA_0010",
+            #    #"ac_offset" : "kuchemann",
+            #    "sweep" : 45.0,
+            #    "control_surface" : {
+            #        "chord_fraction" : 0.5,
+            #        "control_mixing" : {
+            #            "rudder" : 1.0
+            #        }
+            #    },
+            #    "grid" : {
+            #        "N" : 10,
+            #        "reid_corrections" : reid_corrections,
+            #        "flap_edge_cluster" : flap_edge_cluster
+            #    }
             }
         }
     }
 
     state = {
         "velocity" : 100.0,
-        "alpha" : -2.0,
-        "beta" : 7.0,
+        "alpha" : 2.0,
+        "beta" : 0.0,
         "angular_rates" : [0.0, 0.0, 0.0]
     }
 
     control_state = {
-        "aileron" : 5.0,
-        "elevator" : -2.0,
-        "rudder" : 3.0
+        "aileron" : 0.0,
+        "elevator" : 0.0,
+        "rudder" : 0.0
     }
 
     # Get MachUp Pro results

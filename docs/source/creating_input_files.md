@@ -257,8 +257,11 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>**"use_total_velocity" : int, optional**
 >>>Whether to include induced velocities when redimensionalizing section coefficients. It is highly recommended that this not be turned off. Defaults to True.
 >>
+>>**"use_in_plane" : int, optional**
+>>>Whether to use only the in-plane velocity for determining airfoil section behavior. It is highly recommended that this not be turned off. Defaults to True.
+>>
 >>**"match_machup_pro" : int, optional**
->>>Changes how aircraft rotation is handled to match the nondimensional derivation used in MachUp Pro. Defaults to False.
+>>>Changes how miscelaneous other aspects of NLL are handled to match the nondimensional derivation used in MachUp Pro. Defaults to False. **If you desire to match MachUp Pro exactly, "use_swept_sections", "use_total_velocity", "use_in_plane", "reid_corrections", and "flap_edge_cluster" must be set to False along with setting this to True (not recommended).**
 >
 >**"units" : string, optional**
 >>Specifies the unit system to be used for inputs and outputs. Can be "SI" or "English". Any units not explicitly defined for each value in the input objects will be assumed to be the default unit for that measurement in the system specified here. All outputs will be given in this unit system. Defaults to "English".
