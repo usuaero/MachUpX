@@ -119,7 +119,8 @@ class Scene:
                 raise IOError("{0} is not an allowable profile name.".format(rho))
 
             def density_getter(position):
-                return self._std_atmos.rho(-position[2])
+                pos = np.transpose(position)
+                return self._std_atmos.rho(-pos[2])
             
         # Array
         elif isinstance(rho, np.ndarray):
@@ -2374,6 +2375,7 @@ class Scene:
             "w" : body-z velocity
             "Re" : Reynolds number
             "M" : Mach number
+            "q" : dynamic pressure
             "section_CL" : lift coefficient
             "section_Cm" : moment coefficient
             "section_parasitic_CD" : drag coefficient
@@ -2429,6 +2431,7 @@ class Scene:
                           ("w", "float"),
                           ("Re", "float"),
                           ("M", "float"),
+                          ("q", "float"),
                           ("section_CL", "float"),
                           ("section_Cm", "float"),
                           ("section_parasitic_CD", "float"),
@@ -2464,24 +2467,32 @@ class Scene:
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
 
                 # Airfoil info
-                v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
-                if self._use_in_plane:
-                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_in_plane[cur_slice])
-                else:
-                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_full[cur_slice])
-                dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
-                dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
                 if self._use_swept_sections:
                     dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice]*self._C_sweep_inv[cur_slice])
                 else:
                     dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
                 dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
                 dist[airplane_name][segment_name]["delta_flap"] = list(np.degrees(segment_object._delta_flap))
+
+                # Section coefficients
+                if self._use_in_plane:
+                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_in_plane[cur_slice])
+                else:
+                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_full[cur_slice])
+                dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
+                dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
+
+                # Atmospheric properties
+                v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
                 dist[airplane_name][segment_name]["u"] = list(v[:,0])
                 dist[airplane_name][segment_name]["v"] = list(v[:,1])
                 dist[airplane_name][segment_name]["w"] = list(v[:,2])
                 dist[airplane_name][segment_name]["Re"] = list(self._Re[cur_slice])
                 dist[airplane_name][segment_name]["M"] = list(self._M[cur_slice])
+                if self._use_in_plane:
+                    dist[airplane_name][segment_name]["q"] = list(self._redim_in_plane[cur_slice]/self._dS[cur_slice])
+                else:
+                    dist[airplane_name][segment_name]["q"] = list(self._redim_full[cur_slice]/self._dS[cur_slice])
 
                 # Save to data table
                 if filename is not None:
@@ -2512,6 +2523,7 @@ class Scene:
                     table_data[cur_slice]["delta_flap"] = dist[airplane_name][segment_name]["delta_flap"]
                     table_data[cur_slice]["Re"] = dist[airplane_name][segment_name]["Re"]
                     table_data[cur_slice]["M"] = dist[airplane_name][segment_name]["M"]
+                    table_data[cur_slice]["q"] = dist[airplane_name][segment_name]["q"]
                     table_data[cur_slice]["u"] = dist[airplane_name][segment_name]["u"]
                     table_data[cur_slice]["v"] = dist[airplane_name][segment_name]["v"]
                     table_data[cur_slice]["w"] = dist[airplane_name][segment_name]["w"]
@@ -2522,10 +2534,10 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
                 "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
-                "Flap Defl.", "u", "v", "w", "Re", "M", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)

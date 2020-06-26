@@ -15,7 +15,14 @@ if __name__=="__main__":
             #"type" : "scipy_fsolve"
             "type" : "nonlinear"
         },
-        "units" : "English"
+        "units" : "English",
+        "scene" : {
+            "atmosphere" : {
+                "density" : "standard",
+                "viscosity" : "standard",
+                "speed_of_sound" : "standard"
+            }
+        }
     }
 
     # Specify airplane
@@ -105,13 +112,13 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=False)
+    #scene.display_wireframe(show_vortices=False)
     #scene.export_stl(filename="plane.stl")
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 
-    # Get derivatives
-    derivs = scene.derivatives(wind_frame=False)
-    print(json.dumps(derivs["plane"], indent=4))
+    ## Get derivatives
+    #derivs = scene.derivatives(wind_frame=False)
+    #print(json.dumps(derivs["plane"], indent=4))
