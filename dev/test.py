@@ -44,6 +44,7 @@ if __name__=="__main__":
             "NACA_4410" : "dev/NACA_4410.json",
             "NACA_0010" : "dev/NACA_0010.json"
         },
+        "plot_lacs" : False,
         "wings" : {
             "winglets" : {
                 "ID" : 2,
@@ -51,7 +52,8 @@ if __name__=="__main__":
                 "is_main" : True,
                 "connect_to" : {
                     "ID" : 1,
-                    "location" : "tip"
+                    "location" : "tip",
+                    "dz" : -0.001
                 },
                 "semispan" : 0.5,
                 "dihedral" : 90.0,
@@ -61,7 +63,8 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "grid" : {
                     "N" : 20,
-                    "wing_ID" : 0
+                    "wing_ID" : 1,
+                    "reid_corrections" : True
                 }
             },
             "main_wing" : {
@@ -89,7 +92,8 @@ if __name__=="__main__":
                 },
                 "grid" : {
                     "N" : 20,
-                    "wing_ID" : 0
+                    "wing_ID" : 1,
+                    "reid_corrections" : False
                 }
             }
         }
