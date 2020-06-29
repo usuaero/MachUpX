@@ -767,7 +767,7 @@ class Scene:
         # Calculate velocity cross product and b vector
         if self._use_in_plane:
             u_inf_x_dl = np.cross(self._v_inf_in_plane/self._V_inf_in_plane[:,np.newaxis], self._dl)
-            b = self._V_inf_in_plane*self._dS*self._CL # Using CL here instead of CL,a(a-a_L0) is consistent with Phillips' and Hunsaker's implementations. It is more accurate.
+            b = self._V_inf_in_plane*self._dS*self._CL # Phillips and Hunsaker use CL here instead of CL,a(a-a_L0). It is more accurate for nonlinear airfoils.
         else:
             u_inf_x_dl = np.cross(self._u_inf, self._dl)
             b = self._V_inf*self._dS*self._CL
