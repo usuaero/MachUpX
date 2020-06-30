@@ -114,7 +114,7 @@ if __name__=="__main__":
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    scene.add_aircraft("plane", "dev/jack_airplane.json", state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
     #scene.export_stl(filename="plane.stl")

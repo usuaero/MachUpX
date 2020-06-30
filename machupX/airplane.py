@@ -158,7 +158,7 @@ class Airplane:
             beta = import_value("beta", kwargs, self._unit_sys, 0.0)
 
             # Set state
-            self.v = np.array([100.0, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking; will be overwritten
+            self.v = np.array([9.181994, 0.0, 0.0]) # Keeps the following call to set_aerodynamic_state() from breaking; will be overwritten
             self.set_aerodynamic_state(alpha=alpha, beta=beta, velocity=v_value, v_wind=v_wind)
 
         # Body-fixed velocity vector
