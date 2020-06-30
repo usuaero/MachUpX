@@ -46,27 +46,27 @@ if __name__=="__main__":
         },
         "plot_lacs" : False,
         "wings" : {
-            "winglets" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : True,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "tip",
-                    "dz" : -0.001
-                },
-                "semispan" : 0.5,
-                "dihedral" : 90.0,
-                "sweep" : 10.0,
-                "chord" : [[0.0, 0.5],
-                           [1.0, 0.2]],
-                "airfoil" : "NACA_0010",
-                "grid" : {
-                    "N" : 20,
-                    "wing_ID" : 1,
-                    "reid_corrections" : True
-                }
-            },
+            #"winglets" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : True,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "tip",
+            #        "dz" : -0.001
+            #    },
+            #    "semispan" : 0.5,
+            #    "dihedral" : 90.0,
+            #    "sweep" : 10.0,
+            #    "chord" : [[0.0, 0.5],
+            #               [1.0, 0.2]],
+            #    "airfoil" : "NACA_0010",
+            #    "grid" : {
+            #        "N" : 20,
+            #        "wing_ID" : 1,
+            #        "reid_corrections" : True
+            #    }
+            #},
             "main_wing" : {
                 "ID" : 1,
                 "side" : "both",
@@ -77,9 +77,9 @@ if __name__=="__main__":
                            [1.0, 30.0]],
                 "dihedral" : [[0.0, 0.0],
                               [1.0, 5.0]],
-                "chord" : [[0.0, 2.0],
+                "chord" : [[0.0, 1.0],
                            [0.2, 1.0],
-                           [1.0, 0.5]],
+                           [1.0, 1.0]],
                 "twist" : 0.0,
                 "control_surface" : {
                     "chord_fraction" : 0.4,
@@ -91,7 +91,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 20,
+                    "N" : 80,
                     "wing_ID" : 1,
                     "reid_corrections" : False
                 }
@@ -102,19 +102,19 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 0.0,
+        "alpha" : -4.0,
         "beta" : 0.0
     }
 
     control_state = {
-        "elevator" : 15.0,
+        "elevator" : 0.0,
         "aileron" : 0.0,
         "rudder" : 0.0
     }
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", "dev/jack_airplane.json", state=state, control_state=control_state)
+    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
     #scene.export_stl(filename="plane.stl")
@@ -122,6 +122,12 @@ if __name__=="__main__":
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
+
+    # Plot lift distribution
+    dist = scene.distributions()
+    plt.figure()
+    plt.plot(dist["plane"]["main_wing_right"]["cpy"], dist["plane"]["main_wing_right"]["section_CL"])
+    plt.show()
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

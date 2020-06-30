@@ -935,7 +935,9 @@ class Scene:
 
         # Calculate vortex force differential elements
         dF_inv = (self._rho*self._gamma)[:,np.newaxis]*np.cross(self._v_i, self._dl)
-        self._dL = np.linalg.norm(dF_inv, axis=-1)
+
+        # Store differential lift for distributions()
+        self._dL = np.linalg.norm(dF_inv, axis=-1)*np.sign(self._CL)
 
         # Calculate conditions for determining viscid contributions
         self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
