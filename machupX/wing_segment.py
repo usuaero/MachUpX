@@ -236,6 +236,13 @@ class WingSegment:
             self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
             self._add_discontinuities(self._getter_data["sweep"], self._discont)
 
+        # Add 0.0 and 1.0 to discontinuities and sort
+        if 0.0 not in self._discont:
+            self._discont.append(0.0)
+        if 1.0 not in self._discont:
+            self._discont.append(1.0)
+        self._discont = sorted(self._discont)
+
         # Chord
         chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0) # Side is not specified because this is always positive
 
@@ -248,13 +255,11 @@ class WingSegment:
             
 
     def _add_discontinuities(self, data, discont):
-        # Finds discontinuities in the data (i.e. step changes in first derivative)
+        # Finds discontinuities in the data (i.e. any change in linear distribution)
 
         if isinstance(data, np.ndarray):
-
-            # Look for places where the span location is the same, but the values are different
             for i in range(data.shape[0]):
-                if data[i,0] == data[i-1,0] and data[i,1] != data[i-1,1] and data[i,0].item() not in discont:
+                if data[i,0].item() not in discont:
                     discont.append(data[i,0].item())
 
 
@@ -689,9 +694,21 @@ class WingSegment:
         # Integrate sweep and dihedral along the span to get the location
         ds = np.zeros((span_array.shape[0],3))
         for i, span in enumerate(span_array):
-            ds[i,0] = integ.quad(lambda s : np.tan(self.get_sweep(s)), 0, span, points=self._discont)[0]*self.b
-            ds[i,1] = integ.quad(lambda s : -np.cos(self.get_dihedral(s)), 0, span, points=self._discont)[0]*self.b
-            ds[i,2] = integ.quad(lambda s : np.sin(self.get_dihedral(s)), 0, span, points=self._discont)[0]*self.b
+            for j, discont in enumerate(self._discont):
+                
+                # Skip 0.0
+                if j == 0:
+                    continue
+                else:
+                    if span > discont:
+                        ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], discont)[0]*self.b
+                        ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
+                        ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
+                    elif span <= discont:
+                        ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], span)[0]*self.b
+                        ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
+                        ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
+                        break
 
         # Apply based on which side
         if self.side == "left":
