@@ -652,17 +652,32 @@ class WingSegment:
         if ac_offset_data == "kuchemann":
 
             # If the sweep is not constant, don't calculate an offset
+            kuchemann_invalid = False
             try:
                 sweep_data = self._getter_data["sweep"]
                 if not isinstance(sweep_data, float):
                     warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
                     ac_offset_data = 0.0
+                    kuchemann_invalid = True
+
             except KeyError:
-                warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
-                ac_offset_data = 0.0
+
+                # Check for constant sweep from given points
+                if self._qc_data_type == "points":
+                    spans = np.linspace(0.0, 1.0, 10)
+                    sweeps = self.get_sweep(spans)
+                    if not np.allclose(np.full(10, sweeps[0]), sweeps, rtol=1e-10, atol=1e-3):
+                        warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
+                        ac_offset_data = 0.0
+                        kuchemann_invalid = True
+
+                else:
+                    warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
+                    ac_offset_data = 0.0
+                    kuchemann_invalid = True
 
             # Calculate offset as a fraction of the local chord
-            else:
+            if not kuchemann_invalid:
                 
                 # Get constants
                 CLa_root = self._airfoils[0].get_CLa(alpha=0.0)

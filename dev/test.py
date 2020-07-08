@@ -76,6 +76,7 @@ if __name__=="__main__":
                 #"sweep" : 45.0,
                 "quarter_chord_locs" : [[-4.12310563/2, 2.0, -0.5],
                                         [-4.12310563, 4.0, -1.0]],
+                "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
