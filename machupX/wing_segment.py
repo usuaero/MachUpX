@@ -269,7 +269,23 @@ class WingSegment:
                     converted = True
                     span = np.asarray(span)[np.newaxis]
 
+                # Calculate dihedral
                 dihedral = np.zeros_like(span)
+                for i, s in enumerate(span):
+
+                    # Get two points near span location of interest
+                    if s < 0.005:
+                        p0 = self._get_quarter_chord_loc(s)
+                        p1 = self._get_quarter_chord_loc(s+0.01)
+                    elif s > 0.995:
+                        p0 = self._get_quarter_chord_loc(s-0.01)
+                        p1 = self._get_quarter_chord_loc(s)
+                    else:
+                        p0 = self._get_quarter_chord_loc(s-0.005)
+                        p1 = self._get_quarter_chord_loc(s+0.005)
+
+                    # Calculate dihedral
+                    dihedral[i] = -np.arctan((p1[2]-p0[2])/(p1[1]-p0[1]))
 
                 # Convert back to float if needed
                 if converted:
@@ -308,7 +324,23 @@ class WingSegment:
                     converted = True
                     span = np.asarray(span)[np.newaxis]
 
+                # Calculate sweep
                 sweep = np.zeros_like(span)
+                for i, s in enumerate(span):
+
+                    # Get two points near span location of interest
+                    if s < 0.005:
+                        p0 = self._get_quarter_chord_loc(s)
+                        p1 = self._get_quarter_chord_loc(s+0.01)
+                    elif s > 0.995:
+                        p0 = self._get_quarter_chord_loc(s-0.01)
+                        p1 = self._get_quarter_chord_loc(s)
+                    else:
+                        p0 = self._get_quarter_chord_loc(s-0.005)
+                        p1 = self._get_quarter_chord_loc(s+0.005)
+
+                    # Calculate dihedral
+                    sweep[i] = -np.arctan((p1[0]-p0[0])/(p1[1]-p0[1]))
 
                 # Convert back to float if needed
                 if converted:

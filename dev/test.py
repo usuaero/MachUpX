@@ -45,35 +45,35 @@ if __name__=="__main__":
         },
         "plot_lacs" : False,
         "wings" : {
-            "winglets" : {
-                "ID" : 2,
-                "side" : "both",
-                "is_main" : True,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "tip",
-                    "dz" : -0.001
-                },
-                "semispan" : 0.5,
-                "dihedral" : 90.0,
-                "sweep" : 10.0,
-                "chord" : [[0.0, 0.5],
-                           [1.0, 0.2]],
-                "airfoil" : "NACA_0010",
-                "grid" : {
-                    "N" : 20,
-                    "wing_ID" : 1,
-                    "reid_corrections" : True
-                }
-            },
+            #"winglets" : {
+            #    "ID" : 2,
+            #    "side" : "both",
+            #    "is_main" : True,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "tip",
+            #        "dz" : -0.001
+            #    },
+            #    "semispan" : 0.5,
+            #    "dihedral" : 90.0,
+            #    "sweep" : 10.0,
+            #    "chord" : [[0.0, 0.5],
+            #               [1.0, 0.2]],
+            #    "airfoil" : "NACA_0010",
+            #    "grid" : {
+            #        "N" : 20,
+            #        "wing_ID" : 1,
+            #        "reid_corrections" : True
+            #    }
+            #},
             "main_wing" : {
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
-                "quarter_chord_locs" : [[0.0, 2.0, 1.0],
-                                        [0.0, 3.0, 0.5],
-                                        [0.0, 4.0, 0.0]],
+                "quarter_chord_locs" : [[-2.0, 2.0, -0.0],
+                                        [-2.0, 3.0, -0.5],
+                                        [-2.0, 4.0, -1.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -118,11 +118,10 @@ if __name__=="__main__":
 
     # Plot lift distribution
     dist = scene.distributions()
-    dist_l = dist["plane"]["main_wing_left"]
-    dist_r = dist["plane"]["main_wing_right"]
-
-    L = np.sum(np.asarray(dist_l["section_CL"])*np.asarray(dist_l["q"])*np.asarray(dist_l["area"]))+np.sum(np.asarray(dist_r["section_CL"])*np.asarray(dist_r["q"])*np.asarray(dist_r["area"]))
-    print(L)
+    print(np.degrees(dist["plane"]["main_wing_left"]["sweep"]))
+    print(np.degrees(dist["plane"]["main_wing_right"]["sweep"]))
+    print(np.degrees(dist["plane"]["main_wing_left"]["dihedral"]))
+    print(np.degrees(dist["plane"]["main_wing_right"]["dihedral"]))
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
