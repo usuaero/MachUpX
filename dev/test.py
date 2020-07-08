@@ -71,9 +71,11 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
-                "quarter_chord_locs" : [[-2.0, 2.0, -0.0],
-                                        [-2.0, 3.0, -0.5],
-                                        [-2.0, 4.0, -1.0]],
+                #"semispan" : np.sqrt(17),
+                #"dihedral" : np.degrees(np.arctan(0.25)),
+                #"sweep" : 45.0,
+                "quarter_chord_locs" : [[-4.12310563/2, 2.0, -0.5],
+                                        [-4.12310563, 4.0, -1.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -109,7 +111,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=False)
+    scene.display_wireframe(show_vortices=False)
     #scene.export_stl(filename="plane.stl")
 
     # Solve forces
@@ -117,11 +119,7 @@ if __name__=="__main__":
     print(json.dumps(FM["plane"]["total"], indent=4))
 
     # Plot lift distribution
-    dist = scene.distributions()
-    print(np.degrees(dist["plane"]["main_wing_left"]["sweep"]))
-    print(np.degrees(dist["plane"]["main_wing_right"]["sweep"]))
-    print(np.degrees(dist["plane"]["main_wing_left"]["dihedral"]))
-    print(np.degrees(dist["plane"]["main_wing_right"]["dihedral"]))
+    #dist = scene.distributions()
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

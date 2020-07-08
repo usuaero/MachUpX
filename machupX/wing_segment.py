@@ -71,7 +71,6 @@ class WingSegment:
             self._setup_cp_data()
             self._setup_node_data()
 
-
     
     def _initialize_params(self):
 
@@ -200,19 +199,19 @@ class WingSegment:
         # Sets getters for functions which are a function of span
 
         # Determine how the wing LQC has been given
-        self.b = import_value("semispan", self._input_dict, self._unit_sys, -1)
-        qc_loc_data = import_value("quarter_chord_locs", self._input_dict, self._unit_sys, -1)
-        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, -1)
-        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, -1)
+        self.b = import_value("semispan", self._input_dict, self._unit_sys, "not_given")
+        qc_loc_data = import_value("quarter_chord_locs", self._input_dict, self._unit_sys, "not_given")
+        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, "not_given")
+        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, "not_given")
 
         # Check for redundant definitions
-        if self.b == -1 and not isinstance(qc_loc_data, np.ndarray):
+        if isinstance(self.b, str) and not isinstance(qc_loc_data, np.ndarray):
             raise IOError("Either 'semispan' or 'quarter_chord_locs' must be specified.")
-        if self.b != -1 and isinstance(qc_loc_data, np.ndarray):
+        if not isinstance(self.b, str) and isinstance(qc_loc_data, np.ndarray):
             raise IOError("'semispan' and 'quarter_chord_locs' may not both be specified at once.")
-        if dihedral_data != -1 and isinstance(qc_loc_data, np.ndarray):
+        if not isinstance(dihedral_data, str) and isinstance(qc_loc_data, np.ndarray):
             raise IOError("'dihedral' and 'quarter_chord_locs' may not both be specified at once.")
-        if sweep_data != -1 and isinstance(qc_loc_data, np.ndarray):
+        if not isinstance(sweep_data, str) and isinstance(qc_loc_data, np.ndarray):
             raise IOError("'sweep' and 'quarter_chord_locs' may not both be specified at once.")
 
         # Perform various computations based on whether qc points are given
@@ -249,6 +248,12 @@ class WingSegment:
 
             # Store discontinuities to make the integrators more reliable
             self._discont = []
+
+            # Restore defaults
+            if isinstance(dihedral_data, str):
+                dihedral_data = 0.0
+            if isinstance(sweep_data, str):
+                sweep_data = 0.0
 
         # Twist
         twist_data = import_value("twist", self._input_dict, self._unit_sys, 0.0)

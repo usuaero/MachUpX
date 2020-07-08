@@ -60,7 +60,7 @@ def test_damping_derivatives():
     assert abs(damp_derivs["test_plane"]["Cn,qbar"])<1e-9
     assert abs(damp_derivs["test_plane"]["CL,rbar"])<1e-9
     assert abs(damp_derivs["test_plane"]["CD,rbar"])<1e-9
-    assert abs(damp_derivs["test_plane"]["CS,rbar"]-1.2254471082474228)<1e-9
+    assert abs(damp_derivs["test_plane"]["CS,rbar"]-1.225447113641625)<1e-9
     assert abs(damp_derivs["test_plane"]["Cx,rbar"])<1e-9
     assert abs(damp_derivs["test_plane"]["Cy,rbar"]-1.2254471136479639)<1e-8
     assert abs(damp_derivs["test_plane"]["Cz,rbar"])<1e-9
