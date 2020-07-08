@@ -17,7 +17,9 @@ def test_main():
         "solve_forces" : {},
         "derivatives" : {},
         "distributions" : {},
-        "pitch_trim" : {},
+        "pitch_trim" : {
+            "verbose" : True
+        },
         "aero_center" : {},
         "export_stl" : {}
     }
