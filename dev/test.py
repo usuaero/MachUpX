@@ -68,7 +68,7 @@ if __name__=="__main__":
             #},
             "main_wing" : {
                 "ID" : 1,
-                "side" : "both",
+                "side" : "left",
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 #"semispan" : np.sqrt(17),

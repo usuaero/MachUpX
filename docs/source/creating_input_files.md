@@ -489,7 +489,7 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>
 >>>>If "quarter_chord_locs" is given, "sweep", "dihedral", and "semispan" may not be specified.
 >>>>
->>>>For a wing with "side" specified as "both", these locations should only be given for the *right* half of the wing and MachUpX will mirror them for the left half. Otherwise, these locations should be given for the appropriate side.
+>>>>These locations should only be given for the *right* half of the wing and MachUpX will mirror them for the left half, *even for a wing where "side" is "left"*.
 >>>
 >>>**"ac_offset" : float, array, string, or func optional**
 >>>>Gives the offset of the section aerodynamic center from the quarter chord. By default, MachUpX assumes the locus of aerodynamic centers for a given wing segment falls on the quarter chord line. This allows shifting the locus along the chord line for greater accuracy. This shift is given as a fraction of the chord. A positive value puts the local aerodynamic center behind the quarter chord. Defined the same as "twist", except that it may also be specified as "kuchemann" *for wings of constant sweep, including zero sweep*, in which case the locus of aerodynamic centers will be specified using Kuchemann's equations. Specifying "kuchemann" for a wing segment with variable sweep will result in an error. If Kuchemann's equations are selected, the user should ensure the number of control points for this wing is large enough to capture the nonlinear locus of aerodynamic centers at the wing root and tips. MachUpX will cosine cluster these points by default, but a very small number of control points may still fail to sufficiently capture Kuchemann's correction. Defaults to 0.
