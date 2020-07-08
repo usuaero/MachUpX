@@ -75,9 +75,8 @@ class WingSegment:
     
     def _initialize_params(self):
 
-        # Set global params
+        # Determine if it's part of the main wing
         self.is_main = self._input_dict.get("is_main", False)
-        self.b = import_value("semispan", self._input_dict, self._unit_sys, None)
 
         # Grid parameters
         grid_dict = self._input_dict.get("grid", {})
@@ -200,48 +199,149 @@ class WingSegment:
     def _initialize_getters(self):
         # Sets getters for functions which are a function of span
 
-        # Store discontinuities to make the integrators more reliable
-        self._discont = []
+        # Determine how the wing LQC has been given
+        self.b = import_value("semispan", self._input_dict, self._unit_sys, -1)
+        qc_loc_data = import_value("quarter_chord_locs", self._input_dict, self._unit_sys, -1)
+        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, -1)
+        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, -1)
+
+        # Check for redundant definitions
+        if self.b == -1 and not isinstance(qc_loc_data, np.ndarray):
+            raise IOError("Either 'semispan' or 'quarter_chord_locs' must be specified.")
+        if self.b != -1 and isinstance(qc_loc_data, np.ndarray):
+            raise IOError("'semispan' and 'quarter_chord_locs' may not both be specified at once.")
+        if dihedral_data != -1 and isinstance(qc_loc_data, np.ndarray):
+            raise IOError("'dihedral' and 'quarter_chord_locs' may not both be specified at once.")
+        if sweep_data != -1 and isinstance(qc_loc_data, np.ndarray):
+            raise IOError("'sweep' and 'quarter_chord_locs' may not both be specified at once.")
+
+        # Perform various computations based on whether qc points are given
+        if isinstance(qc_loc_data, np.ndarray):
+
+            # Set flag
+            self._qc_data_type = "points"
+
+            # Determine the semispan of the wing
+            self._qc_loc_data = np.zeros((qc_loc_data.shape[0]+1, 4))
+            self._qc_loc_data[1:,1:] = qc_loc_data
+            self.b = 0.0
+
+            # Loop through points to add up semispan
+            for i in range(self._qc_loc_data.shape[0]):
+
+                # Skip the first
+                if i == 0:
+                    continue
+
+                # Add on length of current segment
+                self.b += np.linalg.norm((self._qc_loc_data[i,2:]-self._qc_loc_data[i-1,2:]).flatten())
+
+                # Store current span location
+                self._qc_loc_data[i,0] = self.b
+
+            # Divide the span locations by the total span
+            self._qc_loc_data[:,0] /= self.b
+
+        else:
+
+            # Set flag
+            self._qc_data_type = "standard"
+
+            # Store discontinuities to make the integrators more reliable
+            self._discont = []
 
         # Twist
         twist_data = import_value("twist", self._input_dict, self._unit_sys, 0.0)
         if callable(twist_data):
             self.get_twist = twist_data
         else:
-            self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True) # Side is not specified because this is always positive
+            self.get_twist = self._build_getter_linear_f_of_span(twist_data, "twist", angular_data=True) # Side is not specified because the sign convention is the same for both
 
         # Dihedral
-        dihedral_data = import_value("dihedral", self._input_dict, self._unit_sys, 0.0)
-        if callable(dihedral_data):
+        if self._qc_data_type == "points":
+
+            # Extract dihedral from qc points using central differencing
+            def get_dihedral(span):
+
+                # Convert input to array
+                converted = False
+                if isinstance(span, float):
+                    converted = True
+                    span = np.asarray(span)[np.newaxis]
+
+                dihedral = np.zeros_like(span)
+
+                # Convert back to float if needed
+                if converted:
+                    span = span.item()
+                    return dihedral.item()
+                else:
+                    return dihedral
+
+            self.get_dihedral = get_dihedral
+
+        elif callable(dihedral_data):
+
+            # Get dihedral from user function
             def get_dihedral(s):
                 if self.side == "left":
                     return -dihedral_data(s)
                 else:
                     return dihedral_data(s)
             self.get_dihedral = get_dihedral
+
         else:
+
+            # Create linear interpolator
             self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, side=self.side)
             self._add_discontinuities(self._getter_data["dihedral"], self._discont)
 
         # Sweep
-        sweep_data = import_value("sweep", self._input_dict, self._unit_sys, 0.0)
-        if callable(sweep_data):
+        if self._qc_data_type == "points":
+
+            # Extract sweep from qc points using central differencing
+            def get_sweep(span):
+
+                # Convert input to array
+                converted = False
+                if isinstance(span, float):
+                    converted = True
+                    span = np.asarray(span)[np.newaxis]
+
+                sweep = np.zeros_like(span)
+
+                # Convert back to float if needed
+                if converted:
+                    span = span.item()
+                    return sweep.item()
+                else:
+                    return sweep
+
+            self.get_sweep = get_sweep
+
+        elif callable(sweep_data):
+
+            # Get sweep from user function
             def get_sweep(s):
                 if self.side == "left":
                     return -sweep_data(s)
                 else:
                     return sweep_data(s)
             self.get_sweep = get_sweep
+
         else:
+
+            # Create linear interpolator
             self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
             self._add_discontinuities(self._getter_data["sweep"], self._discont)
 
         # Add 0.0 and 1.0 to discontinuities and sort
-        if 0.0 not in self._discont:
-            self._discont.append(0.0)
-        if 1.0 not in self._discont:
-            self._discont.append(1.0)
-        self._discont = sorted(self._discont)
+        if self._qc_data_type == "standard":
+            if 0.0 not in self._discont:
+                self._discont.append(0.0)
+            if 1.0 not in self._discont:
+                self._discont.append(1.0)
+            self._discont = sorted(self._discont)
 
         # Chord
         chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0) # Side is not specified because this is always positive
@@ -277,6 +377,8 @@ class WingSegment:
                 span : float or ndarray
                     Non-dimensional span location.
                 """
+
+                # Make input an array
                 converted = False
                 if isinstance(span, float):
                     converted = True
@@ -288,6 +390,7 @@ class WingSegment:
                 else:
                     data = np.full(span.shape, self._getter_data[name])
 
+                # Convert back to scalar if needed
                 if converted:
                     span = span.item()
                     return data.item()
@@ -310,19 +413,24 @@ class WingSegment:
                 span : float or ndarray
                     Non-dimensional span location.
                 """
+
+                # Convert input to array
                 converted = False
                 if isinstance(span, float):
                     converted = True
                     span = np.asarray(span)[np.newaxis]
 
+                # Perform interpolation
                 if angular_data:
                     data = np.interp(span, self._getter_data[name][:,0], np.radians(self._getter_data[name][:,1]))
                 else:
                     data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
 
+                # Reverse data for left side
                 if side=="left":
                     data = -data
 
+                # Convert back to scalar if needed
                 if converted:
                     span = span.item()
                     return data.item()
@@ -691,31 +799,48 @@ class WingSegment:
             converted = False
             span_array = np.asarray(span)
 
-        # Integrate sweep and dihedral along the span to get the location
-        ds = np.zeros((span_array.shape[0],3))
-        for i, span in enumerate(span_array):
-            for j, discont in enumerate(self._discont):
-                
-                # Skip 0.0
-                if j == 0:
-                    continue
-                else:
-                    if span > discont:
-                        ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], discont)[0]*self.b
-                        ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
-                        ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
-                    elif span <= discont:
-                        ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], span)[0]*self.b
-                        ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
-                        ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
-                        break
+        if self._qc_data_type == "standard":
 
-        # Apply based on which side
-        if self.side == "left":
-            qc_loc = self.get_root_loc()+ds
+            # Integrate sweep and dihedral along the span to get the location
+            ds = np.zeros((span_array.shape[0],3))
+            for i, span in enumerate(span_array):
+                for j, discont in enumerate(self._discont):
+
+                    # Skip 0.0
+                    if j == 0:
+                        continue
+                    else:
+                        if span > discont:
+                            ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], discont)[0]*self.b
+                            ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
+                            ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
+                        elif span <= discont:
+                            ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], span)[0]*self.b
+                            ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
+                            ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
+                            break
+
+            # Apply based on which side
+            if self.side == "left":
+                qc_loc = self.get_root_loc()+ds
+            else:
+                qc_loc = self.get_root_loc()-ds
+        
         else:
-            qc_loc = self.get_root_loc()-ds
 
+            # Perform interpolation
+            ds = np.zeros((span_array.shape[0],3))
+            ds[:,0] = np.interp(span_array, self._qc_loc_data[:,0], self._qc_loc_data[:,1])
+            if self.side == "left":
+                ds[:,1] = -np.interp(span_array, self._qc_loc_data[:,0], self._qc_loc_data[:,2])
+            else:
+                ds[:,1] = np.interp(span_array, self._qc_loc_data[:,0], self._qc_loc_data[:,2])
+            ds[:,2] = np.interp(span_array, self._qc_loc_data[:,0], self._qc_loc_data[:,3])
+
+            # Apply to root location
+            qc_loc = self.get_root_loc()+ds
+
+        # Convert back
         if converted:
             qc_loc = qc_loc.flatten()
 

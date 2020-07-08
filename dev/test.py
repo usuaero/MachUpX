@@ -12,7 +12,6 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            #"type" : "scipy_fsolve"
             "type" : "nonlinear"
         },
         "units" : "English",
@@ -46,41 +45,35 @@ if __name__=="__main__":
         },
         "plot_lacs" : False,
         "wings" : {
-            #"winglets" : {
-            #    "ID" : 2,
-            #    "side" : "both",
-            #    "is_main" : True,
-            #    "connect_to" : {
-            #        "ID" : 1,
-            #        "location" : "tip",
-            #        "dz" : -0.001
-            #    },
-            #    "semispan" : 0.5,
-            #    "dihedral" : 90.0,
-            #    "sweep" : 10.0,
-            #    "chord" : [[0.0, 0.5],
-            #               [1.0, 0.2]],
-            #    "airfoil" : "NACA_0010",
-            #    "grid" : {
-            #        "N" : 20,
-            #        "wing_ID" : 1,
-            #        "reid_corrections" : True
-            #    }
-            #},
+            "winglets" : {
+                "ID" : 2,
+                "side" : "both",
+                "is_main" : True,
+                "connect_to" : {
+                    "ID" : 1,
+                    "location" : "tip",
+                    "dz" : -0.001
+                },
+                "semispan" : 0.5,
+                "dihedral" : 90.0,
+                "sweep" : 10.0,
+                "chord" : [[0.0, 0.5],
+                           [1.0, 0.2]],
+                "airfoil" : "NACA_0010",
+                "grid" : {
+                    "N" : 20,
+                    "wing_ID" : 1,
+                    "reid_corrections" : True
+                }
+            },
             "main_wing" : {
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
-                "semispan" : 4.0,
                 "airfoil" : "NACA_0010",
-                "sweep" : [[0.0, 0.0],
-                           [1.0, 30.0]],
-                "dihedral" : [[0.0, 0.0],
-                              [1.0, 5.0]],
-                "chord" : [[0.0, 1.0],
-                           [0.2, 1.0],
-                           [1.0, 1.0]],
-                "twist" : 0.0,
+                "quarter_chord_locs" : [[0.0, 2.0, 1.0],
+                                        [0.0, 3.0, 0.5],
+                                        [0.0, 4.0, 0.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -102,7 +95,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : -4.0,
+        "alpha" : 10.0,
         "beta" : 0.0
     }
 
@@ -116,7 +109,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=False)
+    scene.display_wireframe(show_vortices=False)
     #scene.export_stl(filename="plane.stl")
 
     # Solve forces
@@ -125,9 +118,11 @@ if __name__=="__main__":
 
     # Plot lift distribution
     dist = scene.distributions()
-    plt.figure()
-    plt.plot(dist["plane"]["main_wing_right"]["cpy"], dist["plane"]["main_wing_right"]["section_CL"])
-    plt.show()
+    dist_l = dist["plane"]["main_wing_left"]
+    dist_r = dist["plane"]["main_wing_right"]
+
+    L = np.sum(np.asarray(dist_l["section_CL"])*np.asarray(dist_l["q"])*np.asarray(dist_l["area"]))+np.sum(np.asarray(dist_r["section_CL"])*np.asarray(dist_r["q"])*np.asarray(dist_r["area"]))
+    print(L)
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

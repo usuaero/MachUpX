@@ -85,3 +85,12 @@ Jackson's original GNLL uses empirical fits of data he obtained from vortex pane
 * Zero-lift angle of attack is scaled by 1/cos(sweep).
 * Section moment coefficient is scaled by 1/cos(sweep).
 * Drag is weird...
+
+## Coordinate Systems
+Throughout MachUpX, two coordinate systems are used. These are the body-fixed and earth-fixed coordinate systems. In the body-fixed coordinate system, the x-axis points forward out of the nose of the aircraft, the y-axis points to the right along the wing, and the z-axis points down. The body-fixed coordinate system has its origin at the aircraft's center of gravity.
+
+In the earth-fixed coordinate system, the x-axis points North, the y-axis points East, and the z-axis points down. The origin of the earth-fixed coordinate system is somewhat arbitrary, but it is assumed to be at sea level. In this coordinate system, the earth is assumed to be flat.
+
+![](CoordinateSystems.jpg "Coordinate Systems in MachUpX")
+
+Calculations occurring within the Scene class are almost always done in the earth-fixed frame. Calculations occurring within the Airplane and WingSegment classes are done in the body-fixed frame.
