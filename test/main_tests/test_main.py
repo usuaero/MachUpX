@@ -17,7 +17,9 @@ def test_main():
         "solve_forces" : {},
         "derivatives" : {},
         "distributions" : {},
-        "pitch_trim" : {},
+        "pitch_trim" : {
+            "verbose" : True
+        },
         "aero_center" : {},
         "export_stl" : {}
     }
@@ -25,7 +27,7 @@ def test_main():
     # Write new input to file
     altered_input_name = "unique_name.json"
     with open(altered_input_name, 'w') as new_input_handle:
-        json.dump(input_dict, new_input_handle)
+        json.dump(input_dict, new_input_handle, indent=4)
 
     # Run MachUp
     sp.run(["python", "-m", "machupX", altered_input_name])
