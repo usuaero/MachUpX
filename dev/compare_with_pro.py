@@ -266,13 +266,13 @@ if __name__=="__main__":
     state = {
         "velocity" : 100.0,
         "alpha" : 2.0,
-        "beta" : 0.0,
+        "beta" : 7.0,
         "angular_rates" : [0.0, 0.0, 0.0]
     }
 
     control_state = {
         "aileron" : 0.0,
-        "elevator" : 0.0,
+        "elevator" : 5.0,
         "rudder" : 0.0
     }
 

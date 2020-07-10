@@ -377,6 +377,7 @@ class Scene:
 
         # Misc
         self._diag_ind = np.diag_indices(self._N)
+        self._gamma = np.zeros(self._N)
 
         self._solved = False
         
@@ -570,6 +571,23 @@ class Scene:
         if self._match_machup_pro:
             self._V_inf_w_o_rotation = np.linalg.norm(self._v_inf_w_o_rotation, axis=1)
 
+        # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
+        self._P0_joint_u_inf = self._P0_joint_v_inf/np.linalg.norm(self._P0_joint_v_inf, axis=-1, keepdims=True)
+        self._P1_joint_u_inf = self._P1_joint_v_inf/np.linalg.norm(self._P1_joint_v_inf, axis=-1, keepdims=True)
+
+        # Calculate V_ji
+        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
+        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
+        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis])
+
+        # Influence of vortex segment 1 after the joint
+        denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
+        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis])
+
+        # Sum
+        # In my definition of V_ji, the first index is the control point, the second index is the horseshoe vortex, and the third index is the vector components
+        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
+
         # Get effective freesream and calculate initial approximation for airfoil parameters (Re and M are only used in the linear solution)
         if self._use_in_plane:
             self._v_inf_in_plane = np.matmul(self._P_in_plane, self._v_inf[:,:,np.newaxis]).reshape((self._N,3))
@@ -604,23 +622,6 @@ class Scene:
 
             # Get new estimate
             self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
-
-        # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
-        self._P0_joint_u_inf = self._P0_joint_v_inf/np.linalg.norm(self._P0_joint_v_inf, axis=-1, keepdims=True)
-        self._P1_joint_u_inf = self._P1_joint_v_inf/np.linalg.norm(self._P1_joint_v_inf, axis=-1, keepdims=True)
-
-        # Calculate V_ji
-        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
-        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis])
-
-        # Influence of vortex segment 1 after the joint
-        denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis])
-
-        # Sum
-        # In my definition of V_ji, the first index is the control point, the second index is the horseshoe vortex, and the third index is the vector components
-        self._V_ji = 1/(4*np.pi)*(V_ji_due_to_0+self._V_ji_const+V_ji_due_to_1)
 
         self._solved = False
 
@@ -1404,7 +1405,7 @@ class Scene:
 
         full_output : bool
             If set to True, a tuple will be returned containing (FM, err, message, residual). If set to False,
-            only FM will be returned. Defaults to False.
+            only FM will be returned and any error that occurs will simply throw an exception. Defaults to False.
 
         Returns
         -------
@@ -1491,8 +1492,8 @@ class Scene:
             elif not full_output:
                 raise e
 
-        except AttributeError:
-            pass
+        #except AttributeError:
+        #    pass
 
         # Output timing
         verbose = kwargs.get("verbose", False)
@@ -1511,8 +1512,9 @@ class Scene:
             with open(filename, 'w') as json_file_handle:
                 json.dump(self._FM, json_file_handle, indent=4)
 
-        # Let certain functions know the results are now available
-        self._solved = True
+        # Let certain functions know the results are now available if they were successfully computed
+        if err == 0:
+            self._solved = True
 
         if full_output:
             return (self._FM, err, message, residual)
