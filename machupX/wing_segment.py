@@ -290,7 +290,7 @@ class WingSegment:
                         p1 = self._get_quarter_chord_loc(s+0.005)
 
                     # Calculate dihedral
-                    dihedral[i] = -np.arctan((p1[2]-p0[2])/(p1[1]-p0[1]))
+                    dihedral[i] = np.arctan((p1[2]-p0[2])/(p1[1]-p0[1]))
 
                 # Convert back to float if needed
                 if converted:
@@ -306,15 +306,15 @@ class WingSegment:
             # Get dihedral from user function
             def get_dihedral(s):
                 if self.side == "left":
-                    return -dihedral_data(s)
-                else:
                     return dihedral_data(s)
+                else:
+                    return -dihedral_data(s)
             self.get_dihedral = get_dihedral
 
         else:
 
             # Create linear interpolator
-            self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, side=self.side)
+            self.get_dihedral = self._build_getter_linear_f_of_span(dihedral_data, "dihedral", angular_data=True, flip_sign=(self.side=="right"))
             self._add_discontinuities(self._getter_data["dihedral"], self._discont)
 
         # Sweep
@@ -369,7 +369,7 @@ class WingSegment:
         else:
 
             # Create linear interpolator
-            self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, side=self.side)
+            self.get_sweep = self._build_getter_linear_f_of_span(sweep_data, "sweep", angular_data=True, flip_sign=(self.side=="left"))
             self._add_discontinuities(self._getter_data["sweep"], self._discont)
 
         # Add 0.0 and 1.0 to discontinuities and sort
@@ -381,7 +381,7 @@ class WingSegment:
             self._discont = sorted(self._discont)
 
         # Chord
-        chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0) # Side is not specified because this is always positive
+        chord_data = import_value("chord", self._input_dict, self._unit_sys, 1.0)
 
         if isinstance(chord_data, tuple): # Elliptic distribution
             self.get_chord = self._build_elliptic_chord_dist(chord_data[1])
@@ -400,7 +400,7 @@ class WingSegment:
                     discont.append(data[i,0].item())
 
 
-    def _build_getter_linear_f_of_span(self, data, name, angular_data=False, side=None):
+    def _build_getter_linear_f_of_span(self, data, name, angular_data=False, flip_sign=False):
         # Defines a getter function for data which is a function of span
 
         if isinstance(data, float): # Constant
@@ -421,8 +421,8 @@ class WingSegment:
                     converted = True
                     span = np.asarray(span)[np.newaxis]
 
-                # Sweep and dihedral need to have the signs flipped for the left side
-                if side == "left":
+                # Reverse sign
+                if flip_sign:
                     data = -np.full(span.shape, self._getter_data[name])
                 else:
                     data = np.full(span.shape, self._getter_data[name])
@@ -463,8 +463,8 @@ class WingSegment:
                 else:
                     data = np.interp(span, self._getter_data[name][:,0], self._getter_data[name][:,1])
 
-                # Reverse data for left side
-                if side=="left":
+                # Reverse data
+                if flip_sign:
                     data = -data
 
                 # Convert back to scalar if needed
@@ -865,11 +865,11 @@ class WingSegment:
                         if span > discont:
                             ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], discont)[0]*self.b
                             ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
-                            ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
+                            ds[i,2] += integ.quad(lambda s : -np.sin(self.get_dihedral(s)), self._discont[j-1], discont)[0]*self.b
                         elif span <= discont:
                             ds[i,0] += integ.quad(lambda s : np.tan(self.get_sweep(s)), self._discont[j-1], span)[0]*self.b
                             ds[i,1] += integ.quad(lambda s : -np.cos(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
-                            ds[i,2] += integ.quad(lambda s : np.sin(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
+                            ds[i,2] += integ.quad(lambda s : -np.sin(self.get_dihedral(s)), self._discont[j-1], span)[0]*self.b
                             break
 
             # Apply based on which side
@@ -914,7 +914,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        return np.asarray([-C_twist, S_twist*S_dihedral, S_twist*C_dihedral]).T
+        return np.asarray([-C_twist, -S_twist*S_dihedral, S_twist*C_dihedral]).T
 
 
     def _get_unswept_normal_vec(self, span):
@@ -932,7 +932,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        return np.asarray([-S_twist, -C_twist*S_dihedral, -C_twist*C_dihedral]).T
+        return np.asarray([-S_twist, C_twist*S_dihedral, -C_twist*C_dihedral]).T
 
 
     def _get_unswept_span_vec(self, span):
@@ -947,7 +947,7 @@ class WingSegment:
         C_dihedral = np.cos(dihedral)
         S_dihedral = np.sin(dihedral)
 
-        return np.asarray([np.zeros(span_array.size), C_dihedral, -S_dihedral]).T
+        return np.asarray([np.zeros(span_array.size), C_dihedral, S_dihedral]).T
 
 
     def _get_section_ac_loc(self, span):
