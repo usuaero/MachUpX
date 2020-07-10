@@ -2666,6 +2666,9 @@ class Scene:
 
         aircraft : str or list, optional
             Name(s) of the aircraft to include in the model. Defaults to all aircraft in the scene.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Specify the aircraft
@@ -2682,7 +2685,6 @@ class Scene:
 
         # Multiple aircraft
         else:
-            section_resolution = kwargs.get("section_resolution", 200)
             num_facets = 0
             vector_dict = {}
 
@@ -2693,7 +2695,7 @@ class Scene:
 
                 # Loop through segments
                 for segment_name, segment_object in airplane_object.wing_segments.items():
-                    vectors = segment_object.get_stl_vectors(section_res=section_resolution)
+                    vectors = segment_object.get_stl_vectors(**kwargs)
                     vector_dict[aircraft_name][segment_name] = airplane_object.p_bar+quat_inv_trans(airplane_object.q, vectors)
                     num_facets += int(vectors.shape[0]/3)
 
@@ -2780,6 +2782,9 @@ class Scene:
 
         maintain_sections : bool, optional
             Whether the wing segment sections should be preserved in the loft. Defaults to True.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Specify the aircraft
@@ -2803,6 +2808,9 @@ class Scene:
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
         
         # Specify the aircraft

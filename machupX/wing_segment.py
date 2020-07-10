@@ -77,6 +77,9 @@ class WingSegment:
         # Determine if it's part of the main wing
         self.is_main = self._input_dict.get("is_main", False)
 
+        # Shear dihedral
+        self._shear_dihedral = self._input_dict.get("shear_dihedral", False)
+
         # Grid parameters
         grid_dict = self._input_dict.get("grid", {})
         self.N = grid_dict.get("N", 40)
@@ -1327,14 +1330,17 @@ class WingSegment:
         self._delta_flap = np.radians(self._delta_flap)
 
 
-    def get_stl_vectors(self, section_res=200):
+    def get_stl_vectors(self, **kwargs):
         """Calculates and returns the outline vectors required for 
         generating an .stl model of the wing segment.
 
         Parameters
         ----------
-        section_res : int, optional
+        section_resolution : int, optional
             Number of points to use in distcretizing the airfoil sections. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
 
         Returns
         -------
@@ -1344,6 +1350,8 @@ class WingSegment:
         """
 
         # Discretize by node locations
+        section_res = kwargs.get("section_resolution", 200)
+        close_te = kwargs.get("close_te", True)
         num_facets = self.N*(section_res-1)*2
         vectors = np.zeros((num_facets*3,3))
 
@@ -1352,11 +1360,11 @@ class WingSegment:
 
             # Root-ward node
             root_span = self.node_span_locs[i]
-            root_outline = self._get_airfoil_outline_coords_at_span(root_span, section_res)
+            root_outline = self._get_airfoil_outline_coords_at_span(root_span, section_res, close_te)
 
             # Tip-ward node
             tip_span = self.node_span_locs[i+1]
-            tip_outline = self._get_airfoil_outline_coords_at_span(tip_span, section_res)
+            tip_outline = self._get_airfoil_outline_coords_at_span(tip_span, section_res, close_te)
 
             # Create facets between the outlines
             for j in range(section_res-1):
@@ -1373,7 +1381,7 @@ class WingSegment:
         return vectors
 
 
-    def _get_airfoil_outline_coords_at_span(self, span, N):
+    def _get_airfoil_outline_coords_at_span(self, span, N, close_te):
         # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction with the specified number of points
 
         # Determine flap deflection and fraction at this point
@@ -1389,7 +1397,7 @@ class WingSegment:
 
         # Linearly interpolate outlines, ignoring twist, etc for now
         if self._num_airfoils == 1:
-            points = self._airfoils[0].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
+            points = self._airfoils[0].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f, close_te=close_te)
         else:
             index = 0
             while True:
@@ -1401,8 +1409,8 @@ class WingSegment:
                     tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
 
                     # Get outlines
-                    root_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
-                    tip_outline = self._airfoils[index+1].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f)
+                    root_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f, close_te=close_te)
+                    tip_outline = self._airfoils[index+1].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f, close_te=close_te)
 
                     # Interpolate
                     points = root_weight*root_outline+tip_weight*tip_outline
@@ -1416,7 +1424,10 @@ class WingSegment:
         chord = self.get_chord(span)
 
         # Scale to chord and transform to body-fixed coordinates
-        q = euler_to_quat(np.array([-dihedral, twist, 0.0]))
+        if self._shear_dihedral:
+            q = euler_to_quat(np.array([0.0, twist, 0.0]))
+        else:
+            q = euler_to_quat(np.array([dihedral, twist, 0.0]))
         untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
         coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)
 
@@ -1448,6 +1459,9 @@ class WingSegment:
 
         maintain_sections : bool, optional
             Whether the wing segment sections should be preserved in the loft. Defaults to True.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Import necessary modules
@@ -1460,6 +1474,7 @@ class WingSegment:
         section_resolution = kwargs.get("section_resolution", 200)
         spline = kwargs.get("spline", False)
         maintain_sections = kwargs.get("maintain_sections", True)
+        close_te = kwargs.get("close_te", True)
 
         # Create sections
         sections = []
@@ -1467,7 +1482,7 @@ class WingSegment:
             points = []
 
             # Get outline points
-            outline = self._get_airfoil_outline_coords_at_span(s_i, section_resolution)
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_resolution, close_te)
 
             # Check for wing going to a point
             if np.all(np.all(outline == outline[0,:])):
@@ -1475,7 +1490,7 @@ class WingSegment:
                 #points.append(tip)
                 #continue
                 #TODO loft to an actual point
-                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_resolution)
+                outline = self._get_airfoil_outline_coords_at_span(s_i-0.000001, section_resolution, close_te)
 
             # Create outline points
             for point in outline:
@@ -1512,11 +1527,15 @@ class WingSegment:
 
         section_resolution : int
             Number of outline points to use for the sections. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Get kwargs
         file_tag = kwargs.get("file_tag", "")
         section_res = kwargs.get("section_resolution", 200)
+        close_te = kwargs.get("close_te", True)
 
         # Initialize arrays
         X = np.zeros((self.N+1, section_res))
@@ -1527,7 +1546,7 @@ class WingSegment:
         for i, s_i in enumerate(self.node_span_locs):
 
             # Get outline points
-            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res)
+            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res, close_te)
 
             # Store in arrays
             X[i,:] = outline[:,0]

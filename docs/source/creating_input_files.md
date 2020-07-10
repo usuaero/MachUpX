@@ -470,6 +470,9 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>**"dihedral" : float, array, string, or func optional**
 >>>>Gives the dihedral of the wing segment. Defined the same as "twist". If defined as a distribution, this specifies the local dihedral angle at each point along the wing. Defaults to 0.
 >>>
+>>>**"shear_dihedral" : bool, optional**
+>>>>Whether the dihedral should be viewed as a solid-body rotation (standard) or a shear transformation (nonstandard), similar to sweep, for the purpose of exporting 3D models. Has no effect on aerodynamics. Defaults to False, corresponding to a solid-body rotation.
+>>>
 >>>**"sweep" : float, array, string, or func optional**
 >>>>Gives the sweep angle of the wing segment. Sweeping the wing is a shear transformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from thex-z plane. Defined the same as "twist". Defaults to 0.
 >>>

@@ -958,6 +958,9 @@ class Airplane:
 
         section_resolution
             Number of points to use in discretizing the airfoil section outlines. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Check for .stl file
@@ -968,9 +971,8 @@ class Airplane:
         # Loop through segments
         num_facets = 0
         vector_dict = {}
-        section_resolution = kwargs.get("section_resolution", 200)
         for segment_name, segment_object in self.wing_segments.items():
-            vectors = segment_object.get_stl_vectors(section_resolution)
+            vectors = segment_object.get_stl_vectors(**kwargs)
             vector_dict[segment_name] = vectors
             num_facets += int(vectors.shape[0]/3)
 
@@ -1007,6 +1009,9 @@ class Airplane:
 
         maintain_sections : bool, optional
             Whether the wing segment sections should be preserved in the loft. Defaults to True.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Export wing segment parts
@@ -1024,6 +1029,9 @@ class Airplane:
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
         """
 
         # Export wing segment parts
