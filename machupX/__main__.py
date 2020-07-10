@@ -45,8 +45,14 @@ def _run_prescribed_analyses(input_filename):
             filename = params.pop("filename", input_filename.replace(".json", "_forces.json"))
     
             print("\nCalculating aerodynamic forces...", end='')
-            scene.solve_forces(filename=filename, **params)
+            result = scene.solve_forces(filename=filename, full_output=True, **params)
             print("Done")
+
+            # Check for errors
+            if result[1] != 0:
+                print("Got error code {0} from Scene.solve_forces().".format(result[1]))
+                print(result[2])
+                print("Final residual: {0}".format(result[3]))
     
         # Wireframe
         elif key == "display_wireframe":

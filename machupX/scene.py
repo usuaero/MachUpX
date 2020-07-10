@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 from stl import mesh
 from mpl_toolkits.mplot3d import Axes3D
+from airfoil_db import DatabaseBoundsError
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
@@ -648,7 +649,7 @@ class Scene:
             print("   Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
 
         # Check for no solution
-        if ier != 1:
+        if verbose and ier != 1:
             print("Scipy.optimize.fsolve was unable to find a solution.")
             print("Error message: {0}".format(mesg))
             print("Norm of final residual vector: {0}".format(np.linalg.norm(info["fvec"])))
@@ -780,10 +781,6 @@ class Scene:
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
-        
-        # Check for nans
-        if np.isnan(self._gamma).any():
-            print("Linear solver exceeded the bounds of the airfoil database.")
 
         return time.time()-start_time
 
@@ -874,11 +871,6 @@ class Scene:
             # Get gamma update
             dGamma = np.linalg.solve(J, -R)
 
-            # Check for nan
-            if np.isnan(error):
-                print("Nonlinear solver exceeded the bounds of the airfoil database. Stopping iteration.")
-                break
-
             # Update gamma
             self._gamma = self._gamma+self._solver_relaxation*dGamma
 
@@ -887,19 +879,22 @@ class Scene:
 
             # Check this isn't taking too long
             if iteration >= self._max_solver_iterations:
+                R = self._lifting_line_residual(self._gamma)
+                error = np.linalg.norm(R)
+                converged = False
                 if verbose:
-                    R = self._lifting_line_residual(self._gamma)
-                    error = np.linalg.norm(R)
                     print("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
                 break
 
-        else: # If the loop exits normally, then check for nan
-            if verbose or kwargs.get("scipy_failed", False):
-                R = self._lifting_line_residual(self._gamma)
-                error = np.linalg.norm(R)
+        # Loop exits normally
+        else:
+            R = self._lifting_line_residual(self._gamma)
+            error = np.linalg.norm(R)
+            converged = True
+            if verbose:
                 print("Nonlinear solver successfully converged. Final error: {0}".format(error))
 
-        return time.time()-start_time
+        return (time.time()-start_time, converged, error)
 
 
     def _get_frames(self, **kwargs):
@@ -962,7 +957,6 @@ class Scene:
                 self._redim_in_plane = 0.5*self._rho*self._V_inf_in_plane*self._V_inf_in_plane*self._dS
 
         # Store lift, drag, and moment coefficient distributions
-        self._FM = {}
         empty_coef_dict = {}
         empty_FM_dict = {}
         if body_frame:
@@ -1406,43 +1400,99 @@ class Scene:
             Whether to output results in the wind frame. Defaults to True.
 
         verbose : bool
-            Display the time it took to complete each portion of the calculation. 
-            Defaults to False.
+            Whether to display timing and convergence information. Defaults to False.
+
+        full_output : bool
+            If set to True, a tuple will be returned containing (FM, err, message, residual). If set to False,
+            only FM will be returned. Defaults to False.
 
         Returns
         -------
-        dict:
+        FM : dict
             Dictionary of forces and moments acting on each wing segment.
+
+        err : int
+            Indicates whether an error occurred during computation. If 1, an error occurred while 
+            solving the lifting-line equations. If 2, an error occurred while calculating the sectional
+            moment and drag coefficients. If 3, the nonlinear solver failed to converge to a satisfactory
+            solution. If 0, no error occurred.
+
+        message : str
+            Describes the result of the computation.
+
+        residual : float
+            Norm of the residual error vector for the computed solution. Meaningful only for a type 3 error.
         """
 
         # Check for aircraft
         if self._num_aircraft == 0:
             raise RuntimeError("There are no aircraft in this scene. No calculations can be performed.")
 
-        # Initialize timing
+        # Initialize timing and error handling
+        self._FM = {}
         fsolve_time = 0.0
         linear_time = 0.0
         nonlinear_time = 0.0
+        err = 0
+        message = "Results were successfully calculated."
+        converged = True
+        residual = None
+        full_output = kwargs.get("full_output", False)
 
-        # Solve for gamma distribution using fsolve
-        if self._solver_type == "scipy_fsolve":
-            fsolve_time = self._solve_w_scipy(**kwargs)
+        try:
 
-        # Solve for gamma using analytical solvers
-        if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
+            # Solve for gamma distribution using fsolve
+            if self._solver_type == "scipy_fsolve":
+                fsolve_time = self._solve_w_scipy(**kwargs)
 
-            # Linear solution
-            linear_time = self._solve_linear(**kwargs)
+            # Solve for gamma using analytical solvers
+            if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
 
-            # Nonlinear improvement
-            if self._solver_type == "nonlinear" or fsolve_time == -1:
-                nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
+                # Linear solution
+                linear_time = self._solve_linear(**kwargs)
 
-            if fsolve_time == -1:
-                fsolve_time = 0.0
+                # Nonlinear improvement
+                if self._solver_type == "nonlinear" or fsolve_time == -1:
+                    nonlinear_time, converged, residual = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
 
-        # Integrate forces and moments
-        integrate_time = self._integrate_forces_and_moments(**kwargs)
+                if fsolve_time == -1:
+                    fsolve_time = 0.0
+
+        except DatabaseBoundsError as e:
+
+            if full_output:
+                err = 1
+                message = "While solving the lifting-line equations, the bounds of one of the airfoil databases were exceeded."
+                message += "\n   Airfoil: {0}".format(e.airfoil)
+                for key, value in e.inputs_dict.items():
+                    e.inputs_dict[key] = list(value)
+                message += "\n   Inputs: {0}".format(json.dumps(e.inputs_dict, indent=4))
+                message += "\n   Invalid indices: {0}".format(e.exception_indices)
+            else:
+                raise e
+
+        else:
+            if not converged:
+                err = 3
+                message = "Nonlinear solver failed to converge within the allowed number of iterations."
+
+        try:
+
+            # Integrate forces and moments
+            integrate_time = self._integrate_forces_and_moments(**kwargs)
+
+        except DatabaseBoundsError as e:
+            if err != 1 and full_output:
+                err = 2
+                message = "While determining section moments or drag, the bounds of one of the airfoil databases were exceeded."
+                message += "\n   Airfoil: {0}".format(e.airfoil)
+                message += "\n   Inputs: {0}".format(json.dumps(e.inputs_dict, indent=4))
+                message += "\n   Invalid indices: {0}".format(e.exception_indices)
+            elif not full_output:
+                raise e
+
+        except AttributeError:
+            pass
 
         # Output timing
         verbose = kwargs.get("verbose", False)
@@ -1464,7 +1514,10 @@ class Scene:
         # Let certain functions know the results are now available
         self._solved = True
 
-        return self._FM
+        if full_output:
+            return (self._FM, err, message, residual)
+        else:
+            return self._FM
 
 
     def set_aircraft_state(self, state={}, aircraft=None):
