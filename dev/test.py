@@ -68,7 +68,7 @@ if __name__=="__main__":
             #},
             "main_wing" : {
                 "ID" : 1,
-                "side" : "left",
+                "side" : "right",
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 #"semispan" : np.sqrt(17),
@@ -112,12 +112,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=False)
+    #scene.display_wireframe(show_vortices=False)
     #scene.export_stl(filename="plane.stl")
 
     # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
 
     # Plot lift distribution
     #dist = scene.distributions()
@@ -125,3 +125,7 @@ if __name__=="__main__":
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
     #print(json.dumps(derivs["plane"], indent=4))
+
+    # Target CL
+    alpha = scene.target_CL(CL=0.5, verbose=True)
+    print(alpha)
