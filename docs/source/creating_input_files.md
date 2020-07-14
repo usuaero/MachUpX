@@ -80,7 +80,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>Whether to output results in the wind frame. Defaults to true.
 >>>
 >>>**"verbose" : boolean, optional**
->>>>Defaults to false
+>>>>Defaults to false.
 >>
 >>**"display_wireframe" : dict, optional**
 >>>Displays a wireframe of the geometry of the scene/aircraft.
@@ -159,6 +159,9 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to include in the model. If only one aircraft is included, the model's origin will coincide with the body-fixed origin. If multiple aircraft are included, the model origin will coicide with the earth-fixed origin. Defaults to all aircraft in the scene.
+>>>
+>>>**"close_te" : bool, optional**
+>>>>Whether ensure the trailing edge is sealed. Defaults to true.
 >>
 >>**"export_stp" : dict, optional"**
 >>>Exports a STEP file describing each wing segment for the specified aircraft
@@ -177,6 +180,9 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"maintain_sections" : bool, optional**
 >>>>Whether the section outlines should be maintained in the loft of each wing segment. Defaults to True. This again can help with importing the resulting STEP file into other CAD packages.
+>>>
+>>>**"close_te" : bool, optional**
+>>>>Whether ensure the trailing edge is sealed. Defaults to true.
 >>
 >>**"export_dxf" : dict, optional"**
 >>>Exports a dxf file describing each wing segment for the specified aircraft
@@ -189,6 +195,9 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to export .dxf files for. Defaults to all aircraft in the scene.
+>>>
+>>>**"close_te" : bool, optional**
+>>>>Whether ensure the trailing edge is sealed. Defaults to true.
 >>>
 >>>**"export_pylot_model" : dict, optional**
 >>>>Creates a JSON object containing a linearized model of the aircraft to use as input for Pylot (www.github.com/usuaero/Pylot). Any information not available to MachupX but required for Pylot will be filled with "PLEASE SPECIFY" and must be changed by the user before the input can be used for Pylot. Note, this can only be used if there is one aircraft in the scene.

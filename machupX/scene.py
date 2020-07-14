@@ -1,6 +1,7 @@
 from .helpers import quat_inv_trans, quat_trans, check_filepath, import_value
 from .airplane import Airplane
 from .standard_atmosphere import StandardAtmosphere
+from .exceptions import SolverNotConvergedError
 
 import json
 import time
@@ -46,6 +47,9 @@ class Scene:
 
         # Import information from the input
         self._load_params(scene_input)
+
+        # Set the error handling state
+        self.set_err_state()
 
 
     def _load_params(self, scene_input):
@@ -1491,9 +1495,6 @@ class Scene:
                 message += "\n   Invalid indices: {0}".format(e.exception_indices)
             elif not full_output:
                 raise e
-
-        #except AttributeError:
-        #    pass
 
         # Output timing
         verbose = kwargs.get("verbose", False)
@@ -3109,3 +3110,52 @@ class Scene:
             plt.plot(y_locs, self._gamma)
             plt.ylabel('gamma')
             plt.show()
+
+
+    def set_err_state(self, **kwargs):
+        """Sets how errors are to be handled.
+
+        Each error type can be set to "raise", "warn", or "ignore". If set to "raise", the 
+        error will be raised and execution will be interrupted. If set to "warn", a warning
+        will be given, but execution will be allowed to continue. If set to "ignore", no 
+        message will be given and execution will continue. This can only be set for custom
+        exceptions defined for MachUpX and AirfoilDatabase.
+
+        All will default to "raise" if not specified.
+
+        Parameters
+        ----------
+        not_converged : str, optional
+            How to handle the SolverNotConvergedError.
+
+        database_bounds : str, optional
+            How to handle the DatabaseBoundsError.
+        """
+
+        # Set error state
+        self._err_state = {}
+        self._err_state["not_converged"] = kwargs.get("not_converged", "raise")
+        self._err_state["database_bounds"] = kwargs.get("database_bounds", "raise")
+
+
+    def _handle_error(self, error):
+        # Handles an error according to the error state
+
+        # Has to be a custom exception
+        if isinstance(error, SolverNotConvergedError):
+            key = "not_converged"
+        elif isinstance(error, DatabaseBoundsError)
+            key = "database_bounds"
+        else:
+            raise error
+
+        # Handle
+        instruction = self._err_state[key]
+        if instruction == "raise":
+            raise error
+        elif instruction == "warn":
+            warnings.warn(str(error))
+        elif instruction == "ignore":
+            return
+        else:
+            raise RuntimeError("MachUpX Scene got an incorrect error handling instruction. '{0}' is invalid.".format(instruction))
