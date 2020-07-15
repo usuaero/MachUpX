@@ -1,7 +1,19 @@
 """Custom exceptions used in MachUpX."""
 
 class SolverNotConvergedError(Exception):
-    """An exception thrown when the solver fails to converge for a given case."""
+    """An exception thrown when the solver fails to converge for a given case.
+
+    Members
+    ----------
+    solver_type : str
+        Either "nonlinear" or "scipy_fsolve".
+
+    final_error : float
+        The norm of the final error when computation was terminated.
+
+    message : str
+        A message about the error.
+    """
 
     def __init__(self, solver_type, final_error):
 

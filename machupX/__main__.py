@@ -45,15 +45,9 @@ def _run_prescribed_analyses(input_filename):
             filename = params.pop("filename", input_filename.replace(".json", "_forces.json"))
     
             print("\nCalculating aerodynamic forces...", end='')
-            result = scene.solve_forces(filename=filename, full_output=True, **params)
+            scene.solve_forces(filename=filename, **params)
 
-            # Check for errors
-            if result[1] != 0:
-                print("\nGot error code {0} from Scene.solve_forces().".format(result[1]))
-                print(result[2])
-                print("Final residual: {0}".format(result[3]))
-            else:
-                print("Done")
+            print("Done")
     
         # Wireframe
         elif key == "display_wireframe":
@@ -129,6 +123,13 @@ def _run_prescribed_analyses(input_filename):
 
             print("\nExporting Pylot model...", end='')
             scene.export_pylot_model(**params)
+            print("Done")
+
+        # Set error suppression
+        elif key == "set_err_state":
+
+            print("Setting error state...", end='')
+            scene.set_err_state(**params)
             print("Done")
 
         # Unrecognized command

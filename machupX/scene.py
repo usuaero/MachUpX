@@ -886,20 +886,16 @@ class Scene:
             if iteration >= self._max_solver_iterations:
                 R = self._lifting_line_residual(self._gamma)
                 error = np.linalg.norm(R)
-                converged = False
-                if verbose:
-                    print("Nonlinear solver failed to converge within the allowed number of iterations. Final error: {0}".format(error))
-                break
+                raise SolverNotConvergedError(self._solver_type, error)
 
         # Loop exits normally
         else:
             R = self._lifting_line_residual(self._gamma)
             error = np.linalg.norm(R)
-            converged = True
             if verbose:
                 print("Nonlinear solver successfully converged. Final error: {0}".format(error))
 
-        return (time.time()-start_time, converged, error)
+        return time.time()-start_time
 
 
     def _get_frames(self, **kwargs):
@@ -1407,26 +1403,10 @@ class Scene:
         verbose : bool
             Whether to display timing and convergence information. Defaults to False.
 
-        full_output : bool
-            If set to True, a tuple will be returned containing (FM, err, message, residual). If set to False,
-            only FM will be returned and any error that occurs will simply throw an exception. Defaults to False.
-
         Returns
         -------
         FM : dict
             Dictionary of forces and moments acting on each wing segment.
-
-        err : int
-            Indicates whether an error occurred during computation. If 1, an error occurred while 
-            solving the lifting-line equations. If 2, an error occurred while calculating the sectional
-            moment and drag coefficients. If 3, the nonlinear solver failed to converge to a satisfactory
-            solution. If 0, no error occurred.
-
-        message : str
-            Describes the result of the computation.
-
-        residual : float
-            Norm of the residual error vector for the computed solution. Meaningful only for a type 3 error.
         """
 
         # Check for aircraft
@@ -1438,11 +1418,6 @@ class Scene:
         fsolve_time = 0.0
         linear_time = 0.0
         nonlinear_time = 0.0
-        err = 0
-        message = "Results were successfully calculated."
-        converged = True
-        residual = None
-        full_output = kwargs.get("full_output", False)
 
         try:
 
@@ -1458,43 +1433,21 @@ class Scene:
 
                 # Nonlinear improvement
                 if self._solver_type == "nonlinear" or fsolve_time == -1:
-                    nonlinear_time, converged, residual = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
+                    nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
 
                 if fsolve_time == -1:
                     fsolve_time = 0.0
 
-        except DatabaseBoundsError as e:
-
-            if full_output:
-                err = 1
-                message = "While solving the lifting-line equations, the bounds of one of the airfoil databases were exceeded."
-                message += "\n   Airfoil: {0}".format(e.airfoil)
-                for key, value in e.inputs_dict.items():
-                    e.inputs_dict[key] = list(value)
-                message += "\n   Inputs: {0}".format(json.dumps(e.inputs_dict, indent=4))
-                message += "\n   Invalid indices: {0}".format(e.exception_indices)
-            else:
-                raise e
-
-        else:
-            if not converged:
-                err = 3
-                message = "Nonlinear solver failed to converge within the allowed number of iterations."
+        except Exception as e:
+            self._handle_error(e)
 
         try:
 
             # Integrate forces and moments
             integrate_time = self._integrate_forces_and_moments(**kwargs)
 
-        except DatabaseBoundsError as e:
-            if err != 1 and full_output:
-                err = 2
-                message = "While determining section moments or drag, the bounds of one of the airfoil databases were exceeded."
-                message += "\n   Airfoil: {0}".format(e.airfoil)
-                message += "\n   Inputs: {0}".format(json.dumps(e.inputs_dict, indent=4))
-                message += "\n   Invalid indices: {0}".format(e.exception_indices)
-            elif not full_output:
-                raise e
+        except Exception as e:
+            self._handle_error(e)
 
         # Output timing
         verbose = kwargs.get("verbose", False)
@@ -1513,14 +1466,10 @@ class Scene:
             with open(filename, 'w') as json_file_handle:
                 json.dump(self._FM, json_file_handle, indent=4)
 
-        # Let certain functions know the results are now available if they were successfully computed
-        if err == 0:
-            self._solved = True
+        # Let certain functions know the results are now available
+        self._solved = True
 
-        if full_output:
-            return (self._FM, err, message, residual)
-        else:
-            return self._FM
+        return self._FM
 
 
     def set_aircraft_state(self, state={}, aircraft=None):
@@ -3144,7 +3093,7 @@ class Scene:
         # Has to be a custom exception
         if isinstance(error, SolverNotConvergedError):
             key = "not_converged"
-        elif isinstance(error, DatabaseBoundsError)
+        elif isinstance(error, DatabaseBoundsError):
             key = "database_bounds"
         else:
             raise error

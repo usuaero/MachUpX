@@ -73,11 +73,13 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
                 "dihedral" : [[0.0, 0.0],
+                              [0.25, 180.0],
+                              [0.5, 90.0],
                               [1.0, 180.0]],
-                "sweep" : 45.0,
+                "sweep" : -45.0,
                 #"quarter_chord_locs" : [[-4.12310563/2, 2.0, -0.5],
                 #                        [-4.12310563, 4.0, -1.0]],
-                "ac_offset" : "kuchemann",
+                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -113,10 +115,11 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=False)
-    scene.export_stl(filename="plane.stl")
+    #scene.display_wireframe(show_vortices=False)
+    #scene.export_stl(filename="plane.stl")
 
     # Solve forces
+    scene.set_err_state(not_converged="warn")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
 

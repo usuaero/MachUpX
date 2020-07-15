@@ -239,6 +239,15 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>
 >>>>**"set_accel_derivs" : bool, optional**
 >>>>>Whether to set derivatives with respect to vertical and lateral acceleration to zero. Defaults to False, in which case the user must specify these.
+>>>
+>>>**"set_err_state" : dict, optional**
+>>>>Describes how *custom* exceptions within MachUpX are to be handled. Each can be set to "raise", "warn", or "ignore".
+>>>>
+>>>>**"not_converged" : str, optional**
+>>>>>Behavior for SolverNotConvergedError. Defaults to "raise".
+>>>>
+>>>>**"database_bounds" : str, optional**
+>>>>>Behavior for DatabaseBoundsError. Defaults to "raise".
 >
 >**"solver" : dict, optional**
 >>Specifies parameters regarding how the lifting-line equation is solved.
