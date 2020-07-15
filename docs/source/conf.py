@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../'))
 # -- Project information -----------------------------------------------------
 
 project = 'MachUpX'
-copyright = '2019, Cory Goates, Doug Hunsaker'
+copyright = '2020, Cory Goates, Doug Hunsaker'
 author = 'Cory Goates, Doug Hunsaker'
 
 # The full version, including alpha/beta/rc tags
