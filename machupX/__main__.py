@@ -80,6 +80,14 @@ def _run_prescribed_analyses(input_filename):
             scene.pitch_trim(filename=filename, **params)
             print("Done")
 
+        # Target CL
+        elif key == "target_CL":
+            filename = params.pop("filename", input_filename.replace(".json", "_target_CL.json"))
+
+            print("\nGetting target CL...", end='')
+            scene.target_CL(filename=filename, **params)
+            print("Done")
+
         # Aerodynamic center
         elif key == "aero_center":
             filename = params.pop("filename", input_filename.replace(".json", "_aero_center.json"))

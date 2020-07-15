@@ -68,7 +68,11 @@ if __name__=="__main__":
             #},
             "main_wing" : {
                 "ID" : 1,
+<<<<<<< HEAD
                 "side" : "both",
+=======
+                "side" : "right",
+>>>>>>> master
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
@@ -129,3 +133,7 @@ if __name__=="__main__":
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
     #print(json.dumps(derivs["plane"], indent=4))
+
+    # Target CL
+    alpha = scene.target_CL(CL=0.5, verbose=True)
+    print(alpha)

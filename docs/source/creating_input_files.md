@@ -124,6 +124,24 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**verbose : bool, optional**
 >>>>If set to true, information will be output about the progress of Newton's method. Defaults to False.
 >>
+>>**"target_CL" : dict, optional**
+>>>Determines the angle of attack necessary to generate the specified lift coefficient. THIS SHOULD ONLY BE USED IN THE CASE OF ONE AIRCRAFT IN THE SCENE AND NO WIND.
+>>>
+>>>**"CL" : float**
+>>>>The desired lift coefficient.
+>>>
+>>>**"filename" : string, optional**
+>>>>File to store the results in. Defaults to the input filename + "_target_CL".
+>>>
+>>>**set_state : bool, optional**
+>>>>If set to True, once the angle of attack is determined, the state of the aircraft will be set to that. If False, the state of the aircraft will return to what it was before this method was called. Defaults to False.
+>>>
+>>>**"control_state" : dict, optional**
+>>>>Control deflections for determining the angle of attack. Defaults to no deflections.
+>>>
+>>>**verbose : bool, optional**
+>>>>If set to true, information will be output about the progress of Newton's method. Defaults to False.
+>>
 >>**"aero_center" : dict, optional**
 >>>Calculates the location of the aerodynamic center at the current state.
 >>>

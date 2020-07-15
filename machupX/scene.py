@@ -2147,11 +2147,11 @@ class Scene:
         # Make sure there is only one aircraft in the scene and the wind is constant
         aircraft_names = list(self._airplanes.keys())
         if len(aircraft_names) != 1:
-            raise IOError("aircraft_pitch_trim() may not be used when there is more than one aircraft in the scene.")
+            raise IOError("pitch_trim() may not be used when there is more than one aircraft in the scene.")
         try:
             self._constant_wind
         except:
-            raise IOError("aircraft_pitch_trim() may not be used when the wind is not constant.")
+            raise IOError("pitch_trim() may not be used when the wind is not constant.")
 
         # Get the aircraft object
         aircraft_name = aircraft_names[0]
@@ -3028,6 +3028,7 @@ class Scene:
 
         return aircraft_names
 
+
     def out_gamma(self):
         """Plots the induced velocities and writes the circulation distribution to a file.
 
@@ -3108,3 +3109,105 @@ class Scene:
             return
         else:
             raise RuntimeError("MachUpX Scene got an incorrect error handling instruction. '{0}' is invalid.".format(instruction))
+    def target_CL(self, **kwargs):
+        """Determines the angle of attack necessary to produce the specified lift coefficient
+        with the specified control deflections. MAY ONLY BE USED IF THERE IS ONE AIRCRAFT IN 
+        THE SCENE AND THE WIND IS CONSTANT.
+
+        Parameters
+        ----------
+        CL : float
+            Target lift coefficient.
+
+        control_state : dict, optional
+            Control deflections. Defaults to no deflections.
+
+        set_state : bool, optional
+            Whether to set the state of the aircraft to the angle of attack determined.
+
+        filename : str, optional
+            File to output results to. Defaults to no file.
+
+        verbose : bool, optional
+            Whether to output the progress of the iterative solver. Defaults to False.
+
+        Returns
+        -------
+        alpha : float
+            Angle of attack at the given CL.
+        """
+
+        # Make sure there is only one aircraft in the scene and the wind is constant
+        aircraft_names = list(self._airplanes.keys())
+        if len(aircraft_names) != 1:
+            raise IOError("target_CL() may not be used when there is more than one aircraft in the scene.")
+        try:
+            self._constant_wind
+        except:
+            raise IOError("target_CL() may not be used when the wind is not constant.")
+
+        # Get parameters
+        alpha = 0.0
+        verbose = kwargs.get("verbose", False)
+        CL_target = kwargs.get("CL")
+        controls = kwargs.get("control_state", {})
+        if verbose: print("\nSetting angle of attack for CL={0}...".format(CL_target))
+
+        # Get the aircraft object
+        aircraft_name = aircraft_names[0]
+        airplane_object = self._airplanes[aircraft_name]
+
+        # Setup output
+        if verbose:
+            print("{0:<25}{1:<25}".format("Alpha", "CL"))
+
+        # Store the current orientation, angle of attack, and control deflection
+        v_wind = self._get_wind(airplane_object.p_bar)
+        alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
+        controls_original = copy.copy(airplane_object.current_control_state)
+
+        # Get residuals
+        airplane_object.set_aerodynamic_state(alpha=alpha)
+        airplane_object.set_control_state(controls)
+        CL = self.solve_forces(dimensional=False)[aircraft_name]["total"]["CL"]
+
+        if verbose: print("{0:<25}{1:<25}".format(alpha, CL))
+
+        # Iterate until residuals go to zero.
+        while (abs(CL-CL_target)>1e-10).any():
+
+            # Perturb forward in alpha
+            airplane_object.set_aerodynamic_state(alpha=alpha+0.005)
+            CL_fwd = self.solve_forces(dimensional=False)[aircraft_name]["total"]["CL"]
+
+            # Perturb backward in alpha
+            airplane_object.set_aerodynamic_state(alpha=alpha-0.005)
+            CL_bwd = self.solve_forces(dimensional=False)[aircraft_name]["total"]["CL"]
+
+            # Determine update
+            CLa = (CL_fwd-CL_bwd)/0.01
+            alpha += (CL_target-CL)/CLa
+
+            # Determine new residuals
+            airplane_object.set_aerodynamic_state(alpha=alpha)
+            CL = self.solve_forces(dimensional=False)[aircraft_name]["total"]["CL"]
+
+            if verbose: print("{0:<25}{1:<25}".format(alpha, CL))
+
+        # If the user wants, set the state to the new trim state
+        set_state = kwargs.get("set_state", True)
+        if set_state:
+            airplane_object.set_aerodynamic_state(alpha=alpha)
+            self.set_aircraft_control_state(control_state=controls, aircraft=aircraft_name)
+
+        else: # Return to the original state
+            airplane_object.set_aerodynamic_state(alpha=alpha_original)
+            self.set_aircraft_control_state(controls_original, aircraft=aircraft_name)
+
+        # Output results to file
+        filename = kwargs.get("filename", None)
+        if filename is not None:
+            with open(filename, 'w') as file_handle:
+                json.dump({"CL" : CL_target, "alpha" : alpha}, file_handle, indent=4)
+
+        return alpha
