@@ -17,9 +17,6 @@ if __name__=="__main__":
         "units" : "English",
         "scene" : {
             "atmosphere" : {
-                "density" : "standard",
-                "viscosity" : "standard",
-                "speed_of_sound" : "standard"
             }
         }
     }
@@ -68,22 +65,13 @@ if __name__=="__main__":
             #},
             "main_wing" : {
                 "ID" : 1,
-<<<<<<< HEAD
                 "side" : "both",
-=======
-                "side" : "right",
->>>>>>> master
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "dihedral" : [[0.0, 0.0],
-                              [0.25, 180.0],
-                              [0.5, 90.0],
-                              [1.0, 180.0]],
-                "sweep" : -45.0,
-                #"quarter_chord_locs" : [[-4.12310563/2, 2.0, -0.5],
-                #                        [-4.12310563, 4.0, -1.0]],
-                #"ac_offset" : "kuchemann",
+                "sweep" : 45.0,
+                "dihedral" : 5.0,
+                "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -96,7 +84,7 @@ if __name__=="__main__":
                 "grid" : {
                     "N" : 80,
                     "wing_ID" : 1,
-                    "reid_corrections" : False
+                    "reid_corrections" : True
                 }
             }
         }
@@ -126,14 +114,8 @@ if __name__=="__main__":
     scene.set_err_state(not_converged="warn")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-
-    # Plot lift distribution
-    #dist = scene.distributions()
+    scene.out_gamma()
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
     #print(json.dumps(derivs["plane"], indent=4))
-
-    # Target CL
-    alpha = scene.target_CL(CL=0.5, verbose=True)
-    print(alpha)

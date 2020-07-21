@@ -47,7 +47,7 @@ if __name__=="__main__":
     }
 
     # Select comparison case
-    case_no = 1
+    case_no = 3
     if case_no == 0:
         with open("dev/jackson_data/10_a_10_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)

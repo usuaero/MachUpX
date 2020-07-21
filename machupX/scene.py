@@ -3109,6 +3109,8 @@ class Scene:
             return
         else:
             raise RuntimeError("MachUpX Scene got an incorrect error handling instruction. '{0}' is invalid.".format(instruction))
+        
+
     def target_CL(self, **kwargs):
         """Determines the angle of attack necessary to produce the specified lift coefficient
         with the specified control deflections. MAY ONLY BE USED IF THERE IS ONE AIRCRAFT IN 
