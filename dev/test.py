@@ -12,7 +12,8 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear"
+            "type" : "nonlinear",
+            "use_total_velocity" : True
         },
         "units" : "English",
         "scene" : {
@@ -111,10 +112,9 @@ if __name__=="__main__":
     #scene.export_stl(filename="plane.stl")
 
     # Solve forces
-    scene.set_err_state(not_converged="warn")
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.out_gamma()
+    scene.distributions(filename="test.dist")
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

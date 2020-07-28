@@ -930,10 +930,7 @@ class Scene:
                 self._V_i_in_plane_2 = np.einsum('ij,ij->i', self._v_i_in_plane, self._v_i_in_plane)
 
         # Calculate vortex force differential elements
-        dF_inv = (self._rho*self._gamma)[:,np.newaxis]*np.cross(self._v_i, self._dl)
-
-        # Store differential lift for distributions()
-        self._dL = np.linalg.norm(dF_inv, axis=-1)*np.sign(self._CL)
+        self._dF_inv = (self._rho*self._gamma)[:,np.newaxis]*np.cross(self._v_i, self._dl)
 
         # Calculate conditions for determining viscid contributions
         self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
@@ -985,28 +982,29 @@ class Scene:
 
                 index += num_cps
 
-        # Inviscid moment due to section
+        # Correct section moment coefficient for sweep
         if self._use_swept_sections:
             self._Cm = self._Cm*self._C_sweep_inv
 
+        # Inviscid moment due to sectional properties
         if self._use_in_plane:
             dM_section = (self._redim_in_plane*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s
         else:
             dM_section = (self._redim_full*self._c_bar*self._Cm)[:,np.newaxis]*self._u_s
 
+        # Inviscid moment due to vortex lift and total inviscid moment
+        dM_vortex = np.cross(self._r_CG, self._dF_inv)
+        self._dM_inv = dM_vortex+dM_section
+
         # Determine viscous drag vector
         dD = self._redim_full*self._CD
         if self._use_total_velocity or self._match_machup_pro:
-            dF_visc = dD[:,np.newaxis]*self._u_i
+            self._dF_visc = dD[:,np.newaxis]*self._u_i
         else:
-            dF_visc = dD[:,np.newaxis]*self._u_inf
+            self._dF_visc = dD[:,np.newaxis]*self._u_inf
 
         # Moment due to viscous drag
-        dM_visc = np.cross(self._r_CG, dF_visc)
-
-        # Inviscid moment due to vortex lift
-        dM_vortex = np.cross(self._r_CG, dF_inv)
-        dM_inv = dM_vortex+dM_section
+        self._dM_visc = np.cross(self._r_CG, self._dF_visc)
 
         # Loop through airplanes to gather necessary data
         index = 0
@@ -1068,16 +1066,16 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Get drag coef and redimensionalize
-                F_b_visc = quat_trans(airplane_object.q, np.sum(dF_visc[cur_slice], axis=0))
+                F_b_visc = quat_trans(airplane_object.q, np.sum(self._dF_visc[cur_slice], axis=0))
 
                 # Determine viscous moment vector
-                M_b_visc = quat_trans(airplane_object.q, np.sum(dM_visc[cur_slice], axis=0))
+                M_b_visc = quat_trans(airplane_object.q, np.sum(self._dM_visc[cur_slice], axis=0))
 
                 # Determine inviscid force vector
-                F_b_inv = quat_trans(airplane_object.q, np.sum(dF_inv[cur_slice], axis=0))
+                F_b_inv = quat_trans(airplane_object.q, np.sum(self._dF_inv[cur_slice], axis=0))
 
                 # Determine inviscid moment vector
-                M_b_inv = quat_trans(airplane_object.q, np.sum(dM_inv[cur_slice], axis=0))
+                M_b_inv = quat_trans(airplane_object.q, np.sum(self._dM_inv[cur_slice], axis=0))
 
                 # Rotate frames
                 if wind_frame:
@@ -2387,6 +2385,12 @@ class Scene:
             "section_Cm" : moment coefficient
             "section_parasitic_CD" : drag coefficient
             "section_aL0" : zero-lift angle of attack
+            "Fx" : body-x force acting on each section
+            "Fy" : body-y force acting on each section
+            "Fz" : body-z force acting on each section
+            "Mx" : body-x moment acting on each section
+            "My" : body-y moment acting on each section
+            "Mz" : body-z moment acting on each section
 
 
         Parameters
@@ -2412,8 +2416,6 @@ class Scene:
         # Make sure the LL equations have been solved in this state
         if not self._solved:
             self.solve_forces()
-
-        dist = {}
 
         # Setup table for saving to .txt file
         index = 0
@@ -2442,12 +2444,19 @@ class Scene:
                           ("section_CL", "float"),
                           ("section_Cm", "float"),
                           ("section_parasitic_CD", "float"),
-                          ("section_aL0","float")]
+                          ("section_aL0","float"),
+                          ("Fx", "float"),
+                          ("Fy", "float"),
+                          ("Fz", "float"),
+                          ("Mx", "float"),
+                          ("My", "float"),
+                          ("Mz", "float")]
 
             table_data = np.zeros(self._N, dtype=item_types)
 
 
         # Loop through airplanes
+        dist = {}
         for airplane_object in self._airplane_objects:
             airplane_name = airplane_object.name
             dist[airplane_name] = {}
@@ -2482,12 +2491,17 @@ class Scene:
                 dist[airplane_name][segment_name]["delta_flap"] = list(np.degrees(segment_object._delta_flap))
 
                 # Section coefficients
-                if self._use_in_plane:
-                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_in_plane[cur_slice])
-                else:
-                    dist[airplane_name][segment_name]["section_CL"] = list(self._dL[cur_slice]/self._redim_full[cur_slice])
+                dist[airplane_name][segment_name]["section_CL"] = list(self._CL[cur_slice])
                 dist[airplane_name][segment_name]["section_Cm"] = list(self._Cm[cur_slice])
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
+
+                # Section force and moment components
+                dist[airplane_name][segment_name]["Fx"] = list(self._dF_inv[cur_slice,0]+self._dF_visc[cur_slice,0])
+                dist[airplane_name][segment_name]["Fy"] = list(self._dF_inv[cur_slice,1]+self._dF_visc[cur_slice,1])
+                dist[airplane_name][segment_name]["Fz"] = list(self._dF_inv[cur_slice,2]+self._dF_visc[cur_slice,2])
+                dist[airplane_name][segment_name]["Mx"] = list(self._dM_inv[cur_slice,0]+self._dM_visc[cur_slice,0])
+                dist[airplane_name][segment_name]["My"] = list(self._dM_inv[cur_slice,1]+self._dM_visc[cur_slice,1])
+                dist[airplane_name][segment_name]["Mz"] = list(self._dM_inv[cur_slice,2]+self._dM_visc[cur_slice,2])
 
                 # Atmospheric properties
                 v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
@@ -2522,10 +2536,6 @@ class Scene:
                     table_data[cur_slice]["area"] = dist[airplane_name][segment_name]["area"]
 
                     # Airfoil info
-                    table_data[cur_slice]["section_CL"] = dist[airplane_name][segment_name]["section_CL"]
-                    table_data[cur_slice]["section_Cm"] = dist[airplane_name][segment_name]["section_Cm"]
-                    table_data[cur_slice]["section_parasitic_CD"] = dist[airplane_name][segment_name]["section_parasitic_CD"]
-                    table_data[cur_slice]["section_aL0"] = dist[airplane_name][segment_name]["section_aL0"]
                     table_data[cur_slice]["alpha"] = dist[airplane_name][segment_name]["alpha"]
                     table_data[cur_slice]["delta_flap"] = dist[airplane_name][segment_name]["delta_flap"]
                     table_data[cur_slice]["Re"] = dist[airplane_name][segment_name]["Re"]
@@ -2535,16 +2545,30 @@ class Scene:
                     table_data[cur_slice]["v"] = dist[airplane_name][segment_name]["v"]
                     table_data[cur_slice]["w"] = dist[airplane_name][segment_name]["w"]
 
+                    # Section coefficients
+                    table_data[cur_slice]["section_CL"] = dist[airplane_name][segment_name]["section_CL"]
+                    table_data[cur_slice]["section_Cm"] = dist[airplane_name][segment_name]["section_Cm"]
+                    table_data[cur_slice]["section_parasitic_CD"] = dist[airplane_name][segment_name]["section_parasitic_CD"]
+                    table_data[cur_slice]["section_aL0"] = dist[airplane_name][segment_name]["section_aL0"]
+
+                    # Section force and moment components
+                    table_data[cur_slice]["Fx"] = dist[airplane_name][segment_name]["Fx"]
+                    table_data[cur_slice]["Fy"] = dist[airplane_name][segment_name]["Fy"]
+                    table_data[cur_slice]["Fz"] = dist[airplane_name][segment_name]["Fz"]
+                    table_data[cur_slice]["Mx"] = dist[airplane_name][segment_name]["Mx"]
+                    table_data[cur_slice]["My"] = dist[airplane_name][segment_name]["My"]
+                    table_data[cur_slice]["Mz"] = dist[airplane_name][segment_name]["Mz"]
+
                 index += num_cps
 
         # Save distributions to .txt file
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
                 "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
-                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha", "Fx", "Fy", "Fz", "Mx", "My", "Mz")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)
@@ -3043,6 +3067,11 @@ class Scene:
             # Output gammas
             for i in range(self._N):
                 print(i, y_locs[i], self._gamma[i], file=output_handle)
+                
+            # Check V_i is computed
+            if not hasattr(self, "_V_i"):
+                self._calc_v_i()
+                self._V_i = np.linalg.norm(self._v_i, axis=-1)
 
             # Output velocities
             print('i  y  v_i  V_i', file=output_handle)
