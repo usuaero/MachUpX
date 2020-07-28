@@ -1416,6 +1416,7 @@ class Scene:
         fsolve_time = 0.0
         linear_time = 0.0
         nonlinear_time = 0.0
+        integrate_time = 0.0
 
         try:
 
@@ -1456,7 +1457,10 @@ class Scene:
             total_time = linear_time+nonlinear_time+integrate_time+fsolve_time
             print("Time to integrate forces: {0} s".format(integrate_time))
             print("Total time: {0} s".format(total_time))
-            print("Solution rate: {0} Hz".format(1/total_time))
+            try:
+                print("Solution rate: {0} Hz".format(1/total_time))
+            except ZeroDivisionError:
+                pass
 
         # Output to file
         filename = kwargs.get("filename", None)
@@ -2363,18 +2367,18 @@ class Scene:
         
         The following properties are stored as distributions:
         
-            "span_frac" : fraction along the span
+            "span_frac" : fraction along the span (distance along the LQC projected into the y-z plane)
             "cpx" : control point x location
-            "cpy" : control point x location
-            "cpz" : control point x location
-            "chord" : section geometric chord
+            "cpy" : control point y location
+            "cpz" : control point z location
+            "chord" : section geometric chord (corrected for sweep)
             "twist" : section geometric twist
             "dihedral" : section geometric dihedral
             "sweep" : section geometric sweep
             "aero_sweep" : section aerodynamic sweep (based on the locus of aerodynamic centers)
             "area" : section differential planform area
-            "alpha" : angle of attack
-            "delta_flap" : flap deflection
+            "alpha" : angle of attack in degrees (corrected for sweep)
+            "delta_flap" : flap deflection in degrees
             "u" : body-x velocity
             "v" : body-y velocity
             "w" : body-z velocity
