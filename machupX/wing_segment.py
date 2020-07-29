@@ -9,6 +9,8 @@ import scipy.interpolate as interp
 import os
 import warnings
 
+from pyWings.generator import Generator
+from pyWings.planform import Planform
 
 class WingSegment:
     """A class defining a segment of a lifting surface.
@@ -59,7 +61,8 @@ class WingSegment:
         if self.ID == 0 and name != "origin":
             raise IOError("Wing segment ID for {0} may not be 0.".format(name))
 
-        if self.ID != 0: # These do not need to be run for the origin segment
+        if self.ID != 0:  # These do not need to be run for the origin segment
+            self._parse_f4e_params()
             self._initialize_params()
             self._initialize_airfoils(airfoil_dict)
             self._initialize_getters()
@@ -72,7 +75,26 @@ class WingSegment:
             self._setup_node_data()
 
     
+    def _parse_f4e_params(self):
+        if "planform" in self._input_dict:
+            if "parameters" in self._input_dict["planform"]:
+                planform = Generator(parameters=self._input_dict["planform"]['parameters']).planform
+            else:
+                planform = Planform(**self._input_dict["planform"])
+            
+        self._input_dict["sweep"] = planform.sweep
+        self._input_dict["dihedral"] = planform.dihedral
+        self._input_dict["chord"] = planform.chord
+        self._input_dict["semispan"] = planform.span
+        self._input_dict["twist"] = planform.twist
+
+        if "connect_to" not in self._input_dict:
+            self._input_dict["connect_to"] = {}
+        self._input_dict["connect_to"]["dx"] = planform.origin_x
+        self._input_dict["connect_to"]["dz"] = planform.origin_z
+
     def _initialize_params(self):
+
 
         # Determine if it's part of the main wing
         self.is_main = self._input_dict.get("is_main", False)

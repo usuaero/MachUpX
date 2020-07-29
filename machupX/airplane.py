@@ -1,6 +1,6 @@
 from .helpers import import_value,  euler_to_quat, check_filepath, quat_trans, quat_inv_trans, quat_conj
 from .wing_segment import WingSegment
-from airfoil_db import Airfoil
+from AirfoilDatabase.airfoil_db import Airfoil
 
 import json
 import numpy as np

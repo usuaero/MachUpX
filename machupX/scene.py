@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 
 from stl import mesh
 from mpl_toolkits.mplot3d import Axes3D
-from airfoil_db import DatabaseBoundsError
+from AirfoilDatabase.airfoil_db import DatabaseBoundsError
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
