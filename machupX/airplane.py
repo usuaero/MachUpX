@@ -1029,9 +1029,9 @@ class Airplane:
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
-
-        close_te : bool, optional
-            Whether to force the trailing edge to be sealed. Defaults to true
+        
+        dxf_line_type : str
+            Type of line to be used in the dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
         """
 
         # Export wing segment parts

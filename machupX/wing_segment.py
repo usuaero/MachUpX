@@ -1,5 +1,5 @@
 from .helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans
-from .dxf import dxf_spline
+from .dxf import dxf
 
 import json
 import numpy as np
@@ -1523,24 +1523,49 @@ class WingSegment:
             Name of the airplane this segment belongs to.
 
         file_tag : str, optional
-            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.dxf".
 
         section_resolution : int
             Number of outline points to use for the sections. Defaults to 200.
-
-        close_te : bool, optional
-            Whether to force the trailing edge to be sealed. Defaults to true
+        
+        dxf_line_type : str
+            Type of line to be used in the dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
         """
 
         # Get kwargs
         file_tag = kwargs.get("file_tag", "")
         section_res = kwargs.get("section_resolution", 200)
-        close_te = kwargs.get("close_te", True)
+        dxf_line_type = kwargs.get("dxf_line_type", "spline")
+        close_te = True
 
-        # Initialize arrays
-        X = np.zeros((self.N+1, section_res))
-        Y = np.zeros((self.N+1, section_res))
-        Z = np.zeros((self.N+1, section_res))
+        # determine number of extra dxf 2d sections to create
+        two_plus_airfoils = len(self._airfoils) > 1
+        if two_plus_airfoils:
+            num_2D = len(self._airfoils)
+        else:
+            num_2D = 2
+        
+        # Initialize arrays 2D, and guide curve arrays
+        X_2D = np.zeros((num_2D,section_res))
+        Y_2D = np.zeros((num_2D,section_res))
+        X_gc = np.zeros((2,self.N+1))
+        Y_gc = np.zeros((2,self.N+1))
+        Z_gc = np.zeros((2,self.N+1))
+        X_plane = np.zeros((2*num_2D,2))
+        Y_plane = np.zeros((2*num_2D,2))
+
+        # Initialize 3D arrays
+        X_3D = np.zeros((self.N+1, section_res))
+        Y_3D = np.zeros((self.N+1, section_res))
+        Z_3D = np.zeros((self.N+1, section_res))
+
+        # set unit multiplier
+        if self._unit_sys == "English":
+            unit_multiplier = 12.0
+        elif self._unit_sys == "SI":
+            unit_multiplier = 1.0
+        else:
+            raise ValueError("{0} not an acceptable unit system, must be 'English' or 'SI'".format(self._unit_sys))
 
         # Fill arrays
         for i, s_i in enumerate(self.node_span_locs):
@@ -1549,10 +1574,167 @@ class WingSegment:
             outline = self._get_airfoil_outline_coords_at_span(s_i, section_res, close_te)
 
             # Store in arrays
-            X[i,:] = outline[:,0]
-            Y[i,:] = outline[:,1]
-            Z[i,:] = outline[:,2]
+            X_3D[i,:] = outline[:,0] * unit_multiplier
+            Y_3D[i,:] = outline[:,1] * unit_multiplier
+            Z_3D[i,:] = outline[:,2] * unit_multiplier
 
-        # Export
-        abs_path = os.path.abspath("{0}{1}_{2}.dxf".format(file_tag, airplane_name, self.name))
-        dxf_spline(abs_path, X, Y, Z)
+        # determine first and mid index for guide curve splines
+        first_index = 0
+        mid_index = section_res // 2
+        
+        # transfer guide curve points
+        X_gc[0,:] = X_3D[:,first_index]
+        X_gc[1,:] = X_3D[:,mid_index]
+        Y_gc[0,:] = Y_3D[:,first_index]
+        Y_gc[1,:] = Y_3D[:,mid_index]
+        Z_gc[0,:] = Z_3D[:,first_index]
+        Z_gc[1,:] = Z_3D[:,mid_index]
+
+        # Export guide curves
+        folder_path = os.path.abspath("{0}_dxf_files".format(airplane_name))
+        file_path = folder_path + "/{0}{1}_{2}_GC".format(file_tag, airplane_name, self.name)
+        dxf(file_path, X_gc, Y_gc, Z_gc,geometry=dxf_line_type)
+
+        # run through each 2d shape and add to the _2D arrays
+        for i in range(num_2D):
+            # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction with the specified number of points
+            if two_plus_airfoils:
+                span = self._airfoil_spans[i]
+            else:
+                span = float(i)
+            N = section_res
+
+            # Determine flap deflection and fraction at this point
+            if self._has_control_surface and span >= self._cntrl_root_span and span <= self._cntrl_tip_span:
+                if self.side == "left":
+                    d_f = np.interp(span, self.cp_span_locs[::-1], self._delta_flap[::-1])
+                else:
+                    d_f = np.interp(span, self.cp_span_locs, self._delta_flap)
+                c_f = self.get_c_f(span)
+            else:
+                d_f = 0.0
+                c_f = 0.0
+
+            # Linearly interpolate outlines, ignoring twist, etc for now
+            if self._num_airfoils == 1:
+                points = self._airfoils[0].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f, close_te=close_te)
+            else:
+                index = 0
+                while True:
+                    if span >= self._airfoil_spans[index] and span <= self._airfoil_spans[index+1]:
+                        total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+
+                        # Get weights
+                        root_weight = 1-abs(span-self._airfoil_spans[index])/total_span
+                        tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
+
+                        # Get outlines
+                        root_outline = self._airfoils[index].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f, close_te=close_te)
+                        tip_outline = self._airfoils[index+1].get_outline_points(N=N, trailing_flap_deflection=d_f, trailing_flap_fraction=c_f, close_te=close_te)
+
+                        # Interpolate
+                        points = root_weight*root_outline+tip_weight*tip_outline
+                        break
+                    
+                    if two_plus_airfoils:
+                        index += 1
+
+            # Get twist, dihedral, and chord
+            twist = self.get_twist(span)
+            dihedral = self.get_dihedral(span)
+            chord = self.get_chord(span)
+            if chord == 0.0:
+                chord = 1e-5
+
+            # Scale to chord and transform to body-fixed coordinates
+            q = euler_to_quat(np.array([0.0, twist, 0.0]))
+            untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
+            quarter_chord_point = self._get_quarter_chord_loc(span)[np.newaxis][0] * unit_multiplier
+            coords = quat_inv_trans(q, untransformed_coords) * unit_multiplier
+
+            # Seal trailing edge
+            te = (coords[0]+coords[-1])*0.5
+            coords[0] = te
+            coords[-1] = te
+
+            # split out coords array
+            X_2D[i,:] = coords[:,0]
+            Y_2D[i,:] = coords[:,2]
+
+            ### determine 2D values of the shape
+            rx2d = Y_2D[i,:]*1.
+            ry2d = X_2D[i,:]*1.
+            X_2D[i,:] = rx2d; Y_2D[i,:] = ry2d
+
+            # determine how much to shift down due to dihedral
+            # shift back x and y
+            if not dihedral == 0.0:
+                # determine slope of plane
+                m = -np.cos(dihedral) / np.sin(dihedral)
+
+                # read in y and z values
+                yval = quarter_chord_point[1]
+                zval = quarter_chord_point[2]
+
+                # determine intercept and diagonal values
+                b = zval - m * yval
+                d = b * np.cos(dihedral)
+
+                # calculate normal point values ( of origin)
+                vval = d * np.sin(dihedral)
+                wval = b - d * np.cos(dihedral)
+
+                # calculate x shift
+                xshift = ((vval-yval)**2. + (wval-zval)**2.)**0.5
+
+                # add x shift
+                X_2D[i,:] += xshift
+            # and y shift to proper arrays
+            Y_2D[i,:] += quarter_chord_point[0]
+
+            # create line for plane creation
+            # set last point as the planar control point
+            Y_plane[2*i][1] = quarter_chord_point[1]
+            X_plane[2*i][1] = quarter_chord_point[2]
+
+            # set first point as one unit away from the control point
+            # at the dihedral angle
+            if self._unit_sys == "English":
+                line = 1.0 / unit_multiplier # make 1 inch
+            else: # "SI"
+                line = 1.0 * 25.4 / 1000.0 # make 1 inch in SI
+            Y_plane[2*i][0] = Y_plane[2*i][1] + np.sin(dihedral) * line
+            X_plane[2*i][0] = X_plane[2*i][1] - np.cos(dihedral) * line
+
+            if not dihedral == 0:
+                # set last point as the planar control point
+                mn = 1/np.tan(dihedral)
+                dy = ( (line/20.)**2./(1+mn**2.) )**0.5
+                Y_plane[2*i+1][0] = Y_plane[2*i][0] + dy*mn
+                X_plane[2*i+1][0] = X_plane[2*i][0] + dy
+
+                # set first point as one unit away from the control point
+                # at the dihedral angle
+                Y_plane[2*i+1][1] = Y_plane[2*i][0] - dy*mn
+                X_plane[2*i+1][1] = X_plane[2*i][0] - dy
+            else:
+                # set last point as the planar control point
+                Y_plane[2*i+1][0] = Y_plane[2*i][0] + line/20.
+                X_plane[2*i+1][0] = X_plane[2*i][0]
+
+                # set first point as one unit away from the control point
+                # at the dihedral angle
+                Y_plane[2*i+1][1] = Y_plane[2*i][0] - line/20.
+                X_plane[2*i+1][1] = X_plane[2*i][0]
+        
+        # reverse across the x axis
+        X_plane *= -1.
+
+        # save planar dxf file
+        file_path = folder_path + "/{0}{1}_{2}_planes".format(file_tag, airplane_name, self.name)
+        dxf(file_path, X_plane, Y_plane, Y_plane*0.,geometry="line")
+
+        # save 2D dxf files
+        for i in range(num_2D):
+            file_path = folder_path + "/{0}{1}_{2}_{3}".format(file_tag, airplane_name, self.name,str(i).zfill(2))
+            dxf(file_path, np.array([X_2D[i]]), np.array([Y_2D[i]]), np.array([Y_2D[i]])*0.,geometry=dxf_line_type)
