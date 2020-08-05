@@ -1031,7 +1031,7 @@ class Airplane:
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         
         dxf_line_type : str
-            Type of line to be used in the dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
+            Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
         """
 
         # Export wing segment parts
