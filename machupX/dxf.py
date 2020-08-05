@@ -334,5 +334,5 @@ def dxf(filename,x,y,z,file_info = [],geometry = "spline"):
         dxf_point(filename,x,y,z,file_info)
     else:
         raise ValueError("geometry must be 'spline', 'polyline', "+\
-            "'line', or 'point'")
+            "'line', or 'point'" )
     return
