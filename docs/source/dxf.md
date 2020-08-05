@@ -45,6 +45,8 @@ Insert the .dxf shape (as 2D).
 
 Continue through each plane and related .dxf file. There will be at least 2. The number of these files depends on how many changes in airfoil occur in the wing segement.
 
+NOTE : If one of your airfoil outlines does not import, check whether you have a wing segment with a taper ratio of 0. Because Soliworks cannot loft between a point and 2D shape, MachUpX modifies the chord at the tip point from 0 to 1e-5. If your model is already extremely small, it may cause sever changes in the model compared to your input design. Consider scaling the values you put into MachUpX to resolve this issue.
+
 ## Import 3D .dxf Guidecurves
 Lastly, the guidecurves must be imported.
 
