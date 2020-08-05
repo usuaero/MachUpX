@@ -214,8 +214,8 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"aircraft" : str or list, optional**
 >>>>Aircraft to export .dxf files for. Defaults to all aircraft in the scene.
 >>>
->>>**"close_te" : bool, optional**
->>>>Whether ensure the trailing edge is sealed. Defaults to true.
+>>>**"dxf_line_type" : str, optional**
+>>>>Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
 >>>
 >>>**"export_pylot_model" : dict, optional**
 >>>>Creates a JSON object containing a linearized model of the aircraft to use as input for Pylot (www.github.com/usuaero/Pylot). Any information not available to MachupX but required for Pylot will be filled with "PLEASE SPECIFY" and must be changed by the user before the input can be used for Pylot. Note, this can only be used if there is one aircraft in the scene.
