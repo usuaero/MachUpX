@@ -125,6 +125,9 @@ def import_value(key, dict_of_vals, system, default_value):
     elif callable(val):
         return_value = val
 
+    elif isinstance(val, np.ndarray):
+        return_value = val
+
     else:
         raise ValueError("Did not recognize value format {0}.".format(val))
 
@@ -186,12 +189,12 @@ def quat_mult(quat0, quat1):
     # vector
 
     # Check for vectors
-    if quat0.size[0] == 3:
+    if len(quat0) == 3:
         q0 = np.concatenate((np.zeros(1), quat0))
     else:
         q0 = copy.copy(quat0)
 
-    if quat1.size[0] == 3:
+    if len(quat1) == 3:
         q1 = np.concatenate((np.zeros(1), quat1))
     else:
         q1 = copy.copy(quat1)

@@ -95,8 +95,7 @@ if __name__=="__main__":
     state = {
         "velocity" : 100.0,
         "alpha" : 10.0,
-        "beta" : 0.0,
-        "angular_rates" : [0.0, 0.0, 0.1]
+        "beta" : 0.0
     }
 
     control_state = {
@@ -115,8 +114,12 @@ if __name__=="__main__":
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.distributions(filename="test.dist")
+    #scene.distributions(filename="test.dist")
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
     #print(json.dumps(derivs["plane"], indent=4))
+
+    # Get state derivatives
+    derivs = scene.state_derivatives()
+    print(json.dumps(derivs["plane"], indent=4))

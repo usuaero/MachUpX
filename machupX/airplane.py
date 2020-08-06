@@ -206,31 +206,22 @@ class Airplane:
     def get_state(self):
         """Returns the aircraft's current state vector.
 
-        Parameters
-        ----------
-        v_wind : ndarray
-            The local wind vector at the aircraft body-fixed origin in flat-earth 
-            coordinates. Defaults to [0.0, 0.0, 0.0].
-
         Returns
         -------
-        alpha : float
-            Angle of attack in degrees
+        ndarray
+            Current body-fixed velocity vector.
 
-        beta : float
-            Sideslip angle in degrees
+        ndarray
+            Current body-fixed angular velocity vector.
 
-        velocity : float
-            Magnitude of the freestream velocity
+        ndarray
+            Current Earth-fixed position vector.
+
+        ndarray
+            Current active orientation quaternion.
         """
-        # Determine velocity in the body-fixed frame
-        v = quat_trans(self.q, self.v)
-        V = m.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2])
 
-        # Calculate values
-        alpha = m.degrees(m.atan2(v[2], v[0]))
-        beta = m.degrees(m.asin(v[1]/V))
-        return alpha, beta, V
+        return np.copy(self.v), np.copy(self.w), np.copy(self.p_bar), np.copy(self.q)
 
 
     def get_aerodynamic_state(self, v_wind=[0.0, 0.0, 0.0]):
