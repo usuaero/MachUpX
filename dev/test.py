@@ -95,7 +95,8 @@ if __name__=="__main__":
     state = {
         "velocity" : 100.0,
         "alpha" : 10.0,
-        "beta" : 0.0
+        "beta" : 0.0,
+        "angular_rates" : [0.0, 0.0, 0.1]
     }
 
     control_state = {
