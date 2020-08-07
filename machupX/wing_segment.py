@@ -1529,13 +1529,15 @@ class WingSegment:
             Number of outline points to use for the sections. Defaults to 200.
         
         dxf_line_type : str
-            Type of line to be used in the dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
+            Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
         """
 
         # Get kwargs
         file_tag = kwargs.get("file_tag", "")
         section_res = kwargs.get("section_resolution", 200)
         dxf_line_type = kwargs.get("dxf_line_type", "spline")
+
+        # initialize closed trailing edge
         close_te = True
 
         # determine number of extra dxf 2d sections to create
@@ -1578,6 +1580,12 @@ class WingSegment:
             Y_3D[i,:] = outline[:,1] * unit_multiplier
             Z_3D[i,:] = outline[:,2] * unit_multiplier
 
+        # Export ######################################################
+        folder_path = os.path.abspath("{0}_dxf_files".format(airplane_name))
+        file_path = folder_path + "/{0}{1}_{2}".format(file_tag, airplane_name, self.name)
+        dxf(file_path, X_3D, Y_3D, Z_3D)      
+        #####################################################
+
         # determine first and mid index for guide curve splines
         first_index = 0
         mid_index = section_res // 2
@@ -1593,7 +1601,7 @@ class WingSegment:
         # Export guide curves
         folder_path = os.path.abspath("{0}_dxf_files".format(airplane_name))
         file_path = folder_path + "/{0}{1}_{2}_GC".format(file_tag, airplane_name, self.name)
-        dxf(file_path, X_gc, Y_gc, Z_gc,geometry=dxf_line_type)
+        dxf(file_path, X_gc, Y_gc, Z_gc,geometry="spline")
 
         # run through each 2d shape and add to the _2D arrays
         for i in range(num_2D):
@@ -1636,8 +1644,7 @@ class WingSegment:
                         points = root_weight*root_outline+tip_weight*tip_outline
                         break
                     
-                    if two_plus_airfoils:
-                        index += 1
+                    index += 1
 
             # Get twist, dihedral, and chord
             twist = self.get_twist(span)
@@ -1651,6 +1658,27 @@ class WingSegment:
             untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
             quarter_chord_point = self._get_quarter_chord_loc(span)[np.newaxis][0] * unit_multiplier
             coords = quat_inv_trans(q, untransformed_coords) * unit_multiplier
+            # noords = coords * 1.
+            # noords[:,1] = coords[:,1] * 0.
+            # noords[:,2] = coords[:,1] * np.sin(-dihedral) + coords[:,2] * np.cos(-dihedral)
+            # coords = noords * 1.0
+                
+            #############################################
+            # determine 3D shape at this location
+            outline3D = self._get_airfoil_outline_coords_at_span(span, section_res, close_te)
+            
+            # determine indices to be used to generate plane of outline
+            i0 = int(section_res / 3)
+            i1 = int(section_res / 3)*2
+            i2 = 0
+
+            # determine plane of outline
+            v01 = outline3D[i1] - outline3D[i0]
+            v02 = outline3D[i2] - outline3D[i0]
+            N = np.cross(v01,v02)
+            print(N)
+
+            #################################################
 
             # Seal trailing edge
             te = (coords[0]+coords[-1])*0.5
@@ -1667,8 +1695,13 @@ class WingSegment:
             X_2D[i,:] = rx2d; Y_2D[i,:] = ry2d
 
             # determine how much to shift down due to dihedral
+            # intialize root location
+            root_loc = self.get_root_loc()
+            print(self.name,root_loc)########################################
+            
             # shift back x and y
             if not dihedral == 0.0:
+
                 # determine slope of plane
                 m = -np.cos(dihedral) / np.sin(dihedral)
 
@@ -1689,6 +1722,7 @@ class WingSegment:
 
                 # add x shift
                 X_2D[i,:] += xshift
+
             # and y shift to proper arrays
             Y_2D[i,:] += quarter_chord_point[0]
 
@@ -1700,7 +1734,7 @@ class WingSegment:
             # set first point as one unit away from the control point
             # at the dihedral angle
             if self._unit_sys == "English":
-                line = 1.0 / unit_multiplier # make 1 inch
+                line = 1.0 # make 1 inch
             else: # "SI"
                 line = 1.0 * 25.4 / 1000.0 # make 1 inch in SI
             Y_plane[2*i][0] = Y_plane[2*i][1] + np.sin(dihedral) * line
