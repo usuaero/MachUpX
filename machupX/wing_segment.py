@@ -1,4 +1,4 @@
-from .helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans
+from .helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans, quat_mult
 from .dxf import dxf_spline
 
 import json
@@ -1431,7 +1431,9 @@ class WingSegment:
         if self._shear_dihedral:
             q = euler_to_quat(np.array([0.0, twist, 0.0]))
         else:
-            q = euler_to_quat(np.array([dihedral, twist, 0.0]))
+            q_dih = euler_to_quat(np.array([dihedral, 0.0, 0.0]))
+            q_twi = euler_to_quat(np.array([0.0, twist, 0.0]))
+            q = quat_mult(q_dih, q_twi)
 
         untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(N), -points[:,1]]).T
         coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)

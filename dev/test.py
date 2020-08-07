@@ -71,7 +71,10 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
                 "sweep" : 45.0,
-                "dihedral" : 5.0,
+                "dihedral" : [[0.0, 0.0],
+                              [1.0, 180.0]],
+                "twist" : [[0.0, 0.0],
+                           [1.0, 20.0]],
                 "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
@@ -109,17 +112,18 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
-    #scene.export_stl(filename="plane.stl")
+    scene.export_stl(filename="plane.stl")
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
+
     #scene.distributions(filename="test.dist")
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
     #print(json.dumps(derivs["plane"], indent=4))
 
-    # Get state derivatives
-    derivs = scene.state_derivatives()
-    print(json.dumps(derivs["plane"], indent=4))
+    ## Get state derivatives
+    #derivs = scene.state_derivatives()
+    #print(json.dumps(derivs["plane"], indent=4))
