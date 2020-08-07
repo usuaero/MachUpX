@@ -14,6 +14,7 @@ import copy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+
 class Airplane:
     """A class defining an airplane.
 
@@ -200,6 +201,27 @@ class Airplane:
 
         else:
             raise IOError("{0} is not an allowable angular rate frame.".format(self.angular_rate_frame))
+
+
+    def get_state(self):
+        """Returns the aircraft's current state vector.
+
+        Returns
+        -------
+        ndarray
+            Current body-fixed velocity vector.
+
+        ndarray
+            Current body-fixed angular velocity vector.
+
+        ndarray
+            Current Earth-fixed position vector.
+
+        ndarray
+            Current active orientation quaternion.
+        """
+
+        return np.copy(self.v), np.copy(self.w), np.copy(self.p_bar), np.copy(self.q)
 
 
     def get_aerodynamic_state(self, v_wind=[0.0, 0.0, 0.0]):

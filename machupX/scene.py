@@ -1,4 +1,4 @@
-from .helpers import quat_inv_trans, quat_trans, check_filepath, import_value
+from .helpers import quat_inv_trans, quat_trans, check_filepath, import_value, quat_mult, quat_conj
 from .airplane import Airplane
 from .standard_atmosphere import StandardAtmosphere
 from .exceptions import SolverNotConvergedError
@@ -1674,7 +1674,7 @@ class Scene:
 
     def derivatives(self, **kwargs):
         """Determines the stability, damping, and control derivatives at the 
-        current state. Uses a central difference sceme. Note that the angular
+        current state. Uses a central difference scheme. Note that the angular
         rates for the damping derivatives will be in the frame the angular
         rates were originally given in.
 
@@ -1728,7 +1728,7 @@ class Scene:
 
     def stability_derivatives(self, dtheta=0.5, **kwargs):
         """Determines the stability derivatives at the current state. Uses 
-        a central difference sceme.
+        a central difference scheme.
 
         Parameters
         ----------
@@ -1843,10 +1843,10 @@ class Scene:
 
     def damping_derivatives(self, aircraft=None, dtheta_dot=0.005, **kwargs):
         """Determines the damping derivatives at the current state. Uses 
-        a central difference sceme. Note, the damping derivatives are non-
-        dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Note
-        that the angular rates for the damping derivatives will be in the
-        frame the angular rates were originally given in.
+        a central difference scheme. Note, the damping derivatives are non-
+        dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Also,
+        the angular rates for the damping derivatives will be in the frame
+        the angular rates were originally given in.
 
         Parameters
         ----------
@@ -2023,7 +2023,7 @@ class Scene:
 
     def control_derivatives(self, aircraft=None, dtheta=0.5, **kwargs):
         """Determines the control derivatives at the current state. Uses 
-        a central difference sceme.
+        a central difference scheme.
 
         Parameters
         ----------
@@ -2110,6 +2110,150 @@ class Scene:
                     derivs[aircraft_name]["Cl_w,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cl_w"]-FM_bwd[aircraft_name]["total"]["Cl_w"])/diff
                     derivs[aircraft_name]["Cm_w,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cm_w"]-FM_bwd[aircraft_name]["total"]["Cm_w"])/diff
                     derivs[aircraft_name]["Cn_w,d"+control_name] = (FM_fwd[aircraft_name]["total"]["Cn_w"]-FM_bwd[aircraft_name]["total"]["Cn_w"])/diff
+
+        return derivs
+
+
+    def state_derivatives(self, **kwargs):
+        """Determines the derivatives of forces and moments at the current state
+        with respect to the 13 element state vector. Uses a central difference scheme.
+        These states are:
+
+            Position in Earth-fixed coordinates.
+            Velocity in body-fixed coordinates.
+            Orientation of the body frame relative to the Earth-fixed frame.
+            Angular rate in body-fixed coordinates.
+
+        These derivatives will always be determined using the body-fixed forces and
+        moments.
+
+        Parameters
+        ----------
+        aircraft : str or list
+            The name(s) of the aircraft to determine the stability derivatives 
+            of. Defaults to all aircraft in the scene.
+
+        dx : float
+            The finite difference used to perturb position in either feet or
+            meters. Defaults to 0.5.
+
+        dV : float
+            The finite difference used to perturb velocity in either ft/s or
+            m/s. Defaults to 0.5.
+
+        de : float
+            The finite difference used to perturb the orientation quaternion.
+            Defaults to 0.001.
+
+        dw : float
+            The finite difference used to perturb the angular rates in rad/s.
+            Defaults to 0.01.
+
+        Returns
+        -------
+        dict
+            A dictionary of state derivatives.
+        """
+        derivs= {}
+
+        # Specify the aircraft
+        aircraft_names = self._get_aircraft(**kwargs)
+        
+        # Get the finite differences
+        dx = kwargs.get("dx", 0.5)
+        dV = kwargs.get("dV", 0.5)
+        de = kwargs.get("de", 0.001)
+        dw = kwargs.get("dw", 0.01)
+
+        for aircraft_name in aircraft_names:
+            derivs[aircraft_name] = {}
+
+            # Get current state
+            v0, w0, p0, q0 = self._airplanes[aircraft_name].get_state()
+            orig_state = {
+                "position" : p0,
+                "velocity" : v0,
+                "orientation" : q0,
+                "angular_rates" : w0
+            }
+
+            # Perturb in velocity
+            derivs[aircraft_name].update(self._determine_state_derivs("velocity", "u", 0, dV, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("velocity", "v", 1, dV, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("velocity", "w", 2, dV, orig_state, aircraft_name, **kwargs))
+
+            # Perturb in position
+            derivs[aircraft_name].update(self._determine_state_derivs("position", "x_f", 0, dx, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("position", "y_f", 1, dx, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("position", "z_f", 2, dx, orig_state, aircraft_name, **kwargs))
+
+            # Perturb in angular rate
+            derivs[aircraft_name].update(self._determine_state_derivs("angular_rates", "p", 0, dw, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("angular_rates", "q", 1, dw, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("angular_rates", "r", 2, dw, orig_state, aircraft_name, **kwargs))
+
+            # Perturb in quaternion
+            derivs[aircraft_name].update(self._determine_state_derivs("orientation", "qx", 0, de, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("orientation", "qy", 1, de, orig_state, aircraft_name, **kwargs))
+            derivs[aircraft_name].update(self._determine_state_derivs("orientation", "qz", 2, de, orig_state, aircraft_name, **kwargs))
+        
+            # Reset state
+            self._airplanes[aircraft_name].set_state(**orig_state)
+            self._solved = False
+
+        return derivs
+
+
+    def _determine_state_derivs(self, variable, tag, index, perturbation, orig_state, aircraft_name, **kwargs):
+        # Perturbs the given index of variable by the perturbation and estimates the derivative
+
+        # Simple perturbations
+        pert_state = copy.deepcopy(orig_state)
+        if variable in ["position", "velocity", "angular_rates"]:
+
+            # Forward
+            pert_state[variable][index] += perturbation
+            self._airplanes[aircraft_name].set_state(**pert_state)
+            self.solve_forces(nondimensional=False, **kwargs)
+            FM_fwd = copy.deepcopy(self._FM)
+
+            # Backward
+            pert_state[variable][index] -= 2.0*perturbation
+            self._airplanes[aircraft_name].set_state(**pert_state)
+            self.solve_forces(nondimensional=False, **kwargs)
+            FM_bwd = copy.deepcopy(self._FM)
+
+        # Quaternion perturbation
+        else:
+
+            # Get quaternion perturbation
+            dq = np.array([1.0, 0.0, 0.0, 0.0])
+            dq[index+1] = 0.5*perturbation
+            q0 = pert_state["orientation"]
+
+            # Forward
+            q_fwd = quat_mult(dq, q0)
+            pert_state["orientation"] = q_fwd
+            self._airplanes[aircraft_name].set_state(**pert_state)
+            self.solve_forces(nondimensional=False, **kwargs)
+            FM_fwd = copy.deepcopy(self._FM)
+
+            # Backward
+            q_bwd = quat_mult(quat_conj(dq), q0)
+            pert_state["orientation"] = q_bwd
+            self._airplanes[aircraft_name].set_state(**pert_state)
+            self.solve_forces(nondimensional=False, **kwargs)
+            FM_bwd = copy.deepcopy(self._FM)
+
+        # Estimate derivative
+        derivs = {}
+        diff = 0.5/perturbation
+        derivs["dFx,d{0}".format(tag)] = (FM_fwd[aircraft_name]["total"]["Fx"]-FM_bwd[aircraft_name]["total"]["Fx"])*diff
+        derivs["dFy,d{0}".format(tag)] = (FM_fwd[aircraft_name]["total"]["Fy"]-FM_bwd[aircraft_name]["total"]["Fy"])*diff
+        derivs["dFz,d{0}".format(tag)] = (FM_fwd[aircraft_name]["total"]["Fz"]-FM_bwd[aircraft_name]["total"]["Fz"])*diff
+        derivs["dMx,d{0}".format(tag)] = (FM_fwd[aircraft_name]["total"]["Mx"]-FM_bwd[aircraft_name]["total"]["Mx"])*diff
+        derivs["dMy,d{0}".format(tag)] = (FM_fwd[aircraft_name]["total"]["My"]-FM_bwd[aircraft_name]["total"]["My"])*diff
+        derivs["dMz,d{0}".format(tag)] = (FM_fwd[aircraft_name]["total"]["Mz"]-FM_bwd[aircraft_name]["total"]["Mz"])*diff
 
         return derivs
 
