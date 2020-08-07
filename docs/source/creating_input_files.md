@@ -208,11 +208,14 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"file_tag" : str, optional**
 >>>>Tag to prepend to each .dxf file. The filename will be output as "<TAG><AIRCRAFT_NAME>_<SEGMENT_NAME>.dxf". Defaults to no tag.
 >>>
+>>>**"aircraft" : str or list, optional**
+>>>>Aircraft to export .dxf files for. Defaults to all aircraft in the scene.
+>>>
 >>>**"section_resolution" : int, optional**
 >>>>Number of points to use in discretizing the airfoil section outlines. Defaults to 200.
 >>>
->>>**"aircraft" : str or list, optional**
->>>>Aircraft to export .dxf files for. Defaults to all aircraft in the scene.
+>>>**"number_guide_curves" : int, optional**
+>>>>Number of guide curves to be created for the wing egment. Defaults to 2 (one at the leading edge, one at the trailing edge). An even number is recommened to ensure one guide curves runs along the leading edge of the wing segment.
 >>>
 >>>**"dxf_line_type" : str, optional**
 >>>>Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.

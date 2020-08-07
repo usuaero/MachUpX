@@ -2931,6 +2931,9 @@ class Scene:
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         
+        number_guide_curves : int
+            Number of guidecurves to create. Defaults to 2 (one at the leading edge, one at the trailing edge).
+        
         dxf_line_type : str
             Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
         """

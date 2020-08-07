@@ -105,30 +105,44 @@ def dxf_point(filename,x,y,z,file_info):
     f.write("0\nSECTION\n2\nENTITIES\n")
 
     # determine the number of compound lines to create
-    num_points = x.shape[0]
+    num_pointsarr = x.shape[0]
 
     # if the y and x compound line counts are not equal in number, throw error
-    if y.shape[0] != num_points:
-        raise ValueError('y array must have same number of compound lines as x array')
+    if y.shape[0] != num_pointsarr:
+        raise ValueError('y array must have same number of points arrays as x array')
     
     # if the z and x compound line counts are not equal in number, throw error
-    if z.shape[0] != num_points:
-        raise ValueError('z array must have same number of compound lines as x array')
+    if z.shape[0] != num_pointsarr:
+        raise ValueError('z array must have same number of points arrays as x array')
     
     # cycle through each compound line
-    for i in range(num_points):
+    for i in range(num_pointsarr):
 
-        # write dxf file line opening statement
-        f.write("0\nPOINT\n8\nLayer\n")
+        # determine the number of lines in the current compound line
+        num_points = x[i].shape[0]
 
-        # write line start x coordinate
-        f.write("10\n%.16f\n" % x[i])
+        # if the y and x line points are not equal in number, throw error
+        if y[i].shape[0] != num_points:
+            raise ValueError('y points array %d must have same number of points as x array' % i)
 
-        # write line start y coordinate
-        f.write("20\n%.16f\n" % y[i])
+        # if the z and x line points are not equal in number, throw error
+        if z[i].shape[0] != num_points:
+            raise ValueError('z points array %d must have same number of points as x array' % i)
 
-        # write line start y coordinate
-        f.write("30\n%.16f\n" % z[i])
+        # cycle through line in each compound line
+        for j in range(num_points):
+
+            # write dxf file line opening statement
+            f.write("0\nPOINT\n8\nLayer\n")
+
+            # write line start x coordinate
+            f.write("10\n%.16f\n" % x[i][j])
+
+            # write line start y coordinate
+            f.write("20\n%.16f\n" % y[i][j])
+
+            # write line start y coordinate
+            f.write("30\n%.16f\n" % z[i][j])
 
     # write dxf file closing statement
     f.write("0\nENDSEC\n0\nEOF\n")

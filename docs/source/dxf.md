@@ -47,12 +47,17 @@ Continue through each plane and related .dxf file. There will be at least 2. The
 
 NOTE : If one of your airfoil outlines does not import, check whether you have a wing segment with a taper ratio of 0. Because Soliworks cannot loft between a point and 2D shape, MachUpX modifies the chord at the tip point from 0 to 1e-5. If your model is already extremely small, it may cause sever changes in the model compared to your input design. Consider scaling the values you put into MachUpX to resolve this issue.
 
-## Import 3D .dxf Guidecurves
-Lastly, the guidecurves must be imported.
+## Import 3D .dxf Guide Curves
+Lastly, the guide curves must be imported.
 
-When imported a 3D .dxf file, the plane selected prior does not matter. Import the guidecurves file (traditional_main_wing_right_GC in this example) as a 3D .dxf.
+When imported a 3D .dxf file, the plane selected prior does not matter. Import the guide curves file (traditional_main_wing_right_GC in this example) as a 3D .dxf.
 
 ![](dxf_figs/08_dxf2_import_3D.png)
+
+### Problems with guide curves?
+Often, with a complex shape, two guide curves are not enough to constrain the wing geometry through the loft. For more complex lofts, we recommend several guide curves. The number of guide curves can be increased in the .dxf export function. It should be noted that SolidWorks begins to fail after around forty guide curves. We recommend between four and twenty if two is insufficient. If the loft does not complete, sometimes unselecting some guide curves may help.
+
+We also recommend an even number of guide curves. This ensures a guide curve is placed at the trailing edge and at the leading edge. Otherwise, the nose of the wing may not loft as desired.
 
 ## Loft
 Now the loft can be performed
@@ -67,7 +72,7 @@ The points must be positioned like so.
 ![](dxf_figs/09_02_right_green.png)
 
 ### Loft Complete
-Select each outline sequentially, and then each guidecurve.
+Select each outline sequentially, and then each guide curve.
 
 ![](dxf_figs/10_loft.png)
 
