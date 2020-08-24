@@ -112,7 +112,7 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
-    scene.export_stl(filename="plane.stl")
+    scene.export_dxf()
 
     ## Solve forces
     #FM = scene.solve_forces(non_dimensional=False, verbose=True)
