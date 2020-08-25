@@ -124,7 +124,7 @@ class Scene:
                 raise IOError("{0} is not an allowable profile name.".format(rho))
 
             def density_getter(position):
-                pos = np.transpose(position)
+                pos = position.T
                 return self._std_atmos.rho(-pos[2])
             
         # Array
@@ -135,7 +135,8 @@ class Scene:
             if self._density_data.shape[1] is 2: # Density profile
 
                 def density_getter(position):
-                    return np.interp(-position[2], self._density_data[:,0], self._density_data[:,1])
+                    pos = position.T
+                    return np.interp(-pos[2], self._density_data[:,0], self._density_data[:,1])
 
             elif self._density_data.shape[1] is 4: # Density field
                 self._density_field_interpolator = sinterp.LinearNDInterpolator(self._density_data[:,:3],self._density_data[:,3])

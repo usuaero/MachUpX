@@ -18,6 +18,10 @@ if __name__=="__main__":
         "units" : "English",
         "scene" : {
             "atmosphere" : {
+                "rho": [[0.0, 1.225],
+                    [2000.0, 1.0066],
+                    [4000.0, 0.81935],
+                    ["m", "kg/m^3"]]
             }
         }
     }
@@ -71,10 +75,6 @@ if __name__=="__main__":
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
                 "sweep" : 45.0,
-                "dihedral" : [[0.0, 0.0],
-                              [1.0, 180.0]],
-                "twist" : [[0.0, 0.0],
-                           [1.0, 20.0]],
                 "ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
@@ -112,11 +112,11 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=False)
-    scene.export_dxf()
+    #scene.export_dxf()
 
-    ## Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
+    # Solve forces
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
 
     #scene.distributions(filename="test.dist")
 
