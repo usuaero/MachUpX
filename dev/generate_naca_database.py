@@ -26,7 +26,7 @@ if __name__=="__main__":
             },
             "Rey" : {
                 "range" : [5e5, 1e7],
-                "steps" : 20,
+                "steps" : 5,
                 "index" : 2,
                 "log_step" : True
             }

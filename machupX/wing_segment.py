@@ -1011,15 +1011,17 @@ class WingSegment:
             Lift slope
         """
 
-        # Gather lift slopes
-        CLas = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
         if self._num_airfoils == 1:
-            return CLas.flatten()
+            return self._airfoils[0].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
         else:
+
+            # Gather lift slopes
+            CLas = np.zeros((self.N,self._num_airfoils))
+            for j in range(self._num_airfoils):
+                CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
+            # Interpolate
             return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLas)
 
 
@@ -1041,45 +1043,18 @@ class WingSegment:
             Zero lift angle of attack
         """
 
-        # Gather zero-lift angles of attack
-        aL0s = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
         if self._num_airfoils == 1:
-            return aL0s.flatten()
+            return self._airfoils[0].get_aL0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
         else:
+
+            # Gather zero-lift angles of attack
+            aL0s = np.zeros((self.N,self._num_airfoils))
+            for j in range(self._num_airfoils):
+                aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
+            # Interpolate
             return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, aL0s)
-
-
-    def get_cp_am0(self, Rey, Mach):
-        """Returns the zero-moment angle of attack at each control point. Used for corrections to section properties due to sweep.
-
-        Parameters
-        ----------
-        Rey : ndarray
-            Reynolds number
-
-        Mach : ndarray
-            Mach number
-
-        Returns
-        -------
-        float
-            Zero-moment angle of attack
-        """
-
-        # Gather zero-lift angles of attack
-        am0s = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            am0s[:,j] = self._airfoils[j].get_am0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
-        if self._num_airfoils == 1:
-            return am0s.flatten()
-        else:
-            return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, am0s)
 
 
     def get_cp_CLRe(self, alpha, Rey, Mach):
@@ -1134,15 +1109,17 @@ class WingSegment:
             Z
         """
 
-        # Get Mach slopes
-        CLMs = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
         if self._num_airfoils == 1:
-            return CLMs.flatten()
+            return self._airfoils[0].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
         else:
+
+            # Get Mach slopes
+            CLMs = np.zeros((self.N,self._num_airfoils))
+            for j in range(self._num_airfoils):
+                CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
+            # Interpolate
             return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLMs)
 
 
@@ -1167,14 +1144,14 @@ class WingSegment:
         """
 
         # Get CL
-        CLs = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
         if self._num_airfoils == 1:
-            return CLs.flatten()
+            return self._airfoils[0].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
         else:
+            # Interpolate
+            CLs = np.zeros((self.N,self._num_airfoils))
+            for j in range(self._num_airfoils):
+                CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
             return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLs)
 
 
@@ -1198,15 +1175,17 @@ class WingSegment:
             Coefficient of drag
         """
 
-        # Get CD
-        CDs = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
         if self._num_airfoils == 1:
-            return CDs.flatten()
+            return self._airfoils[0].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
         else:
+
+            # Get CD
+            CDs = np.zeros((self.N,self._num_airfoils))
+            for j in range(self._num_airfoils):
+                CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
+            # Interpolate
             return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CDs)
 
 
@@ -1230,15 +1209,17 @@ class WingSegment:
             Moment coefficient
         """
 
-        # Get Cm
-        Cms = np.zeros((self.N,self._num_airfoils))
-        for j in range(self._num_airfoils):
-            Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        # Interpolate
         if self._num_airfoils == 1:
-            return Cms.flatten()
+            return self._airfoils[0].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
         else:
+
+            # Get Cm
+            Cms = np.zeros((self.N,self._num_airfoils))
+            for j in range(self._num_airfoils):
+                Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+
+            # Interpolate
             return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, Cms)
 
 
