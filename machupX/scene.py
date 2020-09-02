@@ -2540,6 +2540,7 @@ class Scene:
             "Mx" : body-x moment acting on each section
             "My" : body-y moment acting on each section
             "Mz" : body-z moment acting on each section
+            "circ" : circulation
 
 
         Parameters
@@ -2599,7 +2600,8 @@ class Scene:
                           ("Fz", "float"),
                           ("Mx", "float"),
                           ("My", "float"),
-                          ("Mz", "float")]
+                          ("Mz", "float"),
+                          ("circ", "float")]
 
             table_data = np.zeros(self._N, dtype=item_types)
 
@@ -2651,6 +2653,7 @@ class Scene:
                 dist[airplane_name][segment_name]["Mx"] = list(self._dM_inv[cur_slice,0]+self._dM_visc[cur_slice,0])
                 dist[airplane_name][segment_name]["My"] = list(self._dM_inv[cur_slice,1]+self._dM_visc[cur_slice,1])
                 dist[airplane_name][segment_name]["Mz"] = list(self._dM_inv[cur_slice,2]+self._dM_visc[cur_slice,2])
+                dist[airplane_name][segment_name]["circ"] = list(self._gamma[cur_slice])
 
                 # Atmospheric properties
                 v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
@@ -2707,6 +2710,7 @@ class Scene:
                     table_data[cur_slice]["Mx"] = dist[airplane_name][segment_name]["Mx"]
                     table_data[cur_slice]["My"] = dist[airplane_name][segment_name]["My"]
                     table_data[cur_slice]["Mz"] = dist[airplane_name][segment_name]["Mz"]
+                    table_data[cur_slice]["circ"] = dist[airplane_name][segment_name]["circ"]
 
                 index += num_cps
 
@@ -2714,10 +2718,10 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
                 "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
-                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha", "Fx", "Fy", "Fz", "Mx", "My", "Mz")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha", "Fx", "Fy", "Fz", "Mx", "My", "Mz", "Circ")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)
