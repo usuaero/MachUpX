@@ -26,6 +26,7 @@ if __name__=="__main__":
         "airfoils" : {
             "NACA_0010" : "dev/NACA_0010.json"
         },
+        "plot_lacs" : False,
         "wings" : {
             "main_wing" : {
                 "ID" : 1,
@@ -33,7 +34,9 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "sweep" : 45.0,
+                "sweep" : [[0.0, 45.0],
+                           [1.0, 45.0]],
+                #"dihedral" : 5.0,
                 "ac_offset" : "kuchemann",
                 "grid" : {
                     "N" : 160,
@@ -99,6 +102,30 @@ if __name__=="__main__":
     gamma_control = dist["wing"]["main_wing_right"]["circ"]
     w_control = dist["wing"]["main_wing_right"]["w"]
     ax0.plot(y_control, gamma_control, label='No section corrections')
+    ax1.plot(y_control, w_control)
+
+    # Run with shorter joints
+    scene = mx.Scene(scene_input=input_dict)
+    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.05
+    scene.add_aircraft("wing", airplane_dict, state=state)
+    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.15
+    dist = scene.distributions()
+    y_control = dist["wing"]["main_wing_right"]["cpy"]
+    gamma_control = dist["wing"]["main_wing_right"]["circ"]
+    w_control = dist["wing"]["main_wing_right"]["w"]
+    ax0.plot(y_control, gamma_control, label='Shorter joints')
+    ax1.plot(y_control, w_control)
+
+    # Run with longer joints
+    scene = mx.Scene(scene_input=input_dict)
+    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.25
+    scene.add_aircraft("wing", airplane_dict, state=state)
+    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.15
+    dist = scene.distributions()
+    y_control = dist["wing"]["main_wing_right"]["cpy"]
+    gamma_control = dist["wing"]["main_wing_right"]["circ"]
+    w_control = dist["wing"]["main_wing_right"]["w"]
+    ax0.plot(y_control, gamma_control, label='Longer joints')
     ax1.plot(y_control, w_control)
 
 

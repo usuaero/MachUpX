@@ -74,8 +74,9 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
+                #"dihedral" : 10.0,
                 "sweep" : 45.0,
-                "ac_offset" : "kuchemann",
+                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -86,7 +87,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 80,
+                    "N" : 50,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                 }
@@ -117,6 +118,7 @@ if __name__=="__main__":
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
+    scene.out_gamma()
 
     #scene.distributions(filename="test.dist")
 
