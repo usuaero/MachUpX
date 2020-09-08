@@ -74,8 +74,9 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                #"dihedral" : 10.0,
-                "sweep" : 45.0,
+                "dihedral" : 5.0,
+                "sweep" : 0.0,
+                "twist" : 5.0,
                 #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
@@ -87,7 +88,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 50,
+                    "N" : 500,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                 }

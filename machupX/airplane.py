@@ -605,8 +605,8 @@ class Airplane:
 
                 else:
 
-                    # These equations ensure the joint vector is orthogonal to the ac tangent and lies in the same plane as the
-                    # ac tangent and the axial vector (i.e. chord line). You get these by solving
+                    # These equations ensure the joint vector is orthogonal to the lifting-line tangent and lies in the same plane as the
+                    # lifting-line tangent and the unswept axial vector (i.e. chord line). You get these by solving
                     #
                     #   < u_j, T > = 0
                     #   < u_j, u_a > > 0
@@ -614,10 +614,10 @@ class Airplane:
 
                     # Same for both
                     u_a = self.u_a_unswept[wing_slice]
+                    ds = np.zeros(wing_slice.stop-wing_slice.start)
 
                     # P0
                     d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
-                    ds = np.zeros(wing_slice.stop-wing_slice.start)
                     ds[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
                     T0 = np.gradient(self.P0_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
                     T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
@@ -627,14 +627,9 @@ class Airplane:
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
                     self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-                    if (np.abs(np.einsum('ij,ij->i', T0, u_j))>1e-9).any():
-                        print(k)
-                        print(np.einsum('ij,ij->i', T0, u_j))
-
 
                     # P1 joint
                     d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
-                    ds = np.zeros(wing_slice.stop-wing_slice.start)
                     ds[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
                     T1 = np.gradient(self.P1_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
                     T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
@@ -708,7 +703,7 @@ class Airplane:
 
 
     def _sort_segments_into_wings(self):
-        # Groups segments into wings for calculating effective ac loci
+        # Groups segments into wings for calculating effective lifting-lines
         wing_IDs = []
 
         # Get user selections

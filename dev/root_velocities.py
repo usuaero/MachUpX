@@ -34,9 +34,16 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "sweep" : [[0.0, 45.0],
-                           [1.0, 45.0]],
+                #"sweep" : 45.0,
                 #"dihedral" : 5.0,
+                "dihedral" : [[0.0, 15.0],
+                              [0.5, 15.0],
+                              [0.5, 15.0],
+                              [1.0, 15.0]],
+                "sweep" : [[0.0, 45.0],
+                           [0.5, 45.0],
+                           [0.5, 45.0],
+                           [1.0, 45.0]],
                 "ac_offset" : "kuchemann",
                 "grid" : {
                     "N" : 160,
@@ -128,8 +135,28 @@ if __name__=="__main__":
     ax0.plot(y_control, gamma_control, label='Longer joints')
     ax1.plot(y_control, w_control)
 
+    ax0.legend()
+    ax0.set_title("Circulation")
+    ax1.set_title("Downwash")
+    plt.show()
+
+    # Convergence study
+    fig, (ax0, ax1) = plt.subplots(ncols=2)
+    grids = [20, 40, 80, 160, 320, 640, 1280]
+    for grid in grids:
+        scene = mx.Scene(scene_input=input_dict)
+        airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
+        airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label=str(grid))
+        ax1.plot(y_control, w_control)
 
     ax0.legend()
     ax0.set_title("Circulation")
     ax1.set_title("Downwash")
     plt.show()
+    scene.out_gamma()
