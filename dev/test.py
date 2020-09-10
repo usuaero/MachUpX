@@ -66,9 +66,11 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 200,
+                    "N" : 500,
                     "wing_ID" : 1,
                     "reid_corrections" : True
+                    #"joint_length" : 2.0,
+                    #"blending_distance" : 2.0
                 }
             }
         }

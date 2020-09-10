@@ -628,6 +628,7 @@ class WingSegment:
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
         self.dihedral_cp = self.get_dihedral(self.cp_span_locs)
         self.sweep_cp = self.get_sweep(self.cp_span_locs)
+        self.twist_cp = self.get_twist(self.cp_span_locs)
         self.dS = abs(self.node_span_locs[1:]-self.node_span_locs[:-1])*self.b*self.c_bar_cp
 
         # Store airfoil thickness and camber for swept section corrections

@@ -635,7 +635,7 @@ class Airplane:
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    P0_joint_eff = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
                     # P1 joint
                     d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
@@ -647,13 +647,36 @@ class Airplane:
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    P1_joint_eff = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+
+                    # Do some averaging to make sure the jointed sheet is continuous
+                    avg_joint_locs = 0.5*(P0_joint_eff[1:,:]+P1_joint_eff[:-1,:])
+                    P0_joint_eff[1:,:] = avg_joint_locs
+                    P1_joint_eff[:-1,:] = avg_joint_locs
+                    self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
+                    self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
+
+                    ## Plot effective vortices
+                    #if i > 48 and i < 51:
+                    #    fig = plt.figure(figsize=plt.figaspect(1.0))
+                    #    ax = fig.gca(projection='3d')
+                    #    for j in range(wing_slice.start, wing_slice.stop):
+                    #        ax.plot([self.P0_joint_eff[i,j,0], self.P0_eff[i,j,0], self.P1_eff[i,j,0], self.P1_joint_eff[i,j,0]],
+                    #                [self.P0_joint_eff[i,j,1], self.P0_eff[i,j,1], self.P1_eff[i,j,1], self.P1_joint_eff[i,j,1]],
+                    #                [self.P0_joint_eff[i,j,2], self.P0_eff[i,j,2], self.P1_eff[i,j,2], self.P1_joint_eff[i,j,2]],
+                    #                '--')
+
+                    #    lim = np.max(np.max(np.max(self.P0_joint_eff)))
+                    #    ax.set_xlim3d(lim, -lim)
+                    #    ax.set_ylim3d(lim, -lim)
+                    #    ax.set_zlim3d(lim, -lim)
+                    #    plt.show()
 
             else:
 
                 # Copy node locations into joint locations (i.e. no jointing)
-                self.P0_joint_eff = np.copy(self.P0_eff)
-                self.P1_joint_eff = np.copy(self.P1_eff)
+                self.P0_joint_eff[i,:,:] = np.copy(self.P0_eff[i,:,:])
+                self.P1_joint_eff[i,:,:] = np.copy(self.P1_eff[i,:,:])
 
         # Calculate vectors from control points to vortex node locations
         self.r_0 = self.PC[:,np.newaxis,:]-self.P0_eff
