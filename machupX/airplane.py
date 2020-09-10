@@ -636,6 +636,7 @@ class Airplane:
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
                     P0_joint_eff = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
 
                     # P1 joint
                     d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
@@ -648,13 +649,15 @@ class Airplane:
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
                     P1_joint_eff = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
+                    self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
 
                     # Do some averaging to make sure the jointed sheet is continuous
-                    avg_joint_locs = 0.5*(P0_joint_eff[1:,:]+P1_joint_eff[:-1,:])
-                    P0_joint_eff[1:,:] = avg_joint_locs
-                    P1_joint_eff[:-1,:] = avg_joint_locs
-                    self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
-                    self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
+                    if True:
+                        avg_joint_locs = 0.5*(P0_joint_eff[1:,:]+P1_joint_eff[:-1,:])
+                        P0_joint_eff[1:,:] = avg_joint_locs
+                        P1_joint_eff[:-1,:] = avg_joint_locs
+                        self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
+                        self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
 
                     ## Plot effective vortices
                     #if i > 48 and i < 51:

@@ -66,7 +66,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 500,
+                    "N" : 200,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -93,7 +93,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene.display_wireframe(show_vortices=True)
+    #scene.display_wireframe(show_vortices=True)
     #scene.export_dxf()
 
     # Solve forces
