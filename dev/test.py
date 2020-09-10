@@ -47,27 +47,6 @@ if __name__=="__main__":
         },
         "plot_lacs" : False,
         "wings" : {
-            #"winglets" : {
-            #    "ID" : 2,
-            #    "side" : "both",
-            #    "is_main" : True,
-            #    "connect_to" : {
-            #        "ID" : 1,
-            #        "location" : "tip",
-            #        "dz" : -0.001
-            #    },
-            #    "semispan" : 0.5,
-            #    "dihedral" : 90.0,
-            #    "sweep" : 10.0,
-            #    "chord" : [[0.0, 0.5],
-            #               [1.0, 0.2]],
-            #    "airfoil" : "NACA_0010",
-            #    "grid" : {
-            #        "N" : 20,
-            #        "wing_ID" : 1,
-            #        "reid_corrections" : True
-            #    }
-            #},
             "main_wing" : {
                 "ID" : 1,
                 "side" : "both",
@@ -77,7 +56,6 @@ if __name__=="__main__":
                 "dihedral" : 5.0,
                 "sweep" : 0.0,
                 "twist" : 5.0,
-                #"ac_offset" : "kuchemann",
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -88,7 +66,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 500,
+                    "N" : 200,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                 }
@@ -113,7 +91,7 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    #scene.display_wireframe(show_vortices=False)
+    scene.display_wireframe(show_vortices=True)
     #scene.export_dxf()
 
     # Solve forces

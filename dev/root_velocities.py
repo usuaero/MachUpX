@@ -144,16 +144,19 @@ if __name__=="__main__":
     fig, (ax0, ax1) = plt.subplots(ncols=2)
     grids = [20, 40, 80, 160, 320, 640, 1280]
     for grid in grids:
-        scene = mx.Scene(scene_input=input_dict)
-        airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
-        airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
-        scene.add_aircraft("wing", airplane_dict, state=state)
-        dist = scene.distributions()
-        y_control = dist["wing"]["main_wing_right"]["cpy"]
-        gamma_control = dist["wing"]["main_wing_right"]["circ"]
-        w_control = dist["wing"]["main_wing_right"]["w"]
-        ax0.plot(y_control, gamma_control, label=str(grid))
-        ax1.plot(y_control, w_control)
+        try:
+            scene = mx.Scene(scene_input=input_dict)
+            airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
+            airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
+            scene.add_aircraft("wing", airplane_dict, state=state)
+            dist = scene.distributions()
+            y_control = dist["wing"]["main_wing_right"]["cpy"]
+            gamma_control = dist["wing"]["main_wing_right"]["circ"]
+            w_control = dist["wing"]["main_wing_right"]["w"]
+            ax0.plot(y_control, gamma_control, label=str(grid))
+            ax1.plot(y_control, w_control)
+        except mx.SolverNotConvergedError:
+            pass
 
     ax0.legend()
     ax0.set_title("Circulation")

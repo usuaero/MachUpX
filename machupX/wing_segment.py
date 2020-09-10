@@ -626,7 +626,6 @@ class WingSegment:
         self.u_n_cp_unswept = self._get_unswept_normal_vec(self.cp_span_locs)
         self.u_s_cp_unswept = self._get_unswept_span_vec(self.cp_span_locs)
         self.c_bar_cp = self._get_cp_avg_chord_lengths()
-        self.twist_cp = self.get_twist(self.cp_span_locs)
         self.dihedral_cp = self.get_dihedral(self.cp_span_locs)
         self.sweep_cp = self.get_sweep(self.cp_span_locs)
         self.dS = abs(self.node_span_locs[1:]-self.node_span_locs[:-1])*self.b*self.c_bar_cp

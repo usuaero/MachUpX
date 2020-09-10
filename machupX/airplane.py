@@ -605,12 +605,21 @@ class Airplane:
 
                 else:
 
-                    # These equations ensure the joint vector is orthogonal to the lifting-line tangent and lies in the same plane as the
-                    # lifting-line tangent and the unswept axial vector (i.e. chord line). You get these by solving
+                    # These equations ensure the joint vector (u_j) is orthogonal to the lifting-line tangent and lies in the plane defined
+                    # by the lifting-line tangent and the unswept axial vector (i.e. chord line). You get these by solving
                     #
                     #   < u_j, T > = 0
                     #   < u_j, u_a > > 0
                     #   u_j = c1*u_a+c2*T
+                    # 
+                    # Lead to
+                    #
+                    # c1 = sqrt(1/1-k^2)
+                    # c2 = -c1*k
+                    #
+                    # where
+                    #
+                    # k = < T, u_a >
 
                     # Same for both
                     u_a = self.u_a_unswept[wing_slice]
