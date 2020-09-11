@@ -13,6 +13,7 @@ if __name__=="__main__":
     input_dict = {
         "solver" : {
             "type" : "nonlinear",
+            "max_iterations" : 100000,
             "use_total_velocity" : True
         },
         "units" : "English",
@@ -53,9 +54,18 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "dihedral" : 5.0,
-                "sweep" : 0.0,
-                "twist" : 5.0,
+                "dihedral" : [[0.0, 15.0],
+                              [0.5, 15.0],
+                              [0.5, 25.0],
+                              [1.0, 25.0]],
+                "twist" : [[0.0, 5.0],
+                           [0.5, 5.0],
+                           [0.5, -5.0],
+                           [1.0, -5.0]],
+                "sweep" : [[0.0, 45.0],
+                           [0.5, 45.0],
+                           [0.5, 0.0],
+                           [1.0, 0.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,

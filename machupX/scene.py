@@ -2565,7 +2565,7 @@ class Scene:
 
         # Make sure the LL equations have been solved in this state
         if not self._solved:
-            self.solve_forces()
+            self.solve_forces(**kwargs)
 
         # Setup table for saving to .txt file
         index = 0

@@ -586,6 +586,13 @@ class Airplane:
                 blend_1 = np.exp(-sigma_blend[i]*ds1*ds1)[:,np.newaxis]
                 self.P1_eff[i,wing_slice,:] = straight_ac*blend_1+self.P1_eff[i,wing_slice,:]*(1.0-blend_1)
 
+                # Blend u_a_unswept
+                ds = self.PC_span_locs[wing_slice]-PC_span
+                blend = np.exp(-sigma_blend[i]*ds*ds)[:,np.newaxis]
+                u_a_straight = self.u_a_unswept[i,:]
+                u_a = u_a_straight*blend+self.u_a_unswept[wing_slice,:]*(1.0-blend)
+                u_a = u_a/np.linalg.norm(u_a, axis=1, keepdims=True)
+
                 # Place vortex joints
                 if jackson_analytic:
 
@@ -622,8 +629,8 @@ class Airplane:
                     # k = < T, u_a >
 
                     # Same for both
-                    u_a = self.u_a_unswept[wing_slice]
                     ds = np.zeros(wing_slice.stop-wing_slice.start)
+                    #u_a = self.u_a_unswept[wing_slice]
 
                     # P0
                     d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
@@ -652,28 +659,28 @@ class Airplane:
                     self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
 
                     # Do some averaging to make sure the jointed sheet is continuous
-                    if True:
+                    if False:
                         avg_joint_locs = 0.5*(P0_joint_eff[1:,:]+P1_joint_eff[:-1,:])
                         P0_joint_eff[1:,:] = avg_joint_locs
                         P1_joint_eff[:-1,:] = avg_joint_locs
                         self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
                         self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
 
-                    ## Plot effective vortices
-                    #if i > 48 and i < 51:
-                    #    fig = plt.figure(figsize=plt.figaspect(1.0))
-                    #    ax = fig.gca(projection='3d')
-                    #    for j in range(wing_slice.start, wing_slice.stop):
-                    #        ax.plot([self.P0_joint_eff[i,j,0], self.P0_eff[i,j,0], self.P1_eff[i,j,0], self.P1_joint_eff[i,j,0]],
-                    #                [self.P0_joint_eff[i,j,1], self.P0_eff[i,j,1], self.P1_eff[i,j,1], self.P1_joint_eff[i,j,1]],
-                    #                [self.P0_joint_eff[i,j,2], self.P0_eff[i,j,2], self.P1_eff[i,j,2], self.P1_joint_eff[i,j,2]],
-                    #                '--')
+                    # Plot effective vortices
+                    if False and i > (self.N//2-2) and i < (self.N//2+1):
+                        fig = plt.figure(figsize=plt.figaspect(1.0))
+                        ax = fig.gca(projection='3d')
+                        for j in range(wing_slice.start, wing_slice.stop):
+                            ax.plot([self.P0_joint_eff[i,j,0], self.P0_eff[i,j,0], self.P1_eff[i,j,0], self.P1_joint_eff[i,j,0]],
+                                    [self.P0_joint_eff[i,j,1], self.P0_eff[i,j,1], self.P1_eff[i,j,1], self.P1_joint_eff[i,j,1]],
+                                    [self.P0_joint_eff[i,j,2], self.P0_eff[i,j,2], self.P1_eff[i,j,2], self.P1_joint_eff[i,j,2]],
+                                    '--')
 
-                    #    lim = np.max(np.max(np.max(self.P0_joint_eff)))
-                    #    ax.set_xlim3d(lim, -lim)
-                    #    ax.set_ylim3d(lim, -lim)
-                    #    ax.set_zlim3d(lim, -lim)
-                    #    plt.show()
+                        lim = np.max(np.max(np.max(self.P0_joint_eff)))
+                        ax.set_xlim3d(lim, -lim)
+                        ax.set_ylim3d(lim, -lim)
+                        ax.set_zlim3d(lim, -lim)
+                        plt.show()
 
             else:
 

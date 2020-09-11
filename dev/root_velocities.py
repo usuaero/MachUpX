@@ -9,6 +9,7 @@ if __name__=="__main__":
     input_dict = {
         "solver" : {
             "type" : "nonlinear",
+            "max_iterations" : 10000,
             "use_total_velocity" : True,
             "use_swept_sections" : True,
             "use_in_plane" : True,
@@ -34,8 +35,18 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "twist" : 5.0,
-                "dihedral" : 5.0,
+                "dihedral" : [[0.0, 15.0],
+                              [0.5, 15.0],
+                              [0.5, 25.0],
+                              [1.0, 25.0]],
+                "twist" : [[0.0, 5.0],
+                           [0.5, 5.0],
+                           [0.5, -5.0],
+                           [1.0, -5.0]],
+                "sweep" : [[0.0, 45.0],
+                           [0.5, 45.0],
+                           [0.5, 0.0],
+                           [1.0, 0.0]],
                 "ac_offset" : "kuchemann",
                 "grid" : {
                     "N" : 160,
@@ -54,104 +65,109 @@ if __name__=="__main__":
         "beta" : 0.0
     }
 
-    # Initialize plot
-    fig, (ax0, ax1) = plt.subplots(ncols=2)
+    if False:
+        # Initialize plot
+        fig, (ax0, ax1) = plt.subplots(ncols=2)
 
-    # Run default case
-    scene = mx.Scene(scene_input=input_dict)
-    scene.add_aircraft("wing", airplane_dict, state=state)
-    dist = scene.distributions()
-    y_control = dist["wing"]["main_wing_right"]["cpy"]
-    gamma_control = dist["wing"]["main_wing_right"]["circ"]
-    w_control = dist["wing"]["main_wing_right"]["w"]
-    ax0.plot(y_control, gamma_control, label='Orig')
-    ax1.plot(y_control, w_control)
+        # Run default case
+        scene = mx.Scene(scene_input=input_dict)
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label='Orig')
+        ax1.plot(y_control, w_control)
 
-    ## Run without corrections
-    #scene = mx.Scene(scene_input=input_dict)
-    #airplane_dict["wings"]["main_wing"]["grid"]["reid_corrections"] = False
-    #scene.add_aircraft("wing", airplane_dict, state=state)
-    #airplane_dict["wings"]["main_wing"]["grid"]["reid_corrections"] = True
-    #dist = scene.distributions()
-    #y_control = dist["wing"]["main_wing_right"]["cpy"]
-    #gamma_control = dist["wing"]["main_wing_right"]["circ"]
-    #w_control = dist["wing"]["main_wing_right"]["w"]
-    #ax0.plot(y_control, gamma_control, label='No Reid')
-    #ax1.plot(y_control, w_control)
+        # Run without corrections
+        scene = mx.Scene(scene_input=input_dict)
+        airplane_dict["wings"]["main_wing"]["grid"]["reid_corrections"] = False
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        airplane_dict["wings"]["main_wing"]["grid"]["reid_corrections"] = True
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label='No Reid')
+        ax1.plot(y_control, w_control)
 
-    # Run without Kuchemann
-    scene = mx.Scene(scene_input=input_dict)
-    airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
-    scene.add_aircraft("wing", airplane_dict, state=state)
-    airplane_dict["wings"]["main_wing"]["ac_offset"] = "kuchemann"
-    dist = scene.distributions()
-    y_control = dist["wing"]["main_wing_right"]["cpy"]
-    gamma_control = dist["wing"]["main_wing_right"]["circ"]
-    w_control = dist["wing"]["main_wing_right"]["w"]
-    ax0.plot(y_control, gamma_control, label='No Kuchemann')
-    ax1.plot(y_control, w_control)
+        # Run without Kuchemann
+        scene = mx.Scene(scene_input=input_dict)
+        airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        airplane_dict["wings"]["main_wing"]["ac_offset"] = "kuchemann"
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label='No Kuchemann')
+        ax1.plot(y_control, w_control)
 
-    # Run without swept sections
-    input_dict["solver"]["use_swept_sections"] = False
-    scene = mx.Scene(scene_input=input_dict)
-    input_dict["solver"]["use_swept_sections"] = True
-    scene.add_aircraft("wing", airplane_dict, state=state)
-    dist = scene.distributions()
-    y_control = dist["wing"]["main_wing_right"]["cpy"]
-    gamma_control = dist["wing"]["main_wing_right"]["circ"]
-    w_control = dist["wing"]["main_wing_right"]["w"]
-    ax0.plot(y_control, gamma_control, label='No section corrections')
-    ax1.plot(y_control, w_control)
+        # Run without swept sections
+        input_dict["solver"]["use_swept_sections"] = False
+        scene = mx.Scene(scene_input=input_dict)
+        input_dict["solver"]["use_swept_sections"] = True
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label='No section corrections')
+        ax1.plot(y_control, w_control)
 
-    # Run with shorter joints
-    scene = mx.Scene(scene_input=input_dict)
-    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.05
-    scene.add_aircraft("wing", airplane_dict, state=state)
-    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.15
-    dist = scene.distributions()
-    y_control = dist["wing"]["main_wing_right"]["cpy"]
-    gamma_control = dist["wing"]["main_wing_right"]["circ"]
-    w_control = dist["wing"]["main_wing_right"]["w"]
-    ax0.plot(y_control, gamma_control, label='Shorter joints')
-    ax1.plot(y_control, w_control)
+        # Run with shorter joints
+        scene = mx.Scene(scene_input=input_dict)
+        airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.05
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.15
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label='Shorter joints')
+        ax1.plot(y_control, w_control)
 
-    # Run with longer joints
-    scene = mx.Scene(scene_input=input_dict)
-    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.25
-    scene.add_aircraft("wing", airplane_dict, state=state)
-    airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.15
-    dist = scene.distributions()
-    y_control = dist["wing"]["main_wing_right"]["cpy"]
-    gamma_control = dist["wing"]["main_wing_right"]["circ"]
-    w_control = dist["wing"]["main_wing_right"]["w"]
-    ax0.plot(y_control, gamma_control, label='Longer joints')
-    ax1.plot(y_control, w_control)
+        # Run with longer joints
+        scene = mx.Scene(scene_input=input_dict)
+        airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.25
+        scene.add_aircraft("wing", airplane_dict, state=state)
+        airplane_dict["wings"]["main_wing"]["grid"]["joint_length"] = 0.15
+        dist = scene.distributions()
+        y_control = dist["wing"]["main_wing_right"]["cpy"]
+        gamma_control = dist["wing"]["main_wing_right"]["circ"]
+        w_control = dist["wing"]["main_wing_right"]["w"]
+        ax0.plot(y_control, gamma_control, label='Longer joints')
+        ax1.plot(y_control, w_control)
 
-    ax0.legend()
-    ax0.set_title("Circulation")
-    ax1.set_title("Downwash")
-    plt.show()
+        ax0.legend()
+        ax0.set_title("Circulation")
+        ax1.set_title("Downwash")
+        plt.show()
 
     # Convergence study
-    fig, (ax0, ax1) = plt.subplots(ncols=2)
-    grids = [20, 40, 80, 160, 320, 640, 1280]
-    for grid in grids:
-        try:
-            scene = mx.Scene(scene_input=input_dict)
-            airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
-            airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
-            scene.add_aircraft("wing", airplane_dict, state=state)
-            dist = scene.distributions()
-            y_control = dist["wing"]["main_wing_right"]["cpy"]
-            gamma_control = dist["wing"]["main_wing_right"]["circ"]
-            w_control = dist["wing"]["main_wing_right"]["w"]
-            ax0.plot(y_control, gamma_control, label=str(grid))
-            ax1.plot(y_control, w_control)
-        except mx.SolverNotConvergedError:
-            pass
+    if True:
+        fig, (ax0, ax1) = plt.subplots(ncols=2)
+        grids = [20, 40, 80, 160, 320, 640, 1280]
+        for grid in grids:
+            try:
+                scene = mx.Scene(scene_input=input_dict)
+                airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
+                airplane_dict["wings"]["main_wing"]["ac_offset"] = 0.0
+                scene.add_aircraft("wing", airplane_dict, state=state)
+                dist = scene.distributions(verbose=True)
+                y_control = dist["wing"]["main_wing_right"]["cpy"]
+                gamma_control = dist["wing"]["main_wing_right"]["circ"]
+                w_control = dist["wing"]["main_wing_right"]["w"]
+                ax0.plot(y_control, gamma_control, label=str(grid))
+                ax1.plot(y_control, w_control)
+            except mx.SolverNotConvergedError:
+                pass
 
-    ax0.legend()
-    ax0.set_title("Circulation")
-    ax1.set_title("Downwash")
-    plt.show()
-    scene.out_gamma()
+            if grid != 1280:
+                del scene
+
+        ax0.legend()
+        ax0.set_title("Circulation")
+        ax1.set_title("Downwash")
+        plt.show()
+        scene.out_gamma()
