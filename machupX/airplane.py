@@ -629,44 +629,33 @@ class Airplane:
                     # k = < T, u_a >
 
                     # Same for both
-                    ds = np.zeros(wing_slice.stop-wing_slice.start)
-                    #u_a = self.u_a_unswept[wing_slice]
+                    dt = np.zeros(wing_slice.stop-wing_slice.start)
 
                     # P0
                     d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
-                    ds[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
-                    T0 = np.gradient(self.P0_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
+                    dt[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
+                    T0 = np.gradient(self.P0_eff[i,wing_slice,:], dt, edge_order=2, axis=0)
                     T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
                     k = np.einsum('ij,ij->i', T0, u_a)
                     c1 = np.sqrt(1/(1-k*k))
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    P0_joint_eff = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-                    self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
+                    self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
                     # P1 joint
                     d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
-                    ds[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
-                    T1 = np.gradient(self.P1_eff[i,wing_slice,:], ds, edge_order=2, axis=0)
+                    dt[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
+                    T1 = np.gradient(self.P1_eff[i,wing_slice,:], dt, edge_order=2, axis=0)
                     T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
                     k = np.einsum('ij,ij->i', T1, u_a)
                     c1 = np.sqrt(1/(1-k*k))
                     c2 = -c1*k
                     u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
                     u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    P1_joint_eff = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-                    self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
+                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
-                    # Do some averaging to make sure the jointed sheet is continuous
-                    if False:
-                        avg_joint_locs = 0.5*(P0_joint_eff[1:,:]+P1_joint_eff[:-1,:])
-                        P0_joint_eff[1:,:] = avg_joint_locs
-                        P1_joint_eff[:-1,:] = avg_joint_locs
-                        self.P0_joint_eff[i,wing_slice,:] = P0_joint_eff
-                        self.P1_joint_eff[i,wing_slice,:] = P1_joint_eff
-
-                    # Plot effective vortices
+                    # Plot effective vortices for control points at the root
                     if False and i > (self.N//2-2) and i < (self.N//2+1):
                         fig = plt.figure(figsize=plt.figaspect(1.0))
                         ax = fig.gca(projection='3d')
