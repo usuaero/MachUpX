@@ -458,6 +458,9 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>
 >>>>**"max_thickness" : float, optional**
 >>>>>Maximum thickness of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. If these are specified, the max camber will be automatically determined. Required for making corrections to section properties based on sweep. Defaults to 0.0.
+>>>
+>>>**"camber_solver_kwargs" : dict, optional**
+>>>>A dictionary of kwargs to pass to the Airfoil class initializer for this airfoil. These affect how the camber line solver runs for an airfoil where "ouline_points" is given. Has no effect is this is not given. The kwargs that can be specified are "verbose", "camber_relaxation", "le_loc", "max_iterations", and "camber_termination_tol". More information on each of these can be found [here](https://airfoildatabase.readthedocs.io/en/latest/airfoil_class.html).
 >
 >**"wings" : dict**
 >>Gives the lifting surfaces for the aircraft. Wings, stabilizers, fins, etc. are all treated the same in numerical lifting-line and so should be included here as wing segments. MachUp is set up so the user can define complex geometries by attaching the ends of different wing segments together (for an example, see the examples/ directory). The user can define any number of wing segments within this dict. Note that each wing segment can only have one control surface, therefore, a wing with multiple control surfaces must be created from multiple wing segments.

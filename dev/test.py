@@ -44,7 +44,16 @@ if __name__=="__main__":
         },
         "airfoils" : {
             "NACA_4410" : "dev/NACA_4410.json",
-            "NACA_0010" : "dev/NACA_0010.json"
+            "NACA_0010" : {
+                "geometry" : {
+                    "outline_points" : "dev/Eppler_335.txt"
+                },
+                "camber_solver_kwargs" : {
+                    "camber_termination_tol" : 1e-8,
+                    "verbose" : True
+                }
+            }
+            #"NACA_0010" : "dev/NACA_0010.json"
         },
         "plot_lacs" : False,
         "wings" : {
