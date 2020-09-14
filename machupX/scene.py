@@ -1834,6 +1834,9 @@ class Scene:
                 derivs[aircraft_name]["Cl_w,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cl_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cl_w"])*diff
                 derivs[aircraft_name]["Cm_w,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cm_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cm_w"])*diff
                 derivs[aircraft_name]["Cn_w,b"] = (FM_dbeta_fwd[aircraft_name]["total"]["Cn_w"]-FM_dbeta_bwd[aircraft_name]["total"]["Cn_w"])*diff
+
+                # Calculate static margin
+                derivs[aircraft_name]["%_static_margin"] = -derivs[aircraft_name]["Cm_w,a"]/derivs[aircraft_name]["CL,a"]*100.0
         
             # Reset aerodynamic state
             self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0)
