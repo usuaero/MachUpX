@@ -61,7 +61,12 @@ if __name__=="__main__":
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
-                "airfoil" : "NACA_0010",
+                "airfoil" : [[0.0, "NACA_0010"],
+                             [0.2, "NACA_4410"],
+                             [0.4, "NACA_0010"],
+                             [0.6, "NACA_4410"],
+                             [0.8, "NACA_0010"],
+                             [1.0, "NACA_4410"]],
                 "semispan" : 4.0,
                 "dihedral" : [[0.0, 5.0],
                               [0.5, 5.0],
@@ -120,7 +125,7 @@ if __name__=="__main__":
     print(json.dumps(FM["plane"]["total"], indent=4))
     scene.out_gamma()
 
-    scene.distributions(make_plots=["chord"], show_plots=True)
+    scene.distributions(make_plots=["chord", "alpha"], show_plots=True, radians=False)
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

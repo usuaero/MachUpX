@@ -2528,8 +2528,8 @@ class Scene:
             "sweep" : section geometric sweep
             "aero_sweep" : section aerodynamic sweep (based on the lifting-line)
             "area" : section differential planform area
-            "alpha" : angle of attack in degrees (corrected for sweep)
-            "delta_flap" : flap deflection in degrees
+            "alpha" : angle of attack (corrected for sweep)
+            "delta_flap" : flap deflection
             "u" : body-x velocity
             "v" : body-y velocity
             "w" : body-z velocity
@@ -2618,6 +2618,7 @@ class Scene:
 
 
         # Loop through airplanes
+        radians = kwargs.get("radians", True)
         dist = {}
         for airplane_object in self._airplane_objects:
             airplane_name = airplane_object.name
@@ -2638,19 +2639,34 @@ class Scene:
 
                 # Geometry
                 dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice])
-                dist[airplane_name][segment_name]["twist"] = list(segment_object.twist_cp)
-                dist[airplane_name][segment_name]["dihedral"] = list(segment_object.dihedral_cp)
-                dist[airplane_name][segment_name]["sweep"] = list(segment_object.sweep_cp)
-                dist[airplane_name][segment_name]["aero_sweep"] = list(self._section_sweep[cur_slice])
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
+                if radians:
+                    dist[airplane_name][segment_name]["twist"] = list(segment_object.twist_cp)
+                    dist[airplane_name][segment_name]["dihedral"] = list(segment_object.dihedral_cp)
+                    dist[airplane_name][segment_name]["sweep"] = list(segment_object.sweep_cp)
+                    dist[airplane_name][segment_name]["aero_sweep"] = list(self._section_sweep[cur_slice])
+                else:
+                    dist[airplane_name][segment_name]["twist"] = list(np.degrees(segment_object.twist_cp))
+                    dist[airplane_name][segment_name]["dihedral"] = list(np.degrees(segment_object.dihedral_cp))
+                    dist[airplane_name][segment_name]["sweep"] = list(np.degrees(segment_object.sweep_cp))
+                    dist[airplane_name][segment_name]["aero_sweep"] = list(np.degrees(self._section_sweep[cur_slice]))
 
                 # Airfoil info
-                if self._use_swept_sections:
-                    dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice]*self._C_sweep_inv[cur_slice])
+                if radians:
+                    if self._use_swept_sections:
+                        dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice]*self._C_sweep_inv[cur_slice])
+                    else:
+                        dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
+                    dist[airplane_name][segment_name]["alpha"] = list(self._alpha[cur_slice])
+                    dist[airplane_name][segment_name]["delta_flap"] = list(segment_object._delta_flap)
+
                 else:
-                    dist[airplane_name][segment_name]["section_aL0"] = list(self._aL0[cur_slice])
-                dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
-                dist[airplane_name][segment_name]["delta_flap"] = list(np.degrees(segment_object._delta_flap))
+                    if self._use_swept_sections:
+                        dist[airplane_name][segment_name]["section_aL0"] = list(np.degrees(self._aL0[cur_slice]*self._C_sweep_inv[cur_slice]))
+                    else:
+                        dist[airplane_name][segment_name]["section_aL0"] = list(np.degrees(self._aL0[cur_slice]))
+                    dist[airplane_name][segment_name]["alpha"] = list(np.degrees(self._alpha[cur_slice]))
+                    dist[airplane_name][segment_name]["delta_flap"] = list(np.degrees(segment_object._delta_flap))
 
                 # Section coefficients
                 dist[airplane_name][segment_name]["section_CL"] = list(self._CL[cur_slice])

@@ -543,6 +543,7 @@ class WingSegment:
             # Just put the same airfoil at the root and the tip
             self._airfoils.append(airfoil_dict[airfoil])
             self._num_airfoils = 1
+            self._airfoil_slices = [slice(0, self.N)]
 
 
         elif isinstance(airfoil, np.ndarray): # Distribution of airfoils
@@ -559,6 +560,20 @@ class WingSegment:
 
                 self._airfoil_spans.append(float(row[0]))
                 self._num_airfoils += 1
+
+            # Determine control points within each airfoil span
+            self._airfoil_slices = []
+            prev_slice_end = 0
+            for i, s in enumerate(self._airfoil_spans):
+                if i == 0:
+                    pass
+
+                # Determine greatest control point index within this span
+                num_less = np.sum((self.cp_span_locs < s).astype(int))
+                self._airfoil_slices.append(slice(prev_slice_end, num_less))
+                prev_slice_end = num_less
+
+            print(self._airfoil_slices)
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
@@ -989,6 +1004,12 @@ class WingSegment:
         j[np.where(j<0)] = 0 # Not allowed to go outside the array
         d = (interp_spans-sample_spans[j])/(sample_spans[j+1]-sample_spans[j])
         return (1-d)*coefs[i,j]+d*coefs[i,j+1]
+
+
+    def _get_control_point_coef(self, alpha, Rey, Mach, coef_func):
+        # Determines the value of the desired coefficient at each control point
+        pass
+
 
 
     def get_cp_CLa(self, alpha, Rey, Mach):
