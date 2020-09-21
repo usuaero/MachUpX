@@ -63,10 +63,10 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "dihedral" : [[0.0, 15.0],
-                              [0.5, 15.0],
-                              [0.5, 15.0],
-                              [1.0, 15.0]],
+                "dihedral" : [[0.0, 5.0],
+                              [0.5, 5.0],
+                              [0.5, 5.0],
+                              [1.0, 5.0]],
                 "twist" : [[0.0, 5.0],
                            [0.5, 5.0],
                            [0.5, 5.0],
@@ -85,7 +85,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 50,
+                    "N" : 500,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -98,7 +98,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 10.0,
+        "alpha" : 0.0,
         "beta" : 0.0
     }
 

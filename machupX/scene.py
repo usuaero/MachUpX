@@ -799,7 +799,7 @@ class Scene:
             print("    Convergence: {0}".format(self._solver_convergence))
             print("{0:<20}{1:<20}".format("Iteration", "Error"))
             print("".join(['-']*40))
-        start_time = time.time()
+        self._nonlinear_start_time = time.time()
 
         J = np.zeros((self._N, self._N))
 
@@ -895,7 +895,7 @@ class Scene:
             if verbose:
                 print("Nonlinear solver successfully converged. Final error: {0}".format(error))
 
-        return time.time()-start_time
+        return time.time()-self._nonlinear_start_time
 
 
     def _get_frames(self, **kwargs):
@@ -1432,7 +1432,12 @@ class Scene:
 
                 # Nonlinear improvement
                 if self._solver_type == "nonlinear" or fsolve_time == -1:
-                    nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
+                    try:
+                        nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
+                    except KeyboardInterrupt:
+                        print("")
+                        print("!!!Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
+                        nonlinear_time = time.time()-self._nonlinear_start_time
 
                 if fsolve_time == -1:
                     fsolve_time = 0.0
