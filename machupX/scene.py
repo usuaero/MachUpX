@@ -2513,9 +2513,8 @@ class Scene:
 
     def distributions(self, **kwargs):
         """Returns various parameters, as well as forces and moments, at each control point for all
-        aircraft at the current state. Angular values are given in radians. Note that if 
-        "correct_sections_for_sweep" (default True) is set to True, the section *aerodynamic* properties
-        given here will be the swept section properties.
+        aircraft at the current state. Note that if "correct_sections_for_sweep" (default True) is
+        set to True, the section *aerodynamic* properties given here will be the swept section properties.
         
         The following properties are stored as distributions:
         
@@ -2527,7 +2526,7 @@ class Scene:
             "twist" : section geometric twist
             "dihedral" : section geometric dihedral
             "sweep" : section geometric sweep
-            "aero_sweep" : section aerodynamic sweep (based on the locus of aerodynamic centers)
+            "aero_sweep" : section aerodynamic sweep (based on the lifting-line)
             "area" : section differential planform area
             "alpha" : angle of attack in degrees (corrected for sweep)
             "delta_flap" : flap deflection in degrees
@@ -2554,6 +2553,11 @@ class Scene:
         ----------
         filename : str
             Output file to write the distributions to. Saves as a .txt file. Defaults to no file.
+
+        radians : bool
+            Whether to output angular values in radians. Defaults to True. If set to False, all
+            angular values will be output in degrees. Note this also affects the plots generated
+            by make_plots.
 
         make_plots : list, optional
             List of keys from the dist dictionary to make plots of. A plot of the parameter as a function 
@@ -2746,7 +2750,7 @@ class Scene:
                     if kwargs.get("show_plots", False):
                         plt.show()
                     else:
-                        plt.savefig("{0}_{1}_{2}_vs_span_fraction".format(aircraft_name, segment_name, param))
+                        plt.savefig("{0}_{1}_{2}_vs_span_fraction".format(aircraft_object.name, segment_name, param))
                     plt.close()
 
         return dist
