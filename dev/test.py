@@ -44,16 +44,16 @@ if __name__=="__main__":
         },
         "airfoils" : {
             "NACA_4410" : "dev/NACA_4410.json",
-            "NACA_0010" : {
-                "geometry" : {
-                    "outline_points" : "dev/Eppler_335.txt"
-                },
-                "camber_solver_kwargs" : {
-                    "camber_termination_tol" : 1e-8,
-                    "verbose" : True
-                }
-            }
-            #"NACA_0010" : "dev/NACA_0010.json"
+            #"NACA_0010" : {
+            #    "geometry" : {
+            #        "outline_points" : "dev/Eppler_335.txt"
+            #    },
+            #    "camber_solver_kwargs" : {
+            #        "camber_termination_tol" : 1e-8,
+            #        "verbose" : True
+            #    }
+            #}
+            "NACA_0010" : "dev/NACA_0010.json"
         },
         "plot_lacs" : False,
         "wings" : {
@@ -65,16 +65,16 @@ if __name__=="__main__":
                 "semispan" : 4.0,
                 "dihedral" : [[0.0, 15.0],
                               [0.5, 15.0],
-                              [0.5, 25.0],
-                              [1.0, 25.0]],
+                              [0.5, 15.0],
+                              [1.0, 15.0]],
                 "twist" : [[0.0, 5.0],
                            [0.5, 5.0],
                            [0.5, 5.0],
                            [1.0, 5.0]],
                 "sweep" : [[0.0, 5.0],
                            [0.5, 5.0],
-                           [0.5, 20.0],
-                           [1.0, 20.0]],
+                           [0.5, 5.0],
+                           [1.0, 5.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -85,7 +85,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 500,
+                    "N" : 50,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -120,7 +120,7 @@ if __name__=="__main__":
     print(json.dumps(FM["plane"]["total"], indent=4))
     scene.out_gamma()
 
-    #scene.distributions(filename="test.dist")
+    scene.distributions(make_plots=["chord"], show_plots=True)
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

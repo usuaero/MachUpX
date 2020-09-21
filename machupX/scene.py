@@ -37,7 +37,6 @@ class Scene:
 
         # Initialize basic storage objects
         self._airplanes = {}
-        self._airplane_names = []
         self._N = 0
         self._num_aircraft = 0
 
@@ -2732,8 +2731,8 @@ class Scene:
         # Create plots specified by the user
         make_plots = kwargs.get("make_plots", [])
         for param in make_plots:
-            for aircraft_name in self._airplane_names:
-                for segment_name, segment_dist in dist[aircraft_name].items():
+            for aircraft_object in self._airplane_objects:
+                for segment_name, segment_dist in dist[aircraft_object.name].items():
                     plt.figure()
                     plt.plot(segment_dist["span_frac"], segment_dist[param])
                     plt.xlabel("Span Fraction")
