@@ -2816,7 +2816,9 @@ class Scene:
             Name of the file to export the model to. Must be .stl.
 
         section_resolution : int, optional
-            Number of points to use in dicretizing the airfoil section outlines. Defaults to 200.
+            Number of points to use in dicretizing the airfoil section outlines. Defaults to 200. Note this is the
+            number of outline points where two exist at the trailing edge. Thus the number of panels will be one less
+            than this number.
 
         aircraft : str or list, optional
             Name(s) of the aircraft to include in the model. Defaults to all aircraft in the scene.

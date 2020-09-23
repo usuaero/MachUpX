@@ -1355,27 +1355,47 @@ class WingSegment:
             index, third is the vector components.
         """
 
-        # Discretize by node locations
+        # Determine params
         section_res = kwargs.get("section_resolution", 200)
         close_te = kwargs.get("close_te", True)
-        num_facets = self.N*(section_res-1)*2
+        close_root = self._input_dict.get("close_stl_root", False)
+        close_tip = self._input_dict.get("close_stl_tip", False)
+
+        # Initialize storage
+        num_end_facets = (section_res//2-1)*2+1+section_res%2+close_te
+        num_facets = self.N*(section_res-1)*2+num_end_facets*close_root+num_end_facets*close_tip
         vectors = np.zeros((num_facets*3,3))
+
+        # Make sure we always go from root to tip
+        if self.side == "right":
+            node_span_locs = self.node_span_locs
+        else:
+            node_span_locs = self.node_span_locs[::-1]
 
         # Generate vectors
         for i in range(self.N):
 
             # Root-ward node
-            root_span = self.node_span_locs[i]
+            root_span = node_span_locs[i]
             root_outline = self._get_airfoil_outline_coords_at_span(root_span, section_res, close_te)
 
             # Tip-ward node
-            tip_span = self.node_span_locs[i+1]
+            tip_span = node_span_locs[i+1]
             tip_outline = self._get_airfoil_outline_coords_at_span(tip_span, section_res, close_te)
+
+            # Seal root
+            if i == 0 and close_root:
+                vectors[:num_end_facets*3] = self._get_end_vectors(section_res, root_outline, close_te, num_end_facets)
+
+            # Seal tip
+            if i == self.N-1 and close_tip:
+                vectors[-num_end_facets*3:] = self._get_end_vectors(section_res, tip_outline, close_te, num_end_facets)
 
             # Create facets between the outlines
             for j in range(section_res-1):
-                index = (2*i*(section_res-1)+2*j)*3
+                index = (2*i*(section_res-1)+2*j)*3+num_end_facets*3*close_root
 
+                # Create panels
                 vectors[index] = root_outline[j]
                 vectors[index+1] = tip_outline[j+1]
                 vectors[index+2] = tip_outline[j]
@@ -1383,6 +1403,12 @@ class WingSegment:
                 vectors[index+3] = tip_outline[j+1]
                 vectors[index+4] = root_outline[j]
                 vectors[index+5] = root_outline[j+1]
+
+            # Reorder to keep the normal pointing outward
+            if self.side == "right":
+                t = np.copy(vectors[::3])
+                vectors[::3] = np.copy(vectors[1::3])
+                vectors[1::3] = np.copy(t)
 
         return vectors
 
@@ -1444,6 +1470,50 @@ class WingSegment:
         coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)
 
         return coords
+
+
+    def _get_end_vectors(self, N, outline_points, close_te, num_facets):
+        # Determines the stl vectors that seal an end of the wing segment
+
+        # Initialize storage
+        vectors = np.zeros((num_facets*3,3))
+
+        # Create panels starting at trailing edge
+        if close_te:
+            vectors[0] = outline_points[0]
+            vectors[1] = outline_points[1]
+            vectors[2] = outline_points[-1]
+            curr_vec_ind = 3
+        else:
+            vectors[0] = outline_points[0]
+            vectors[1] = outline_points[1]
+            vectors[2] = outline_points[-1]
+            vectors[3] = outline_points[1]
+            vectors[4] = outline_points[-2]
+            vectors[5] = outline_points[-1]
+            curr_vec_ind = 6
+
+        # Loop through middle part
+        for i in range(1, N//2):
+
+            # Store vectors
+            vectors[curr_vec_ind] = outline_points[i]
+            vectors[curr_vec_ind+1] = outline_points[-(i+2)]
+            vectors[curr_vec_ind+2] = outline_points[-(i+1)]
+            vectors[curr_vec_ind+3] = outline_points[i]
+            vectors[curr_vec_ind+4] = outline_points[i+1]
+            vectors[curr_vec_ind+5] = outline_points[-(i+2)]
+
+            # Increment index
+            curr_vec_ind += 6
+
+        # Handle leading edge in the case of and odd number of outline points
+        if N%2 != 0:
+            vectors[curr_vec_ind] = outline_points[N//2-1]
+            vectors[curr_vec_ind+1] = outline_points[N//2]
+            vectors[curr_vec_ind+2] = outline_points[N//2+1]
+
+        return vectors
 
 
     def export_stp(self, **kwargs):

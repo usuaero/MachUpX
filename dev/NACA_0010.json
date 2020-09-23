@@ -8,6 +8,7 @@
     "CD1" : 0.0,
     "CD2" : 0.0984,
     "geometry" : {
-        "NACA" : "0010"
+        "NACA" : "0010",
+        "NACA_closed_te" : true
     }
 }

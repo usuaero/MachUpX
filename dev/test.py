@@ -12,17 +12,11 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear",
-            "max_iterations" : 100000,
-            "use_total_velocity" : True
+            "type" : "nonlinear"
         },
         "units" : "English",
         "scene" : {
             "atmosphere" : {
-                "rho": [[0.0, 1.225],
-                    [2000.0, 1.0066],
-                    [4000.0, 0.81935],
-                    ["m", "kg/m^3"]]
             }
         }
     }
@@ -30,7 +24,7 @@ if __name__=="__main__":
     # Specify airplane
     airplane_dict = {
         "weight" : 50.0,
-        "units" : "SI",
+        "units" : "English",
         "controls" : {
             "aileron" : {
                 "is_symmetric" : False
@@ -61,25 +55,21 @@ if __name__=="__main__":
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
-                "airfoil" : [[0.0, "NACA_0010"],
-                             [0.2, "NACA_4410"],
-                             [0.4, "NACA_0010"],
-                             [0.6, "NACA_4410"],
-                             [0.8, "NACA_0010"],
-                             [1.0, "NACA_4410"]],
+                "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "dihedral" : [[0.0, 5.0],
-                              [0.5, 5.0],
-                              [0.5, 5.0],
-                              [1.0, 5.0]],
-                "twist" : [[0.0, 5.0],
-                           [0.5, 5.0],
-                           [0.5, 5.0],
-                           [1.0, 5.0]],
-                "sweep" : [[0.0, 5.0],
-                           [0.5, 5.0],
-                           [0.5, 5.0],
-                           [1.0, 5.0]],
+                #"dihedral" : [[0.0, 5.0],
+                #              [0.5, 5.0],
+                #              [0.5, 5.0],
+                #              [1.0, 5.0]],
+                #"twist" : [[0.0, 5.0],
+                #           [0.5, 5.0],
+                #           [0.5, 5.0],
+                #           [1.0, 5.0]],
+                #"sweep" : [[0.0, 5.0],
+                #           [0.5, 5.0],
+                #           [0.5, 5.0],
+                #           [1.0, 5.0]],
+                "sweep" : 45.0,
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.55,
@@ -90,12 +80,14 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 500,
+                    "N" : 50,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
                     #"blending_distance" : 2.0
-                }
+                },
+                "close_stl_tip" : True,
+                "close_stl_root" : False
             }
         }
     }
@@ -103,7 +95,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 0.0,
+        "alpha" : 3.0,
         "beta" : 0.0
     }
 
@@ -118,14 +110,14 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
-    #scene.export_dxf()
+    scene.export_stl(filename="swept_wing.stl")
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.out_gamma()
+    #scene.out_gamma()
 
-    scene.distributions(make_plots=["chord", "alpha"], show_plots=True, radians=False)
+    #scene.distributions(make_plots=["chord", "alpha"], show_plots=True, radians=False)
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
