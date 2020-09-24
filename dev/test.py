@@ -1,5 +1,6 @@
 # This script is for me to test the functionality of whatever I'm working on at the moment.
 import machupX as MX
+import pypan as pp
 import json
 import numpy as np
 import subprocess as sp
@@ -70,17 +71,17 @@ if __name__=="__main__":
                 #           [0.5, 5.0],
                 #           [1.0, 5.0]],
                 "sweep" : 45.0,
-                "control_surface" : {
-                    "chord_fraction" : 0.4,
-                    "root_span" : 0.55,
-                    "tip_span" : 0.95,
-                    "control_mixing" : {
-                        "aileron" : 1.0,
-                        "elevator" : 1.0
-                    }
-                },
+                #"control_surface" : {
+                #    "chord_fraction" : 0.4,
+                #    "root_span" : 0.55,
+                #    "tip_span" : 0.95,
+                #    "control_mixing" : {
+                #        "aileron" : 1.0,
+                #        "elevator" : 1.0
+                #    }
+                #},
                 "grid" : {
-                    "N" : 50,
+                    "N" : 5,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -110,11 +111,12 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
-    scene.export_stl(filename="swept_wing.stl")
+    stl_file = "swept_wing.stl"
+    scene.export_stl(filename=stl_file, section_resolution=15)
 
     # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
     #scene.out_gamma()
 
     #scene.distributions(make_plots=["chord", "alpha"], show_plots=True, radians=False)
@@ -126,3 +128,5 @@ if __name__=="__main__":
     ## Get state derivatives
     #derivs = scene.state_derivatives()
     #print(json.dumps(derivs["plane"], indent=4))
+
+    my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", verbose=True)

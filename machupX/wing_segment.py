@@ -1362,7 +1362,7 @@ class WingSegment:
         close_tip = self._input_dict.get("close_stl_tip", False)
 
         # Initialize storage
-        num_end_facets = (section_res//2-1)*2+1+section_res%2+close_te
+        num_end_facets = (section_res//2-2)*2+section_res%2+close_te
         num_facets = self.N*(section_res-1)*2+num_end_facets*close_root+num_end_facets*close_tip
         vectors = np.zeros((num_facets*3,3))
 
@@ -1406,9 +1406,9 @@ class WingSegment:
 
             # Reorder to keep the normal pointing outward
             if self.side == "right":
-                t = np.copy(vectors[::3])
-                vectors[::3] = np.copy(vectors[1::3])
-                vectors[1::3] = np.copy(t)
+                t = np.copy(vectors[1::3])
+                vectors[1::3] = np.copy(vectors[2::3])
+                vectors[2::3] = np.copy(t)
 
         return vectors
 
@@ -1482,7 +1482,7 @@ class WingSegment:
         if close_te:
             vectors[0] = outline_points[0]
             vectors[1] = outline_points[1]
-            vectors[2] = outline_points[-1]
+            vectors[2] = outline_points[-2]
             curr_vec_ind = 3
         else:
             vectors[0] = outline_points[0]
@@ -1494,7 +1494,7 @@ class WingSegment:
             curr_vec_ind = 6
 
         # Loop through middle part
-        for i in range(1, N//2):
+        for i in range(1, N//2-1):
 
             # Store vectors
             vectors[curr_vec_ind] = outline_points[i]
@@ -1507,7 +1507,7 @@ class WingSegment:
             # Increment index
             curr_vec_ind += 6
 
-        # Handle leading edge in the case of and odd number of outline points
+        # Handle leading edge in the case of an odd number of outline points
         if N%2 != 0:
             vectors[curr_vec_ind] = outline_points[N//2-1]
             vectors[curr_vec_ind+1] = outline_points[N//2]

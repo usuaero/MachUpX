@@ -2833,6 +2833,7 @@ class Scene:
         # Model of single aircraft
         if len(aircraft_names) == 1:
             self._airplanes[aircraft_names[0]].export_stl(**kwargs)
+            return
 
         # Check for .stl file
         filename = kwargs.get("filename")
