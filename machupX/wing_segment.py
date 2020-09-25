@@ -1395,20 +1395,22 @@ class WingSegment:
             for j in range(section_res-1):
                 index = (2*i*(section_res-1)+2*j)*3+num_end_facets*3*close_root
 
-                # Create panels
-                vectors[index] = root_outline[j]
-                vectors[index+1] = tip_outline[j+1]
-                vectors[index+2] = tip_outline[j]
+                if self.side == "left":
+                    vectors[index] = root_outline[j]
+                    vectors[index+1] = tip_outline[j+1]
+                    vectors[index+2] = tip_outline[j]
 
-                vectors[index+3] = tip_outline[j+1]
-                vectors[index+4] = root_outline[j]
-                vectors[index+5] = root_outline[j+1]
+                    vectors[index+3] = tip_outline[j+1]
+                    vectors[index+4] = root_outline[j]
+                    vectors[index+5] = root_outline[j+1]
+                else:
+                    vectors[index] = root_outline[j]
+                    vectors[index+1] = tip_outline[j]
+                    vectors[index+2] = tip_outline[j+1]
 
-            # Reorder to keep the normal pointing outward
-            if self.side == "right":
-                t = np.copy(vectors[1::3])
-                vectors[1::3] = np.copy(vectors[2::3])
-                vectors[2::3] = np.copy(t)
+                    vectors[index+3] = tip_outline[j+1]
+                    vectors[index+4] = root_outline[j+1]
+                    vectors[index+5] = root_outline[j]
 
         return vectors
 
@@ -1512,6 +1514,12 @@ class WingSegment:
             vectors[curr_vec_ind] = outline_points[N//2-1]
             vectors[curr_vec_ind+1] = outline_points[N//2]
             vectors[curr_vec_ind+2] = outline_points[N//2+1]
+
+        # Reorder to keep the normal pointing outward
+        if self.side == "right":
+            t = np.copy(vectors[1::3])
+            vectors[1::3] = np.copy(vectors[2::3])
+            vectors[2::3] = np.copy(t)
 
         return vectors
 

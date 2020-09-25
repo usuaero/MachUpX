@@ -81,7 +81,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 5,
+                    "N" : 10,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -112,7 +112,7 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=True)
     stl_file = "swept_wing.stl"
-    scene.export_stl(filename=stl_file, section_resolution=15)
+    scene.export_stl(filename=stl_file, section_resolution=21)
 
     # Solve forces
     #FM = scene.solve_forces(non_dimensional=False, verbose=True)
@@ -129,4 +129,5 @@ if __name__=="__main__":
     #derivs = scene.state_derivatives()
     #print(json.dumps(derivs["plane"], indent=4))
 
-    my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", verbose=True)
+    my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
+    my_mesh.plot(centroids=False)
