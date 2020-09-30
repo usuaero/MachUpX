@@ -2522,7 +2522,8 @@ class Scene:
             "cpx" : control point x location
             "cpy" : control point y location
             "cpz" : control point z location
-            "chord" : section geometric chord (corrected for sweep)
+            "chord" : section geometric chord
+            "swept_chord" : section chord normal to the lifting-line (corrected for sweep)
             "twist" : section geometric twist
             "dihedral" : section geometric dihedral
             "sweep" : section geometric sweep
@@ -2589,6 +2590,7 @@ class Scene:
                           ("cpy", "float"),
                           ("cpz", "float"),
                           ("chord", "float"),
+                          ("swept_chord", "float"),
                           ("twist", "float"),
                           ("dihedral", "float"),
                           ("sweep", "float"),
@@ -2638,7 +2640,8 @@ class Scene:
                 dist[airplane_name][segment_name]["cpz"] = list(self._PC[cur_slice,2])
 
                 # Geometry
-                dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice])
+                dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice]*self._C_sweep_inv[cur_slice])
+                dist[airplane_name][segment_name]["swept_chord"] = list(self._c_bar[cur_slice])
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
                 if radians:
                     dist[airplane_name][segment_name]["twist"] = list(segment_object.twist_cp)
@@ -2708,6 +2711,7 @@ class Scene:
 
                     # Geometry
                     table_data[cur_slice]["chord"] = dist[airplane_name][segment_name]["chord"]
+                    table_data[cur_slice]["swept_chord"] = dist[airplane_name][segment_name]["swept_chord"]
                     table_data[cur_slice]["twist"] = dist[airplane_name][segment_name]["twist"]
                     table_data[cur_slice]["dihedral"] = dist[airplane_name][segment_name]["dihedral"]
                     table_data[cur_slice]["sweep"] = dist[airplane_name][segment_name]["sweep"]
@@ -2745,10 +2749,10 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
-                "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+                "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Swept Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
                 "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha", "Fx", "Fy", "Fz", "Mx", "My", "Mz", "Circ")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)

@@ -58,19 +58,18 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                #"dihedral" : [[0.0, 5.0],
-                #              [0.5, 5.0],
-                #              [0.5, 5.0],
-                #              [1.0, 5.0]],
-                #"twist" : [[0.0, 5.0],
-                #           [0.5, 5.0],
-                #           [0.5, 5.0],
-                #           [1.0, 5.0]],
-                #"sweep" : [[0.0, 5.0],
-                #           [0.5, 5.0],
-                #           [0.5, 5.0],
-                #           [1.0, 5.0]],
-                "sweep" : 45.0,
+                "dihedral" : [[0.0, 5.0],
+                              [0.5, 5.0],
+                              [0.5, 5.0],
+                              [1.0, 5.0]],
+                "twist" : [[0.0, 5.0],
+                           [0.5, 5.0],
+                           [0.5, 5.0],
+                           [1.0, 0.0]],
+                "sweep" : [[0.0, 45.0],
+                           [0.5, 45.0],
+                           [0.5, 5.0],
+                           [1.0, 5.0]],
                 #"control_surface" : {
                 #    "chord_fraction" : 0.4,
                 #    "root_span" : 0.55,
@@ -81,7 +80,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 10,
+                    "N" : 500,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -96,7 +95,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 3.0,
+        "alpha" : 5.0,
         "beta" : 0.0
     }
 
@@ -112,12 +111,12 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=True)
     stl_file = "swept_wing.stl"
-    scene.export_stl(filename=stl_file, section_resolution=21)
+    #scene.export_stl(filename=stl_file, section_resolution=51)
 
     # Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-    #scene.out_gamma()
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    scene.out_gamma()
 
     #scene.distributions(make_plots=["chord", "alpha"], show_plots=True, radians=False)
 
@@ -129,5 +128,5 @@ if __name__=="__main__":
     #derivs = scene.state_derivatives()
     #print(json.dumps(derivs["plane"], indent=4))
 
-    my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
-    my_mesh.plot(centroids=False)
+    #my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
+    #my_mesh.plot(centroids=False)
