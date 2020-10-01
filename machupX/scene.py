@@ -2515,6 +2515,7 @@ class Scene:
         """Returns various parameters, as well as forces and moments, at each control point for all
         aircraft at the current state. Note that if "correct_sections_for_sweep" (default True) is
         set to True, the section *aerodynamic* properties given here will be the swept section properties.
+        All angular values are given in radians by default.
         
         The following properties are stored as distributions:
         

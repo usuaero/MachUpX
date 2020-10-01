@@ -497,7 +497,7 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>Length of the wing segment in the y-direction (i.e. discounting sweep). If "side" is specified as "both", the total span of the segment is twice this value. May not be specified if "quarter_chord_locs" is specified.
 >>>
 >>>**"twist" : float, array, string, or func, optional**
->>>>Gives the **geometric** twist of the wing, meaning the angle of the chord line of each airfoil section relative to the body x-axis. If specified as a float, then all sections will make that angle with the horizontal and it will be as if the wing is untwisted but mounted at that angle. If specified as an array, the array gives the local twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value, as below:
+>>>>Gives the **geometric** twist of the wing, meaning the angle of the chord line of each airfoil section relative to the body x-axis in degrees. If specified as a float, then all sections will make that angle with the horizontal and it will be as if the wing is untwisted but mounted at that angle. If specified as an array, the array gives the local twist as a function of span. The first column gives the span location as a fraction of the total span. This column must have values going from 0.0 to 1.0. The second column gives the twist at that span location. If specified as a string, this string must contain the path to a csv file containing the twist data formatted in columns, as with the array. For properties as a function of span, MachUp will linearly interpolate intermediate values. If a step change in distribution is needed, this can be done by specifying the span location where the step change occurs twice, once with each value, as below:
 >>>>
 >>>>>**"twist" : [[0.0, 0.0], [0.5, 0.0], [0.5, 2.0], [1.0, 2.0]]**
 >>>>
@@ -506,13 +506,13 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>Alternatively, if MachUpX is being used as a module imported into a script, this value can be a function which accepts an array of span fractions and returns the corresponding twist angles *in radians*.
 >>>
 >>>**"dihedral" : float, array, string, or func optional**
->>>>Gives the dihedral of the wing segment. Defined the same as "twist". If defined as a distribution, this specifies the local dihedral angle at each point along the wing. Defaults to 0.
+>>>>Gives the dihedral of the wing segment in degrees. Defined the same as "twist". If defined as a distribution, this specifies the local dihedral angle at each point along the wing. Defaults to 0.
 >>>
 >>>**"shear_dihedral" : bool, optional**
 >>>>Whether the dihedral should be viewed as a solid-body rotation (standard) or a shear transformation (nonstandard), similar to sweep, for the purpose of exporting 3D models. Has no effect on aerodynamics. Defaults to False, corresponding to a solid-body rotation.
 >>>
 >>>**"sweep" : float, array, string, or func optional**
->>>>Gives the sweep angle of the wing segment. Sweeping the wing is a shear transformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from thex-z plane. Defined the same as "twist". Defaults to 0.
+>>>>Gives the sweep angle of the wing segment in degrees. Sweeping the wing is a shear transformation, rather than a solid-body rotation. This means the amount of sweep will not affect the distance of the wingtip from thex-z plane. Defined the same as "twist". Defaults to 0.
 >>>
 >>>**"chord" : float, array, string, or func optional**
 >>>>Gives the chord length of the wing segment. Defined the same as "twist", except that it can also be specified as elliptic using the following definition:
