@@ -58,16 +58,16 @@ if __name__=="__main__":
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
-                "dihedral" : [[0.0, 5.0],
-                              [0.5, 5.0],
-                              [0.5, 5.0],
-                              [1.0, 5.0]],
-                "twist" : [[0.0, 5.0],
-                           [0.5, 5.0],
-                           [0.5, 5.0],
+                "dihedral" : [[0.0, 0.0],
+                              [0.5, 0.0],
+                              [0.5, 0.0],
+                              [1.0, 0.0]],
+                "twist" : [[0.0, 0.0],
+                           [0.5, 0.0],
+                           [0.5, 0.0],
                            [1.0, 0.0]],
-                "sweep" : [[0.0, 45.0],
-                           [0.5, 45.0],
+                "sweep" : [[0.0, 5.0],
+                           [0.5, 5.0],
                            [0.5, 5.0],
                            [1.0, 5.0]],
                 #"control_surface" : {
@@ -87,8 +87,8 @@ if __name__=="__main__":
                     #"blending_distance" : 2.0
                 },
                 "CAD_options" :{
-                    "close_stl_tip" : True,
-                    "close_stl_root" : False
+                    "round_stl_tip" : True,
+                    "n_rounding_sections" : 5
                 }
             }
         }
@@ -115,10 +115,10 @@ if __name__=="__main__":
     stl_file = "swept_wing.stl"
     scene.export_stl(filename=stl_file, section_resolution=51)
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.out_gamma()
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
+    #scene.out_gamma()
 
     #scene.distributions(filename="dist.txt")
 
