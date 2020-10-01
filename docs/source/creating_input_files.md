@@ -58,7 +58,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>
 >>The outputs from the analyses will be stored in files automatically.If no filename is given by the user, MachUpX will automatically specify a filename based on the name of the input file. This means that all output files will be stored in the same directory as the input file, with the exception of .stp and .dxf files.
 >>
->>Please note that each of these run commands corresponds to a Scene class method. Thus, for more information on each, please see the [Scene class page](scene_class).
+>>Please note that each of these run commands corresponds to a Scene class method. Thus, for more information on each, please see the [Scene class page](scene_object).
 >>
 >>**"solve_forces" : dict, optional**
 >>>Calculates the aerodynamic forces and moments on the aircraft at the current state.
