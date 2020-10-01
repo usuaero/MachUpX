@@ -75,6 +75,9 @@ class WingSegment:
             self._setup_cp_data()
             self._setup_node_data()
 
+            # Get CAD options
+            self._cad_options = self._input_dict.get("CAD_options", {})
+
     
     def _initialize_params(self):
 
@@ -1358,8 +1361,8 @@ class WingSegment:
         # Determine params
         section_res = kwargs.get("section_resolution", 200)
         close_te = kwargs.get("close_te", True)
-        close_root = self._input_dict.get("close_stl_root", False)
-        close_tip = self._input_dict.get("close_stl_tip", False)
+        close_root = self._cad_options.get("close_stl_root", False)
+        close_tip = self._cad_options.get("close_stl_tip", False)
 
         # Initialize storage
         num_end_facets = (section_res//2-2)*2+section_res%2+close_te

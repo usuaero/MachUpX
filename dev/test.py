@@ -54,7 +54,7 @@ if __name__=="__main__":
         "wings" : {
             "main_wing" : {
                 "ID" : 1,
-                "side" : "both",
+                "side" : "right",
                 "is_main" : True,
                 "airfoil" : "NACA_0010",
                 "semispan" : 4.0,
@@ -86,8 +86,10 @@ if __name__=="__main__":
                     #"joint_length" : 2.0,
                     #"blending_distance" : 2.0
                 },
-                "close_stl_tip" : True,
-                "close_stl_root" : False
+                "CAD_options" :{
+                    "close_stl_tip" : True,
+                    "close_stl_root" : False
+                }
             }
         }
     }
@@ -111,14 +113,14 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=True)
     stl_file = "swept_wing.stl"
-    #scene.export_stl(filename=stl_file, section_resolution=51)
+    scene.export_stl(filename=stl_file, section_resolution=51)
 
     # Solve forces
     FM = scene.solve_forces(non_dimensional=False, verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))
     scene.out_gamma()
 
-    #scene.distributions(make_plots=["chord", "alpha"], show_plots=True, radians=False)
+    #scene.distributions(filename="dist.txt")
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)

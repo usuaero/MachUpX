@@ -58,6 +58,8 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>
 >>The outputs from the analyses will be stored in files automatically.If no filename is given by the user, MachUpX will automatically specify a filename based on the name of the input file. This means that all output files will be stored in the same directory as the input file, with the exception of .stp and .dxf files.
 >>
+>>Please note that each of these run commands corresponds to a Scene class method. Thus, for more information on each, please see the [Scene class page](scene_class).
+>>
 >>**"solve_forces" : dict, optional**
 >>>Calculates the aerodynamic forces and moments on the aircraft at the current state.
 >>>
@@ -349,13 +351,13 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>>Velocity vector of the aircraft in body-fixed coordinates (i.e. u, v, and w) or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
 >>>>>
 >>>>>**"alpha" : float, optional**
->>>>>>Aerodynamic angle of attack. Defaults to 0.
+>>>>>>Aerodynamic angle of attack in degrees. Defaults to 0.
 >>>>>
 >>>>>**"beta" : float, optional**
->>>>>>Aerodynamic sideslip angle. Defaults to 0. NOTE: MachUp defines this as the experimental sideslip angle, i.e. b = asin(Vy/V).
+>>>>>>Aerodynamic sideslip angle in degrees. Defaults to 0. NOTE: MachUpX defines this as the experimental sideslip angle, i.e. b = asin(Vy/V), rather than the analytic sideslip angle.
 >>>>>
 >>>>>**"orientation" : vector, optional**
->>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.
+>>>>>>Orientation of the aircraft, going from earth-fixed frame to body-fixed frame. If this is a 3-element vector it is assumed the ZYX Euler angle formulation in degrees is used (i.e. [psi, theta, phi]). If this is a 4-element vector it is assumed the quaternion formulation is used where the first element is the scalar (i.e. [e0, ex, ey, ez]). Defaults to [1.0, 0.0, 0.0, 0.0], which will align the body- fixed frame with the earth-fixed frame.
 >>>>>
 >>>>>**"angular_rates" : vector, optional**
 >>>>>>Angular rates of the aircraft about the center of gravity, corresponding to p, q, and r. These are dimensional angular rates (rad/s). Defaults to [0.0, 0.0, 0.0].
@@ -367,7 +369,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>Describes the control deflections. The number and names of controls are arbitrary and may be specified by the user. This is discussed more in depth as part of the aircraft object. If the aircraft has controls but no state is specified, all deflections will be assumed to be zero.
 >>>>
 >>>>>**"<CONTROL_NAME>" : float or array, optional**
->>>>>>Control setting. If float, the setting is assumed constant across the control surface. If an array, then a distribution of deflections is assumed. This should be specified like "chord_fraction". Defaults to 0.0.
+>>>>>>Control setting in degrees. If float, the setting is assumed constant across the control surface. If an array, then a distribution of deflections is assumed. This should be specified like "chord_fraction". Defaults to 0.0.
 
 ## Aircraft Object
 Describes an aircraft. Stored as a .json file or a Python dictionary.
@@ -453,12 +455,6 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>**"NACA" : str, optional**
 >>>>>NACA designation for the airfoil. If given, MachUpX will automatically generate outline points using the NACA equations. Can only be NACA 4-digit series. Cannot be specified along with "outline_points". Will not affect aerodynamics.
 >>>>
->>>>**"max_camber" : float, optional**
->>>>>Maximum camber of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. If these are specified, the max camber will be automatically determined. Required for making corrections to section properties based on sweep. Defaults to 0.0.
->>>>
->>>>**"max_thickness" : float, optional**
->>>>>Maximum thickness of the airfoil as a fraction of the chord. Can be specified if "outline_points" and "NACA" are not specified. If these are specified, the max camber will be automatically determined. Required for making corrections to section properties based on sweep. Defaults to 0.0.
->>>
 >>>**"camber_solver_kwargs" : dict, optional**
 >>>>A dictionary of kwargs to pass to the Airfoil class initializer for this airfoil. These affect how the camber line solver runs for an airfoil where "ouline_points" is given. Has no effect is this is not given. The kwargs that can be specified are "verbose", "camber_relaxation", "le_loc", "max_iterations", and "camber_termination_tol". More information on each of these can be found [here](https://airfoildatabase.readthedocs.io/en/latest/airfoil_class.html).
 >
@@ -589,3 +585,12 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>>
 >>>>>**"<CONTROL_NAME>" : float**
 >>>>>>Linearly maps the control deflection to the control surface deflection. The control deflection will be multiplied by this value and then applied to the control surface.
+>>>
+>>>**"CAD_options" : dict, optional**
+>>>>Contains options for how this wing segment is to be treated when exporting in a CAD-type file (STL, STP, DXF).
+>>>>
+>>>>**"close_stl_tip" : bool, optional**
+>>>>>Whether to close the tip of the wing when exporting an STL file. Does so using a flot surface of the same shape as the tip airfoil section. Defaults to False.
+>>>>
+>>>>**"close_stl_root" : bool, optional**
+>>>>>Same as "close_stl_root", but for the root.

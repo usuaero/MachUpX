@@ -131,13 +131,13 @@ class Scene:
             self._density_data = rho
 
             # Create getters
-            if self._density_data.shape[1] is 2: # Density profile
+            if self._density_data.shape[1] == 2: # Density profile
 
                 def density_getter(position):
                     pos = position.T
                     return np.interp(-pos[2], self._density_data[:,0], self._density_data[:,1])
 
-            elif self._density_data.shape[1] is 4: # Density field
+            elif self._density_data.shape[1] == 4: # Density field
                 self._density_field_interpolator = sinterp.LinearNDInterpolator(self._density_data[:,:3],self._density_data[:,3])
 
                 def density_getter(position):
@@ -169,7 +169,7 @@ class Scene:
                 self._wind_data = V_wind
                 
                 # Create getters
-                if self._wind_data.shape[1] is 6: # Wind field
+                if self._wind_data.shape[1] == 6: # Wind field
                     self._wind_field_x_interpolator = sinterp.LinearNDInterpolator(self._wind_data[:,:3], self._wind_data[:,3], fill_value=0.0)
                     self._wind_field_y_interpolator = sinterp.LinearNDInterpolator(self._wind_data[:,:3], self._wind_data[:,4], fill_value=0.0)
                     self._wind_field_z_interpolator = sinterp.LinearNDInterpolator(self._wind_data[:,:3], self._wind_data[:,5], fill_value=0.0)
@@ -184,7 +184,7 @@ class Scene:
                         else:
                             return np.array([Vx, Vy, Vz]).T
 
-                elif self._wind_data.shape[1] is 4: # wind profile
+                elif self._wind_data.shape[1] == 4: # wind profile
 
                     def wind_getter(position):
                         single = len(position.shape)==1
