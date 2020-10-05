@@ -592,8 +592,6 @@ class Airplane:
                 u_a_straight = self.u_a_unswept[i,:]
                 u_a = u_a_straight*blend+self.u_a_unswept[wing_slice,:]*(1.0-blend)
                 u_a = u_a/np.linalg.norm(u_a, axis=1, keepdims=True)
-                u_a = np.zeros_like(u_a)
-                u_a[:,0] = -1.0
 
                 # Place vortex joints
                 if jackson_analytic:

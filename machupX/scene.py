@@ -581,12 +581,18 @@ class Scene:
 
         # Calculate V_ji
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
+        # 
+        # Problem is, if the radius almost goes to zero, that can blow up the influence matrix without making it a nan.
+        # The where statement I've added can take care of this, but then the decision has to be made as to where to cut
+        # it off. I'm loathe to make such a model-specific decision here... Maybe we could make this a user parameter?
+        # I don't trust most users to use this responsibly though. Not sure what to do. For now, I've set the cutoff very
+        # low, so it shouldn't really ever kick in.
         denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
-        V_ji_due_to_0 = np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis])
+        V_ji_due_to_0 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis]), 0.0)
 
         # Influence of vortex segment 1 after the joint
         denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
-        V_ji_due_to_1 = np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis])
+        V_ji_due_to_1 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis]), 0.0)
 
         # Sum
         # In my definition of V_ji, the first index is the control point, the second index is the horseshoe vortex, and the third index is the vector components
