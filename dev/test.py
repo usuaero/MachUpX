@@ -62,8 +62,8 @@ if __name__=="__main__":
                               [0.5, 0.0],
                               [0.5, 0.0],
                               [1.0, 0.0]],
-                "twist" : [[0.0, 5.0],
-                           [0.5, 5.0],
+                "twist" : [[0.0, 0.0],
+                           [0.5, 0.0],
                            [0.5, 0.0],
                            [1.0, 0.0]],
                 "sweep" : [[0.0, 45.0],
@@ -80,7 +80,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 500,
+                    "N" : 50,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -88,6 +88,7 @@ if __name__=="__main__":
                 },
                 "CAD_options" :{
                     "round_stl_tip" : True,
+                    "round_stl_root" : False,
                     "n_rounding_sections" : 5
                 }
             }
@@ -113,12 +114,12 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=True)
     stl_file = "swept_wing.stl"
-    #scene.export_stl(filename=stl_file, section_resolution=51)
+    scene.export_stl(filename=stl_file, section_resolution=21)
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.out_gamma()
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
+    #scene.out_gamma()
 
     #scene.distributions(filename="dist.txt")
 

@@ -1373,8 +1373,9 @@ class WingSegment:
             n_round = 0
 
         # Initialize storage
-        num_end_facets = (section_res//2-2)*2+section_res%2+close_te
-        num_facets = self.N*(section_res-1)*2+num_end_facets*close_root+num_end_facets*close_tip+num_end_facets*n_round*round_root+num_end_facets*n_round*round_tip
+        num_root_facets = (section_res//2-2)*2+close_root*(section_res%2)+close_te+round_root
+        num_tip_facets = (section_res//2-2)*2+close_tip*(section_res%2)+close_te+round_tip
+        num_facets = self.N*(section_res-1)*2+num_root_facets*close_root+num_tip_facets*close_tip+num_root_facets*n_round*round_root+num_tip_facets*n_round*round_tip
         vectors = np.zeros((num_facets*3,3))
 
         # Make sure we always go from root to tip
@@ -1396,25 +1397,35 @@ class WingSegment:
 
             # Seal root
             if i == 0 and close_root:
-                vectors[:num_end_facets*3] = self._get_end_vectors(section_res, root_outline, close_te, num_end_facets)
+                vectors[:num_root_facets*3] = self._get_end_vectors(section_res, root_outline, close_te, num_root_facets, le_tri=section_res%2!=0)[::-1]
 
             # Seal tip
             if i == self.N-1 and close_tip:
-                vectors[-num_end_facets*3:] = self._get_end_vectors(section_res, tip_outline, close_te, num_end_facets)
+                vectors[-num_tip_facets*3:] = self._get_end_vectors(section_res, tip_outline, close_te, num_tip_facets, le_tri=section_res%2!=0)
+
+            # Round root
+            if i == 0 and round_root:
+                d_theta = np.pi/n_round
+                for j in range(n_round):
+                    round_outline = self._get_round_outline(root_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")[::-1]
+                    if j == 0:
+                        vectors[:num_root_facets*3] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
+                    else:
+                        vectors[num_root_facets*3*j:num_root_facets*3*(j+1)] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
 
             # Round tip
             if i == self.N-1 and round_tip:
                 d_theta = np.pi/n_round
                 for j in range(n_round):
-                    round_outline = self._get_round_outline(tip_outline, d_theta*j, d_theta*(j+1), section_res)
+                    round_outline = self._get_round_outline(tip_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="left")
                     if j == n_round-1:
-                        vectors[-(num_end_facets*3)*(n_round-j):] = self._get_end_vectors(section_res, round_outline, close_te, num_end_facets)
+                        vectors[-(num_tip_facets*3)*(n_round-j):] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
                     else:
-                        vectors[-(num_end_facets*3)*(n_round-j):-(num_end_facets*3)*(n_round-j-1)] = self._get_end_vectors(section_res, round_outline, close_te, num_end_facets)
+                        vectors[-(num_tip_facets*3)*(n_round-j):-(num_tip_facets*3)*(n_round-j-1)] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
 
             # Create facets between the outlines
             for j in range(section_res-1):
-                index = (2*i*(section_res-1)+2*j)*3+num_end_facets*3*close_root
+                index = (2*i*(section_res-1)+2*j)*3+num_root_facets*3*close_root+num_root_facets*3*n_round*round_root
 
                 if self.side == "left":
                     vectors[index] = root_outline[j]
@@ -1436,7 +1447,7 @@ class WingSegment:
         return vectors
 
 
-    def _get_airfoil_outline_coords_at_span(self, span, N, close_te, set_chord = "no"):
+    def _get_airfoil_outline_coords_at_span(self, span, N, close_te, set_chord="no"):
         # Returns the airfoil section outline in body-fixed coordinates at the specified span fraction with the specified number of points
 
         # Determine flap deflection and fraction at this point
@@ -1495,7 +1506,7 @@ class WingSegment:
         return coords
 
 
-    def _get_end_vectors(self, N, outline_points, close_te, num_facets):
+    def _get_end_vectors(self, N, outline_points, close_te, num_facets, le_tri):
         # Determines the stl vectors that seal an end of the wing segment
 
         # Initialize storage
@@ -1530,8 +1541,8 @@ class WingSegment:
             # Increment index
             curr_vec_ind += 6
 
-        # Handle leading edge in the case of an odd number of outline points
-        if N%2 != 0:
+        # Handle triangle at leading edge
+        if le_tri:
             vectors[curr_vec_ind] = outline_points[N//2-1]
             vectors[curr_vec_ind+1] = outline_points[N//2]
             vectors[curr_vec_ind+2] = outline_points[N//2+1]
@@ -1545,13 +1556,20 @@ class WingSegment:
         return vectors
 
 
-    def _get_round_outline(self, orig_outline, theta_start, theta_end, N, rev=False):
+    def _get_round_outline(self, orig_outline, theta_start, theta_end, N, rev_rot):
         # Gives the outline points for a slice of the tip rounding
 
+        # For even number of outline points, add a dummy point at the leading edge
+        if N%2==0:
+            p = 0.5*(orig_outline[N//2-1]+orig_outline[N//2])
+            outline = np.insert(orig_outline, N//2, p, axis=0)
+        else:
+            outline = np.copy(orig_outline)
+
         # Determine section plane coordinate frame transformation matrix
-        p0 = orig_outline[N//2]
-        p1 = orig_outline[0]
-        p2 = orig_outline[N-N//4]
+        p0 = outline[N//2]
+        p1 = outline[0]
+        p2 = outline[N-N//4]
         T = np.zeros((3,3))
         T[0] = p1-p0
         T[0] /= np.linalg.norm(T[0])
@@ -1560,30 +1578,26 @@ class WingSegment:
         T[1] = np.cross(T[2], T[0])
 
         # Transform the outline
-        shifted_outline = orig_outline-p0[np.newaxis]
+        shifted_outline = outline-p0[np.newaxis]
         transed_outline = np.einsum('ij,kj->ki', T, shifted_outline)
-        if N%2==0:
-            bottom_outline = transed_outline[-1:N//2:-1]
-            top_outline = transed_outline[:N//2]
-        else:
-            bottom_outline = transed_outline[-1:N//2:-1]
-            top_outline = transed_outline[:N//2]
+        bottom_outline = transed_outline[-1:N//2-1:-1]
+        top_outline = transed_outline[:N//2+1]
 
         # Get rotation matrices to start edge
         C_from_top_to_start = np.cos(theta_start)
         S_from_top_to_start = np.sin(theta_start)
         T_from_top_to_start = np.eye(3)
         T_from_top_to_start[1,1] = C_from_top_to_start
-        T_from_top_to_start[1,2] = -S_from_top_to_start
-        T_from_top_to_start[2,1] = S_from_top_to_start
+        T_from_top_to_start[1,2] = S_from_top_to_start
+        T_from_top_to_start[2,1] = -S_from_top_to_start
         T_from_top_to_start[2,2] = C_from_top_to_start
 
         C_from_bottom_to_start = np.cos(np.pi-theta_start)
         S_from_bottom_to_start = np.sin(np.pi-theta_start)
         T_from_bottom_to_start = np.eye(3)
         T_from_bottom_to_start[1,1] = C_from_bottom_to_start
-        T_from_bottom_to_start[1,2] = S_from_bottom_to_start
-        T_from_bottom_to_start[2,1] = -S_from_bottom_to_start
+        T_from_bottom_to_start[1,2] = -S_from_bottom_to_start
+        T_from_bottom_to_start[2,1] = S_from_bottom_to_start
         T_from_bottom_to_start[2,2] = C_from_bottom_to_start
 
         # Get rotation matrices to end edge
@@ -1591,22 +1605,24 @@ class WingSegment:
         S_from_top_to_end = np.sin(theta_end)
         T_from_top_to_end = np.eye(3)
         T_from_top_to_end[1,1] = C_from_top_to_end
-        T_from_top_to_end[1,2] = -S_from_top_to_end
-        T_from_top_to_end[2,1] = S_from_top_to_end
+        T_from_top_to_end[1,2] = S_from_top_to_end
+        T_from_top_to_end[2,1] = -S_from_top_to_end
         T_from_top_to_end[2,2] = C_from_top_to_end
 
         C_from_bottom_to_end = np.cos(np.pi-theta_end)
         S_from_bottom_to_end = np.sin(np.pi-theta_end)
         T_from_bottom_to_end = np.eye(3)
         T_from_bottom_to_end[1,1] = C_from_bottom_to_end
-        T_from_bottom_to_end[1,2] = S_from_bottom_to_end
-        T_from_bottom_to_end[2,1] = -S_from_bottom_to_end
+        T_from_bottom_to_end[1,2] = -S_from_bottom_to_end
+        T_from_bottom_to_end[2,1] = S_from_bottom_to_end
         T_from_bottom_to_end[2,2] = C_from_bottom_to_end
 
         # Reverse rotation
-        if rev:
-            T_to_end = T_to_end.T
-            T_to_start = T_to_start.T
+        if rev_rot:
+            T_from_bottom_to_end = T_from_bottom_to_end.T
+            T_from_bottom_to_start = T_from_bottom_to_start.T
+            T_from_top_to_end = T_from_top_to_end.T
+            T_from_top_to_start = T_from_top_to_start.T
         
         # Get weightings
         start_top_weight = theta_start/np.pi
@@ -1619,7 +1635,7 @@ class WingSegment:
         end_outline = np.einsum('ij,kj->ki', T_from_top_to_end, top_outline)*end_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_end, bottom_outline)*end_bottom_weight
 
         # Concatenate and transform
-        rounding_outline = np.concatenate((start_outline, end_outline[::-1]), axis=0)
+        rounding_outline = np.concatenate((start_outline, end_outline[-2::-1]), axis=0)
         return np.einsum('ij,ki->kj', T.T, rounding_outline)+p0[np.newaxis]
 
 
