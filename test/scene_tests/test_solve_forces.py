@@ -325,6 +325,40 @@ def test_tapered_wing():
     assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
 
 
+def test_step_change_in_twist_wing():
+    # Tests the NLL algorithm correctly calculates a wing with a step change in twist
+
+    # Load input
+    input_dict, aircraft_name, aircraft_dict, state, control_state = MX.helpers.parse_input(input_file)
+
+    # Alter input
+    input_dict["solver"]["type"] = "nonlinear"
+
+    aircraft_dict["wings"]["main_wing"]["chord"] = [[0.0, 1.0],[1.0, 0.5]]
+    aircraft_dict["wings"]["main_wing"]["dihedral"] = 10.0
+    aircraft_dict["wings"]["main_wing"]["twist"] = [[0.0, 5.0],
+                                                    [0.5, 5.0],
+                                                    [0.5, 0.0],
+                                                    [1.0, 0.0]]
+    aircraft_dict["wings"]["main_wing"]["sweep"] = 30.0
+    aircraft_dict["wings"]["main_wing"]["grid"]["N"] = 100
+
+    # Create scene
+    scene = MX.Scene(input_dict)
+    scene.add_aircraft(aircraft_name, aircraft_dict, state=state, control_state=control_state)
+    FM = scene.solve_forces(non_dimensional=True)
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    assert abs(FM["test_plane"]["total"]["FL"]-28.12285963876808)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-3.5693179079748987)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+2.585669928717018)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+28.23029535108992)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"])<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+18.969204048301485)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
+
+
 def test_jackson_compare():
     # Tests that the circulation distribution for a swept wing matches Jackson's result (quickly becoming obsolete...)
     return # This test is obsolete
