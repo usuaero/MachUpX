@@ -537,6 +537,9 @@ class Airplane:
             self.wing_slices.append(slice(cur_index-self._wing_N[i], cur_index))
 
         # Calculate joint locations for actual lifting line
+        # I feel as if there needs to be some blending in u_a here as well. This would make the trailing vortex sheet
+        # discontinuous when seen by another lifting surface. Right? But I can't think of a good way to fix this right now,
+        # so I'm going to leave it. Have fun Brad ;)
         self.P0_joint = self.P0+(self.P0_chord*delta_joint*reid_corr)[:,np.newaxis]*self.P0_u_a
         self.P1_joint = self.P1+(self.P1_chord*delta_joint*reid_corr)[:,np.newaxis]*self.P1_u_a
         self.P0_joint_eff[:] = np.copy(self.P0_joint)[np.newaxis,:,:]
