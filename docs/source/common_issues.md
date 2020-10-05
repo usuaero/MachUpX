@@ -33,7 +33,7 @@ It's hard to describe how this issue manifests itself, because it can do so in a
 * Ridiculous local values for alpha (i.e. 60 degrees when the global angle of attack is 0.0 degrees) showing up in a DatabaseBoundsError.
 * Nonlinear solver divergence.
 
-![](reid\ corrections.png)
+![](reid\ corrections.pdf)
 
 Let me describe what is happening, as you may be able to recognize that your particular case may encourage this issue. Numerical lifting-line models each wing as a set of horseshoe vortices, as shown in the above figure. Each vortex is a singularity in potential flow and the velocity induced by each vortex goes to infinity as one approaches the vortex. As such, if a control point on an aft lifting surface happens to be too close to a trailing vortex from a forward lifting surface, the induced velocity predicted at that control point can be extremely high, leading to poor results or even failure to produce results.
 
