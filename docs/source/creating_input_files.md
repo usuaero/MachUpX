@@ -407,6 +407,8 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>
 >>MachUpX uses the AirfoilDatabase package ([link](https://www.github.com/usuaero/AirfoilDatabase)) to calculate section properties. This package allows for generating nonlinear coefficient databases for a given airfoil. It's full capabilities are explained in the [documentation](https://airfoildatabase.readthedocs.io/en/latest/). Please note that MachUpX does not have the capability to generate these databases. It can only read in a previously generated database.
 >>
+>>**IMPORTANT:** If you are using multiple nonlinear databases for multiple spanwise airfoils, then the nonlinear databases must be generated for the range of Reynolds number *seen by the whole wing*. E.g. if you have a tapered wing, then the root will see a higher Reynolds number than the tip; despite this fact, the root airfoil database must span the range of Reynolds numbers expected at the tip and vice versa. Please also note that the Reynolds number used to extract coefficients from the database is calculated using the total (freestream plus induced) velocity. Thus it is a good rule of thumb to generate a database which goes a little above and a little below the expected freestream Reynolds numbers.
+>>
 >>The input for a single airfoil has the following structure:
 >
 >>**"<AIRFOIL_NAME>" : dict or str**
