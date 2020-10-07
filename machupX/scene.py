@@ -78,6 +78,7 @@ class Scene:
         self._use_total_velocity = solver_params.get("use_total_velocity", True)
         self._use_in_plane = solver_params.get("use_in_plane", True)
         self._match_machup_pro = solver_params.get("match_machup_pro", False)
+        self._impingement_threshold = solver_params.get("impingement_threshold", 1e-10)
 
         # Store unit system
         self._unit_sys = self._input_dict.get("units", "English")
@@ -580,18 +581,21 @@ class Scene:
         self._P1_joint_u_inf = self._P1_joint_v_inf/np.linalg.norm(self._P1_joint_v_inf, axis=-1, keepdims=True)
 
         # Calculate V_ji
-        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero
-        # 
+        # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero.
         # Problem is, if the radius almost goes to zero, that can blow up the influence matrix without making it a nan.
         # The where statement I've added can take care of this, but then the decision has to be made as to where to cut
         # it off. I'm loathe to make such a model-specific decision here... Maybe we could make this a user parameter?
         # I don't trust most users to use this responsibly though. Not sure what to do. For now, I've set the cutoff very
         # low, so it shouldn't really ever kick in.
         denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
+        if (np.abs(denom)<self._impingement_threshold).any():
+            warnings.warn("""MachUpX detected a trailing vortex impinging upon a control point. This can lead to greatly exaggerated induced velocities at the control point. See "Common Issues" in the documentation for more information. This warning can be suppressed by reducing "impingement_threshold" in the solver parameters.""")
         V_ji_due_to_0 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis]), 0.0)
 
         # Influence of vortex segment 1 after the joint
         denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
+        if (np.abs(denom)<self._impingement_threshold).any():
+            warnings.warn("""MachUpX detected a trailing vortex impinging upon a control point. This can lead to greatly exaggerated induced velocities at the control point. See "Common Issues" in the documentation for more information. This warning can be suppressed by reducing "impingement_threshold" in the solver parameters.""")
         V_ji_due_to_1 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis]), 0.0)
 
         # Sum

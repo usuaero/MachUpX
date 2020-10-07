@@ -28,13 +28,20 @@ except airfoil_db.DatabaseBoundsError as e:
 ```
 
 ## Trailing Vortex Impingement
-It's hard to describe how this issue manifests itself, because it can do so in a few different ways. Some ways we have found are
+MachUpX may give the following warning:
+```
+MachUpX detected a trailing vortex impinging upon a control point. This can lead to greatly exaggerated induced velocities at the control point.
+See "Common Issues" in the documentation for more information. This warning can be suppressed by reducing "impingement_threshold" in the solver parameters.
+```
+Other ways this error can manifest are
 
 * Ridiculous local values for alpha (i.e. 60 degrees when the global angle of attack is 0.0 degrees) showing up in a DatabaseBoundsError.
 * Nonlinear solver divergence.
 
-![](reid\ corrections.png)
+![](reid\ corrections.pnf)
 
 Let me describe what is happening, as you may be able to recognize that your particular case may encourage this issue. Numerical lifting-line models each wing as a set of horseshoe vortices, as shown in the above figure. Each vortex is a singularity in potential flow and the velocity induced by each vortex goes to infinity as one approaches the vortex. As such, if a control point on an aft lifting surface happens to be too close to a trailing vortex from a forward lifting surface, the induced velocity predicted at that control point can be extremely high, leading to poor results or even failure to produce results.
 
-To fix this, it is best to offset one's geometry slightly to keep aft lifting surfaces out of the wake of forward lifting surfaces. This is a known failing of numerical lifting-line theory and is present in all versions of MachUp. Annoying, yes. I'm currently pondering other solutions...
+The above warning will be given if in any case the denominator of the induced velocity equation for the trailing vortex segments falls below a certain threshold (1e-10 by default). If this warning is being given erroneously, the user can reduce the threshold by setting "impingement_threshold" in the solver dict within the input to MachUpX.
+
+To fix the overall issue, it is best to offset one's geometry slightly to keep aft lifting surfaces out of the wake of forward lifting surfaces. This is a known failing of numerical lifting-line theory and is present in all versions of MachUp. Annoying, yes. I'm currently pondering other solutions...
