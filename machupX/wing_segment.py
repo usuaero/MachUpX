@@ -576,8 +576,6 @@ class WingSegment:
                 self._airfoil_slices.append(slice(prev_slice_end, num_less))
                 prev_slice_end = num_less
 
-            print(self._airfoil_slices)
-
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
 
