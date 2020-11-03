@@ -56,7 +56,10 @@ if __name__=="__main__":
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
-                "airfoil" : "NACA_0010",
+                "airfoil" : [[0.0, "NACA_0010"],
+                             [0.3, "NACA_4410"],
+                             [0.7, "NACA_0010"],
+                             [1.0, "NACA_4410"]],
                 "semispan" : 4.0,
                 "dihedral" : [[0.0, 0.0],
                               [0.5, 0.0],
@@ -80,7 +83,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 50,
+                    "N" : 10,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -98,7 +101,7 @@ if __name__=="__main__":
     # Specify state
     state = {
         "velocity" : 100.0,
-        "alpha" : 5.0,
+        "alpha" : 0.0,
         "beta" : 0.0
     }
 
@@ -114,12 +117,12 @@ if __name__=="__main__":
 
     #scene.display_wireframe(show_vortices=True)
     stl_file = "swept_wing.stl"
-    scene.export_stl(filename=stl_file, section_resolution=21)
+    #scene.export_stl(filename=stl_file, section_resolution=21)
 
-    ## Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-    #scene.out_gamma()
+    # Solve forces
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    scene.out_gamma()
 
     #scene.distributions(filename="dist.txt")
 
