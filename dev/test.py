@@ -57,9 +57,9 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "airfoil" : [[0.0, "NACA_0010"],
-                             [0.3, "NACA_4410"],
+                             [0.3, "NACA_0010"],
                              [0.7, "NACA_0010"],
-                             [1.0, "NACA_4410"]],
+                             [1.0, "NACA_0010"]],
                 "semispan" : 4.0,
                 "dihedral" : [[0.0, 0.0],
                               [0.5, 0.0],
@@ -83,7 +83,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 10,
+                    "N" : 40,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -92,7 +92,7 @@ if __name__=="__main__":
                 "CAD_options" :{
                     "round_stl_tip" : True,
                     "round_stl_root" : False,
-                    "n_rounding_sections" : 5
+                    "n_rounding_sections" : 10
                 }
             }
         }
@@ -116,13 +116,13 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
-    stl_file = "swept_wing.stl"
-    #scene.export_stl(filename=stl_file, section_resolution=21)
+    stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
+    scene.export_stl(filename=stl_file, section_resolution=41)
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.out_gamma()
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
+    #scene.out_gamma()
 
     #scene.distributions(filename="dist.txt")
 
@@ -134,5 +134,10 @@ if __name__=="__main__":
     #derivs = scene.state_derivatives()
     #print(json.dumps(derivs["plane"], indent=4))
 
-    #my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
+    my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
     #my_mesh.plot(centroids=False)
+    solver = pp.VortexRingSolver(mesh=my_mesh, verbose=True)
+    solver.set_condition(V_inf=[-100.0, 0.0, -10.0], rho=0.0023769)
+    FM = solver.solve(lifting=True, verbose=True)
+    print(FM)
+    solver.export_vtk("case.vtk")

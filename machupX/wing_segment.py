@@ -1440,9 +1440,9 @@ class WingSegment:
                 for j in range(n_round):
                     round_outline = self._get_round_outline(root_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")[::-1]
                     if j == 0:
-                        vectors[:num_root_facets*3] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
+                        vectors[:num_root_facets*3] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True, flip=j<n_round//2)
                     else:
-                        vectors[num_root_facets*3*j:num_root_facets*3*(j+1)] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
+                        vectors[num_root_facets*3*j:num_root_facets*3*(j+1)] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True, flip=j<n_round//2)
 
             # Round tip
             if i == self.N-1 and round_tip:
@@ -1450,30 +1450,49 @@ class WingSegment:
                 for j in range(n_round):
                     round_outline = self._get_round_outline(tip_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="left")
                     if j == n_round-1:
-                        vectors[-(num_tip_facets*3)*(n_round-j):] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
+                        vectors[-(num_tip_facets*3)*(n_round-j):] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True, flip=j<n_round//2)
                     else:
-                        vectors[-(num_tip_facets*3)*(n_round-j):-(num_tip_facets*3)*(n_round-j-1)] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
+                        vectors[-(num_tip_facets*3)*(n_round-j):-(num_tip_facets*3)*(n_round-j-1)] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True, flip=j<n_round//2)
 
             # Create facets between the outlines
             for j in range(section_res-1):
                 index = (2*i*(section_res-1)+2*j)*3+num_root_facets*3*close_root+num_root_facets*3*n_round*round_root
 
-                if self.side == "left":
-                    vectors[index] = root_outline[j]
-                    vectors[index+1] = tip_outline[j+1]
-                    vectors[index+2] = tip_outline[j]
+                # Facets should be mirrored over the horizontal plane
+                if j < (section_res-1)//2:
+                    if self.side == "left":
+                        vectors[index] = root_outline[j]
+                        vectors[index+1] = tip_outline[j+1]
+                        vectors[index+2] = tip_outline[j]
 
-                    vectors[index+3] = tip_outline[j+1]
-                    vectors[index+4] = root_outline[j]
-                    vectors[index+5] = root_outline[j+1]
+                        vectors[index+3] = tip_outline[j+1]
+                        vectors[index+4] = root_outline[j]
+                        vectors[index+5] = root_outline[j+1]
+                    else:
+                        vectors[index] = root_outline[j]
+                        vectors[index+1] = tip_outline[j]
+                        vectors[index+2] = tip_outline[j+1]
+
+                        vectors[index+3] = tip_outline[j+1]
+                        vectors[index+4] = root_outline[j+1]
+                        vectors[index+5] = root_outline[j]
                 else:
-                    vectors[index] = root_outline[j]
-                    vectors[index+1] = tip_outline[j]
-                    vectors[index+2] = tip_outline[j+1]
+                    if self.side == "left":
+                        vectors[index] = root_outline[j+1]
+                        vectors[index+1] = tip_outline[j+1]
+                        vectors[index+2] = tip_outline[j]
 
-                    vectors[index+3] = tip_outline[j+1]
-                    vectors[index+4] = root_outline[j+1]
-                    vectors[index+5] = root_outline[j]
+                        vectors[index+3] = tip_outline[j]
+                        vectors[index+4] = root_outline[j]
+                        vectors[index+5] = root_outline[j+1]
+                    else:
+                        vectors[index] = root_outline[j+1]
+                        vectors[index+1] = tip_outline[j]
+                        vectors[index+2] = tip_outline[j+1]
+
+                        vectors[index+3] = tip_outline[j]
+                        vectors[index+4] = root_outline[j+1]
+                        vectors[index+5] = root_outline[j]
 
         return vectors
 
@@ -1537,7 +1556,7 @@ class WingSegment:
         return coords
 
 
-    def _get_end_vectors(self, N, outline_points, close_te, num_facets, le_tri):
+    def _get_end_vectors(self, N, outline_points, close_te, num_facets, le_tri, flip=False):
         # Determines the stl vectors that seal an end of the wing segment
 
         # Initialize storage
@@ -1550,24 +1569,40 @@ class WingSegment:
             vectors[2] = outline_points[-2]
             curr_vec_ind = 3
         else:
-            vectors[0] = outline_points[0]
-            vectors[1] = outline_points[1]
-            vectors[2] = outline_points[-1]
-            vectors[3] = outline_points[1]
-            vectors[4] = outline_points[-2]
-            vectors[5] = outline_points[-1]
+            if flip:
+                vectors[0] = outline_points[0]
+                vectors[1] = outline_points[1]
+                vectors[2] = outline_points[-1]
+                vectors[3] = outline_points[1]
+                vectors[4] = outline_points[-2]
+                vectors[5] = outline_points[-1]
+            else:
+                vectors[0] = outline_points[0]
+                vectors[1] = outline_points[1]
+                vectors[2] = outline_points[-2]
+                vectors[3] = outline_points[0]
+                vectors[4] = outline_points[-2]
+                vectors[5] = outline_points[-1]
             curr_vec_ind = 6
 
         # Loop through middle part
         for i in range(1, N//2-1):
 
             # Store vectors
-            vectors[curr_vec_ind] = outline_points[i]
-            vectors[curr_vec_ind+1] = outline_points[-(i+2)]
-            vectors[curr_vec_ind+2] = outline_points[-(i+1)]
-            vectors[curr_vec_ind+3] = outline_points[i]
-            vectors[curr_vec_ind+4] = outline_points[i+1]
-            vectors[curr_vec_ind+5] = outline_points[-(i+2)]
+            if flip:
+                vectors[curr_vec_ind] = outline_points[i]
+                vectors[curr_vec_ind+1] = outline_points[-(i+2)]
+                vectors[curr_vec_ind+2] = outline_points[-(i+1)]
+                vectors[curr_vec_ind+3] = outline_points[i]
+                vectors[curr_vec_ind+4] = outline_points[i+1]
+                vectors[curr_vec_ind+5] = outline_points[-(i+2)]
+            else:
+                vectors[curr_vec_ind] = outline_points[i+1]
+                vectors[curr_vec_ind+1] = outline_points[-(i+2)]
+                vectors[curr_vec_ind+2] = outline_points[-(i+1)]
+                vectors[curr_vec_ind+3] = outline_points[i]
+                vectors[curr_vec_ind+4] = outline_points[i+1]
+                vectors[curr_vec_ind+5] = outline_points[-(i+1)]
 
             # Increment index
             curr_vec_ind += 6
