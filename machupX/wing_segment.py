@@ -679,10 +679,10 @@ class WingSegment:
     
     def _initialize_ac_locus(self):
         # Sets up the locus of aerodynamic centers for this wing segment.
-        ac_offset_data = import_value("ac_offset", self._input_dict, self._unit_sys, 0)
+        ll_offset_data = import_value("ll_offset", self._input_dict, self._unit_sys, 0)
 
         # Generate Kuchemann offset
-        if ac_offset_data == "kuchemann":
+        if ll_offset_data == "kuchemann":
 
             # If the sweep is not constant, don't calculate an offset
             kuchemann_invalid = False
@@ -690,7 +690,7 @@ class WingSegment:
                 sweep_data = self._getter_data["sweep"]
                 if not isinstance(sweep_data, float):
                     warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
-                    ac_offset_data = 0.0
+                    ll_offset_data = 0.0
                     kuchemann_invalid = True
 
             except KeyError:
@@ -701,12 +701,12 @@ class WingSegment:
                     sweeps = self.get_sweep(spans)
                     if not np.allclose(np.full(10, sweeps[0]), sweeps, rtol=1e-10, atol=1e-3):
                         warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
-                        ac_offset_data = 0.0
+                        ll_offset_data = 0.0
                         kuchemann_invalid = True
 
                 else:
                     warnings.warn("Kuchemann's equations for the locus of aerodynamic centers cannot be used in the case of non-constant sweep. Reverting to no offset.")
-                    ac_offset_data = 0.0
+                    ll_offset_data = 0.0
                     kuchemann_invalid = True
 
             # Calculate offset as a fraction of the local chord
@@ -748,16 +748,16 @@ class WingSegment:
                 l = l_cen-l_tip
 
                 # Calculate offset
-                ac_offset = -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))
+                ll_offset = -(0.25*(1.0-1.0/K*(1.0+2.0*l*sweep_eff/m.pi)))
 
                 # Assemble array
-                ac_offset_data = np.concatenate((locs[:,np.newaxis], ac_offset[:,np.newaxis]), axis=1)
+                ll_offset_data = np.concatenate((locs[:,np.newaxis], ll_offset[:,np.newaxis]), axis=1)
 
         # Create getter
-        if callable(ac_offset_data):
-            self._get_ac_offset = ac_offset_data
+        if callable(ll_offset_data):
+            self._get_ll_offset = ll_offset_data
         else:
-            self._get_ac_offset = self._build_getter_linear_f_of_span(ac_offset_data, "ac_offset")
+            self._get_ll_offset = self._build_getter_linear_f_of_span(ll_offset_data, "ll_offset")
 
         # Store control points
         self.control_points = self._get_section_ac_loc(self.cp_span_locs)
@@ -993,7 +993,7 @@ class WingSegment:
             span = np.asarray(span)
 
         loc = self._get_quarter_chord_loc(span)
-        loc += (self._get_ac_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_unswept_axial_vec(span)
+        loc += (self._get_ll_offset(span)*self.get_chord(span))[:,np.newaxis]*self._get_unswept_axial_vec(span)
         if single:
             loc = loc.item()
         return loc

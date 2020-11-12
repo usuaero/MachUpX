@@ -71,7 +71,7 @@ Users will notice that differences exist between the results obtained from the t
 * MachUpX uses only the in-plane velocity for determining section behavior.
 * MachUp Pro scales section coefficients by the magnitude of the freestream including rotation. MachUpX doesn't need to do this.
 
-All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ac_offset" can be set as "kuchemann" for each wing. In the input file under "solver", "use_swept_sections", "use_total_velocity", "use_in_plane", and "match_machup_pro" can be specified. "CL_max" is specified in the input for each airfoil.
+All of these can be toggled in MachUpX by the user. Under the "grid" parameter for each wing, "reid_corrections" and "flap_edge_cluster" can be specified. Also, "ll_offset" can be set as "kuchemann" for each wing. In the input file under "solver", "use_swept_sections", "use_total_velocity", "use_in_plane", and "match_machup_pro" can be specified. "CL_max" is specified in the input for each airfoil.
 
 A couple minor differences which cannot be toggled are:
 

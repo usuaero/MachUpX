@@ -13,6 +13,6 @@ MachUpX
    dxf
    common_issues
    error_handling
-   version_1_to_version_2
+   version_notes
    support
    developer_notes
