@@ -2651,8 +2651,12 @@ class Scene:
                 dist[airplane_name][segment_name]["cpz"] = list(self._PC[cur_slice,2])
 
                 # Geometry
-                dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice]*self._C_sweep_inv[cur_slice])
-                dist[airplane_name][segment_name]["swept_chord"] = list(self._c_bar[cur_slice])
+                if self._use_swept_sections:
+                    dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice]*self._C_sweep_inv[cur_slice])
+                    dist[airplane_name][segment_name]["swept_chord"] = list(self._c_bar[cur_slice])
+                else:
+                    dist[airplane_name][segment_name]["chord"] = list(self._c_bar[cur_slice])
+                    dist[airplane_name][segment_name]["swept_chord"] = list(self._c_bar[cur_slice])
                 dist[airplane_name][segment_name]["area"] = list(self._dS[cur_slice])
                 if radians:
                     dist[airplane_name][segment_name]["twist"] = list(segment_object.twist_cp)
