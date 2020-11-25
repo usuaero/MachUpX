@@ -566,25 +566,26 @@ class WingSegment:
 
             # Determine control points within each airfoil span
             self._airfoil_slices = []
-            prev_slice_end = 0
-            for i, s in enumerate(self._airfoil_spans):
-                if i == 0:
-                    continue
+            if self.side == "right":
+                prev_slice_end = 0
+                for i, s in enumerate(self._airfoil_spans):
+                    if i == 0:
+                        continue
 
-                # Determine greatest control point index within this span
-                num_less = np.sum((self.cp_span_locs < s).astype(int))
-                if self.side == "left":
-                    if prev_slice_end != 0:
-                        self._airfoil_slices.append(slice(num_less-1, prev_slice_end-1, -1))
-                    else:
-                        self._airfoil_slices.append(slice(num_less-1, None, -1))
-                else:
+                    # Determine greatest control point index within this span
+                    num_less = np.sum((self.cp_span_locs < s).astype(int))
                     self._airfoil_slices.append(slice(prev_slice_end, num_less))
-                prev_slice_end = num_less
+                    prev_slice_end = num_less
+            else:
+                prev_slice_end = self.N
+                for i, s in enumerate(self._airfoil_spans):
+                    if i==0:
+                        continue
 
-            # Reverse order for left side
-            if self.side == "left":
-                self._airfoil_slices = self._airfoil_slices[::-1]
+                    # Determine smallest control point index withing this span
+                    num_greater = np.sum((self.cp_span_locs > s).astype(int))
+                    self._airfoil_slices.append(slice(num_greater, prev_slice_end))
+                    prev_slice_end = num_greater
 
         else:
             raise IOError("Airfoil definition must a be a string or an array.")
@@ -1005,7 +1006,7 @@ class WingSegment:
         return (node_chords[1:]+node_chords[:-1])/2
 
 
-    def _airfoil_interpolator(self, interp_spans, sample_spans, coefs):
+    def _airfoil_interpolator(self, interp_spans, sample_spans, vals):
         # Interpolates the airfoil coefficients at the given span locations.
         # Allows for the coefficients having been evaluated as a function of 
         # span as well.
@@ -1014,7 +1015,7 @@ class WingSegment:
         j = np.searchsorted(sample_spans, interp_spans) - 1
         j = np.where(j<0, 0, j) # Not allowed to go outside the array
         d = (interp_spans-sample_spans[j])/(sample_spans[j+1]-sample_spans[j])
-        return_val = (1-d)*coefs[i,j]+d*coefs[i,j+1]
+        return_val = (1-d)*vals[i,j]+d*vals[i,j+1]
         return return_val
 
 
@@ -1023,20 +1024,32 @@ class WingSegment:
 
         # Only one airfoil
         if self._num_airfoils == 1:
-            return getattr(self._airfoils[0], coef_func)(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
+            return getattr(self._airfoils[0], coef_func)(alpha=alpha,
+                                                         Rey=Rey,
+                                                         Mach=Mach,
+                                                         trailing_flap_deflection=self._delta_flap,
+                                                         trailing_flap_fraction=self._cp_c_f)
 
         # Multiple airfoils
         else:
 
-            # Initialize coefficient array for interpolation
-            coefs = np.zeros((self.N,self._num_airfoils))
-            for j in range(self._num_airfoils-1):
-                curr_slice = self._airfoil_slices[j]
-                coefs[curr_slice,j] = getattr(self._airfoils[j], coef_func)(alpha=alpha[curr_slice], Rey=Rey[curr_slice], Mach=Mach[curr_slice], trailing_flap_deflection=self._delta_flap[curr_slice], trailing_flap_fraction=self._cp_c_f[curr_slice])
-                coefs[curr_slice,j+1] = getattr(self._airfoils[j+1], coef_func)(alpha=alpha[curr_slice], Rey=Rey[curr_slice], Mach=Mach[curr_slice], trailing_flap_deflection=self._delta_flap[curr_slice], trailing_flap_fraction=self._cp_c_f[curr_slice])
+            # Create array of coefficients
+            coefs = np.zeros((self.N, self._num_airfoils))
+            for j, cur_slice in enumerate(self._airfoil_slices):
+                coefs[cur_slice,j] = getattr(self._airfoils[j], coef_func)(alpha=alpha[cur_slice],
+                                                                           Rey=Rey[cur_slice],
+                                                                           Mach=Mach[cur_slice],
+                                                                           trailing_flap_deflection=self._delta_flap[cur_slice],
+                                                                           trailing_flap_fraction=self._cp_c_f[cur_slice])
+                coefs[cur_slice,j+1] = getattr(self._airfoils[j+1], coef_func)(alpha=alpha[cur_slice],
+                                                                               Rey=Rey[cur_slice],
+                                                                               Mach=Mach[cur_slice],
+                                                                               trailing_flap_deflection=self._delta_flap[cur_slice],
+                                                                               trailing_flap_fraction=self._cp_c_f[cur_slice])
 
             # Interpolate
-            return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, coefs)
+            return_coefs = self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, coefs)
+            return return_coefs
 
 
     def get_cp_CLa(self, alpha, Rey, Mach):

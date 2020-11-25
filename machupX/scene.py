@@ -925,7 +925,7 @@ class Scene:
         report_by_segment = kwargs.get("report_by_segment", False)
         body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
 
-        # Scale gammas to match MachUp Pro
+        # Scale gammas to match MachUp Pro (this is approximate; I can't figure out how to get these to match exactly; it'd due to how Phillips nondimensionalizes things)
         if self._match_machup_pro:
             self._gamma *= (self._V_inf/self._V_inf_w_o_rotation)**2
 

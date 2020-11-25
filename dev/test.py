@@ -13,7 +13,8 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear"
+            "type" : "nonlinear",
+            "relaxation" : 1.0
         },
         "units" : "English",
         "scene" : {
@@ -48,6 +49,7 @@ if __name__=="__main__":
             #        "verbose" : True
             #    }
             #}
+            "NACA_2410" : "dev/NACA_2410.json",
             "NACA_0010" : "dev/NACA_0010.json"
         },
         "plot_lacs" : False,
@@ -57,10 +59,13 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "airfoil" : [[0.0, "NACA_0010"],
+                             [0.1, "NACA_4410"],
                              [0.3, "NACA_0010"],
-                             [0.7, "NACA_0010"],
-                             [1.0, "NACA_0010"]],
-                "semispan" : 4.0,
+                             [0.5, "NACA_2410"],
+                             [0.6, "NACA_0010"],
+                             [0.8, "NACA_2410"],
+                             [1.0, "NACA_4410"]],
+                "semispan" : 10.0,
                 "dihedral" : [[0.0, 0.0],
                               [0.5, 0.0],
                               [0.5, 0.0],
@@ -69,10 +74,10 @@ if __name__=="__main__":
                            [0.5, 0.0],
                            [0.5, 0.0],
                            [1.0, 0.0]],
-                "sweep" : [[0.0, 45.0],
-                           [0.5, 45.0],
-                           [0.5, 45.0],
-                           [1.0, 45.0]],
+                "sweep" : [[0.0, 0.0],
+                           [0.5, 0.0],
+                           [0.5, 0.0],
+                           [1.0, 0.0]],
                 #"control_surface" : {
                 #    "chord_fraction" : 0.4,
                 #    "root_span" : 0.55,
@@ -83,7 +88,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 40,
+                    "N" : 800,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -116,13 +121,13 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
-    stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
-    scene.export_stl(filename=stl_file, section_resolution=41)
+    #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
+    #scene.export_stl(filename=stl_file, section_resolution=41)
 
-    ## Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-    #scene.out_gamma()
+    # Solve forces
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    scene.out_gamma()
 
     #scene.distributions(filename="dist.txt")
 
@@ -134,10 +139,10 @@ if __name__=="__main__":
     #derivs = scene.state_derivatives()
     #print(json.dumps(derivs["plane"], indent=4))
 
-    my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
-    #my_mesh.plot(centroids=False)
-    solver = pp.VortexRingSolver(mesh=my_mesh, verbose=True)
-    solver.set_condition(V_inf=[-100.0, 0.0, -10.0], rho=0.0023769)
-    FM = solver.solve(lifting=True, verbose=True)
-    print(FM)
-    solver.export_vtk("case.vtk")
+    #my_mesh = pp.Mesh(mesh_file=stl_file, mesh_file_type="STL", kutta_angle=90.0, verbose=True)
+    ##my_mesh.plot(centroids=False)
+    #solver = pp.VortexRingSolver(mesh=my_mesh, verbose=True)
+    #solver.set_condition(V_inf=[-100.0, 0.0, -10.0], rho=0.0023769)
+    #FM = solver.solve(lifting=True, verbose=True)
+    #print(FM)
+    #solver.export_vtk("case.vtk")
