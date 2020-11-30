@@ -163,7 +163,7 @@ if __name__=="__main__":
     print('|           /       /     \       \          ABSOLUTELY NO WARRANTY EXPRESSED OR IMPLIED   |')
     print('|          /      /  -   -  \      \                                                       |')
     print('|         /     /  -  | |  -  \     \               Submit bug reports on Github           |')
-    print('|        /    /__-    | |    -__\    \                                                     |')
+    print('|        /    /__-    | |    -__\    \             Support forum on Google Groups          |')
     print('|       /            /   \            \                                                    |')
     print('|      /____________/     \____________\                                                   |')
     print('|                                                                                          |')
