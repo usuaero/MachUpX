@@ -1687,6 +1687,94 @@ class Scene:
             plt.show()
 
 
+    def display_planform(self, **kwargs):
+        """Displays an overhead plot of the specified aircraft. Note the plot will not reflect
+        the current set orientation of the aircraft nor its current position in Earth-fixed
+        coordinates.
+
+        Parameters
+        ----------
+        aircraft : str or list
+            The name(s) of the aircraft to plot the planform of. Defaults to all aircraft in the scene.
+
+        file_tag : str, optional
+            File tag to be used in saving the plot(s). The plot(s) will be saved to
+            "<AIRCRAFT_NAME>_planform_file_tag.png". If specified, the planform(s) will not be 
+            automatically displayed. If not specified, the planform(s) will display to the user 
+            and not save.
+        """
+
+        # This matters for setting up the plot axis limits
+        first_segment = True
+
+        # Kwargs
+        file_tag = kwargs.get("file_tag", None)
+
+        # Specify the aircraft
+        aircraft_names = self._get_aircraft(**kwargs)
+
+        # Loop through airplanes
+        for airplane_name in aircraft_names:
+            airplane_object = self._airplanes[airplane_name]
+
+            # Initialize plot
+            plt.figure()
+
+            # Loop through segments
+            for _, segment_object in airplane_object.wing_segments.items():
+
+                # Get the outline points and transform to earth-fixed
+                points, cntrl_points = segment_object.get_outline_points()
+
+                # Plot outline points
+                plt.plot(points[:,1], points[:,0], 'k-')
+
+                # Plot control surfaces
+                if cntrl_points is not None:
+                    plt.plot(cntrl_points[:,1], cntrl_points[:,0], 'k-')
+
+                # Figure out if the segment just added increases any needed axis limits
+                if first_segment:
+                    x_lims = [min(points[:,0].flatten()), max(points[:,0].flatten())]
+                    y_lims = [min(points[:,1].flatten()), max(points[:,1].flatten())]
+                    first_segment = False
+                else:
+                    x_lims = [min(x_lims[0], min(points[:,0].flatten())), max(x_lims[1], max(points[:,0].flatten()))]
+                    y_lims = [min(y_lims[0], min(points[:,1].flatten())), max(y_lims[1], max(points[:,1].flatten()))]
+
+            # Set axis labels
+            plt.xlabel('x')
+            plt.ylabel('y')
+
+            # Find out which axis has the widest limits
+            x_diff = x_lims[1]-x_lims[0]
+            y_diff = y_lims[1]-y_lims[0]
+            max_diff = max([x_diff, y_diff])
+
+            # Determine the center of each set of axis limits
+            x_cent = x_lims[0]+0.5*x_diff
+            y_cent = y_lims[0]+0.5*y_diff
+
+            # Scale the axis limits so they all have the same width as the widest set
+            x_lims[0] = x_cent-0.5*max_diff
+            x_lims[1] = x_cent+0.5*max_diff
+
+            y_lims[0] = y_cent-0.5*max_diff
+            y_lims[1] = y_cent+0.5*max_diff
+
+            # Set limits (note body-x is the abcissa and body-y is the ordinate)
+            plt.ylim(x_lims[0]-1, x_lims[1]+1)
+            plt.xlim(y_lims[0]-1, y_lims[1]+1)
+            plt.gca().set_aspect('equal')
+
+            # Output figure
+            if file_tag is not None:
+                plt.savefig(airplane_object.name+"_planform"+file_tag+".png")
+                plt.close()
+            else:
+                plt.show()
+
+
     def derivatives(self, **kwargs):
         """Determines the stability, damping, and control derivatives at the 
         current state. Uses a central difference scheme. Note that the angular
