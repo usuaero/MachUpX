@@ -2276,9 +2276,15 @@ class Scene:
 
             # Get current state
             v0, w0, p0, q0 = self._airplanes[aircraft_name].get_state()
+
+            # Transform velocity to body-fixed
+            v_wind = self._get_wind(p0)
+            v_body = quat_trans(q0, v0-v_wind)
+
+            # Parse original state
             orig_state = {
                 "position" : p0,
-                "velocity" : v0,
+                "velocity" : v_body,
                 "orientation" : q0,
                 "angular_rates" : w0
             }
@@ -2320,34 +2326,48 @@ class Scene:
             # Forward
             pert_state[variable][index] += perturbation
             self._airplanes[aircraft_name].set_state(**pert_state)
+            if variable == "position":
+                self._perform_geometry_and_atmos_calcs()
             self.solve_forces(nondimensional=False, **kwargs)
             FM_fwd = copy.deepcopy(self._FM)
 
             # Backward
             pert_state[variable][index] -= 2.0*perturbation
             self._airplanes[aircraft_name].set_state(**pert_state)
+            if variable == "position":
+                self._perform_geometry_and_atmos_calcs()
             self.solve_forces(nondimensional=False, **kwargs)
             FM_bwd = copy.deepcopy(self._FM)
 
-        # Quaternion perturbation
+        # Quaternion perturbation (includes rotation of the velocity vector to maintain constant Earth-fixed velocity)
         else:
 
             # Get quaternion perturbation
             dq = np.array([1.0, 0.0, 0.0, 0.0])
             dq[index+1] = 0.5*perturbation
-            q0 = pert_state["orientation"]
+            dq = dq/np.linalg.norm(dq)
 
-            # Forward
-            q_fwd = quat_mult(dq, q0)
+            # Get original state vectors
+            q0 = pert_state["orientation"]
+            v0 = pert_state["velocity"]
+
+            # Forward perturbation
+            q_fwd = quat_mult(q0, dq)
+            v_fwd = quat_trans(dq, v0)
             pert_state["orientation"] = q_fwd
+            pert_state["velocity"] = v_fwd
             self._airplanes[aircraft_name].set_state(**pert_state)
+            self._perform_geometry_and_atmos_calcs()
             self.solve_forces(nondimensional=False, **kwargs)
             FM_fwd = copy.deepcopy(self._FM)
 
-            # Backward
-            q_bwd = quat_mult(quat_conj(dq), q0)
+            # Backward perturbation
+            q_bwd = quat_mult(q0, quat_conj(dq))
+            v_bwd = quat_inv_trans(dq, v0)
             pert_state["orientation"] = q_bwd
+            pert_state["velocity"] = v_bwd
             self._airplanes[aircraft_name].set_state(**pert_state)
+            self._perform_geometry_and_atmos_calcs()
             self.solve_forces(nondimensional=False, **kwargs)
             FM_bwd = copy.deepcopy(self._FM)
 
@@ -2366,10 +2386,13 @@ class Scene:
 
     def pitch_trim(self, **kwargs):
         """Returns the required angle of attack and elevator deflection for trim at the current state.
-        THIS SHOULD ONLY BE USED IN THE CASE OF ONE AIRCRAFT IN THE SCENE AND NO WIND.
 
         Parameters
         ----------
+        aircraft : str, optional
+            Aircraft to trim in pitch. If there is only one aircraft in the scene, this does not
+            need to be given.
+
         pitch_control : str
             The name of the control that should be used to trim in pitch. Defaults to "elevator".
 
@@ -2377,9 +2400,10 @@ class Scene:
             File to output the results to. Defaults to no file.
 
         set_trim_state : bool
-            If set to True, once trim is determined, the state of the aircraft will be set to this trim state. If
-            False, the state of the aircraft will return to what it was before this method was called. Defaults 
-            to True.
+            If set to True, once trim is determined, the state of the aircraft will be set to this trim state.
+            Note that the trim state will be achieved by both changing the velocity vector and orientation of the
+            aircraft. If False, the state of the aircraft will return to what it was before this method was called.
+            Defaults to True.
 
         verbose : bool
             If set to true, information will be output about the progress of Newton's method. Defaults to 
@@ -2391,22 +2415,19 @@ class Scene:
             The angle of attack and deflection of the specified control required to trim the aircraft in 
             pitch in the current state.
         """
+
+        # Initialize data
         trim_angles = {}
 
+        # Print info
         verbose = kwargs.get("verbose", False)
         if verbose: print("\nTrimming...")
 
-        # Make sure there is only one aircraft in the scene and the wind is constant
-        aircraft_names = list(self._airplanes.keys())
-        if len(aircraft_names) != 1:
-            raise IOError("pitch_trim() may not be used when there is more than one aircraft in the scene.")
-        try:
-            self._constant_wind
-        except:
-            raise IOError("pitch_trim() may not be used when the wind is not constant.")
-
         # Get the aircraft object
-        aircraft_name = aircraft_names[0]
+        if len(list(self._airplanes.keys())) == 1:
+            aircraft_name = list(self._airplanes.keys())[0]
+        else:
+            aircraft_name = kwargs.get("aircraft")
         airplane_object = self._airplanes[aircraft_name]
 
         # Setup output
@@ -2419,6 +2440,7 @@ class Scene:
         v_wind = self._get_wind(airplane_object.p_bar)
         alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
         controls_original = copy.copy(airplane_object.current_control_state)
+        q_original = copy.copy(airplane_object.q)
 
         # Get residuals
         R = self._get_aircraft_pitch_trim_residuals(aircraft_name)

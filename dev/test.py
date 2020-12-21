@@ -59,25 +59,22 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "airfoil" : [[0.0, "NACA_0010"],
-                             [0.1, "NACA_4410"],
-                             [0.3, "NACA_0010"],
-                             [0.5, "NACA_2410"],
-                             [0.6, "NACA_0010"],
+                             [0.1, "NACA_0010"],
+                             [0.2, "NACA_2410"],
                              [0.8, "NACA_2410"],
-                             [1.0, "NACA_4410"]],
-                "semispan" : 10.0,
+                             [0.9, "NACA_0010"],
+                             [1.0, "NACA_0010"]],
+                "semispan" : 6.0,
                 "dihedral" : [[0.0, 0.0],
-                              [0.5, 0.0],
-                              [0.5, 0.0],
-                              [1.0, 0.0]],
-                "twist" : [[0.0, 0.0],
-                           [0.5, 0.0],
-                           [0.5, 0.0],
-                           [1.0, 0.0]],
+                              [0.2, 5.0],
+                              [0.8, 5.0],
+                              [1.0, 80.0]],
+                "chord" : [[0.0, 3.0],
+                           [0.1, 2.0],
+                           [0.2, 1.0],
+                           [1.0, 0.5]],
                 "sweep" : [[0.0, 0.0],
-                           [0.5, 0.0],
-                           [0.5, 0.0],
-                           [1.0, 0.0]],
+                           [1.0, 30.0]],
                 #"control_surface" : {
                 #    "chord_fraction" : 0.4,
                 #    "root_span" : 0.55,
@@ -88,7 +85,7 @@ if __name__=="__main__":
                 #    }
                 #},
                 "grid" : {
-                    "N" : 800,
+                    "N" : 80,
                     "wing_ID" : 1,
                     "reid_corrections" : True
                     #"joint_length" : 2.0,
@@ -118,16 +115,18 @@ if __name__=="__main__":
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    scene.add_aircraft("plane_for_josh", airplane_dict, state=state, control_state=control_state)
 
     #scene.display_wireframe(show_vortices=True)
     #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
     #scene.export_stl(filename=stl_file, section_resolution=41)
+    scene.display_wireframe(show_vortices=False)
+    scene.export_dxf()
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
-    scene.out_gamma()
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
+    #scene.out_gamma()
 
     #scene.distributions(filename="dist.txt")
 

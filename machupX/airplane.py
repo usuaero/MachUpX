@@ -16,7 +16,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 class Airplane:
-    """A class defining an airplane.
+    """A class defining an airplane. Note the velocity of the airplane is stored
+    internally in Earth-fixed coordinates.
 
     Parameters
     ----------
@@ -40,7 +41,7 @@ class Airplane:
         Dictionary describing the initial state of the airplane's controls.
 
     v_wind : ndarray
-        Vector giving the wind velocity in flat-earth coordinates at the 
+        Vector giving the wind velocity in Earth-fixed coordinates at the 
         aircraft's center of gravity.
 
     Returns
@@ -56,14 +57,17 @@ class Airplane:
 
     def __init__(self, name, airplane_input, unit_system, scene, init_state={}, init_control_state={}, v_wind=[0.0, 0.0, 0.0]):
 
+        # Store basic info
         self.name = name
         self._unit_sys = unit_system
         self._scene = scene
         
+        # Initialize storage
         self.wing_segments = {}
         self._airfoil_database = {}
         self.N = 0
 
+        # Set up data
         self._load_params(airplane_input)
         self.set_state(**init_state, v_wind=v_wind)
         self._create_airfoil_database()
@@ -74,15 +78,21 @@ class Airplane:
 
 
     def _load_params(self, airplane_input):
+        # Parses basic parameters from the airplane input
+
+        # Get input
         if isinstance(airplane_input, str):
+            
             # Load JSON object
             check_filepath(airplane_input, ".json")
             with open(airplane_input) as json_handle:
                 self._input_dict = json.load(json_handle)
+
         elif isinstance(airplane_input, dict):
             self._input_dict = airplane_input
+
         else:
-            raise IOError("{0} is not an allowed airplane definition. Must be path or dictionary.".format(airplane_input))
+            raise IOError("{0} is not an allowed airplane input type. Must be path or dictionary.".format(type(airplane_input)))
 
         # Set airplane global params
         self.CG = import_value("CG", self._input_dict, self._unit_sys, [0.0, 0.0, 0.0])
@@ -136,7 +146,7 @@ class Airplane:
         self.p_bar = import_value("position", kwargs, self._unit_sys, [0.0, 0.0, 0.0])
 
         # Set up orientation quaternion
-        self.q = import_value("orientation", kwargs, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the flat-earth coordinates
+        self.q = import_value("orientation", kwargs, self._unit_sys, [1.0, 0.0, 0.0, 0.0]) # Default aligns the aircraft with the Earth-fixed coordinates
 
         if self.q.shape[0] == 3: # Euler angles
             self.q = euler_to_quat(np.radians(self.q))
