@@ -75,21 +75,17 @@ if __name__=="__main__":
                            [1.0, 0.5]],
                 "sweep" : [[0.0, 0.0],
                            [1.0, 30.0]],
-                #"control_surface" : {
-                #    "chord_fraction" : 0.4,
-                #    "root_span" : 0.55,
-                #    "tip_span" : 0.95,
-                #    "control_mixing" : {
-                #        "aileron" : 1.0,
-                #        "elevator" : 1.0
-                #    }
-                #},
+                "control_surface" : {
+                    "chord_fraction" : 0.4,
+                    "root_span" : 0.4,
+                    "tip_span" : 0.8,
+                    "control_mixing" : {
+                        "aileron" : 1.0,
+                        "elevator" : 1.0
+                    }
+                },
                 "grid" : {
-                    "N" : 80,
-                    "wing_ID" : 1,
-                    "reid_corrections" : True
-                    #"joint_length" : 2.0,
-                    #"blending_distance" : 2.0
+                    "N" : 80
                 },
                 "CAD_options" :{
                     "round_stl_tip" : True,
@@ -115,13 +111,13 @@ if __name__=="__main__":
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane_for_josh", airplane_dict, state=state, control_state=control_state)
+    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+
+    scene._general_trim(aircraft="plane", verbose=True)
 
     #scene.display_wireframe(show_vortices=True)
     #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
     #scene.export_stl(filename=stl_file, section_resolution=41)
-    scene.display_wireframe(show_vortices=False)
-    scene.export_dxf()
 
     ## Solve forces
     #FM = scene.solve_forces(non_dimensional=False, verbose=True)
