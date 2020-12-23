@@ -1,4 +1,4 @@
-from .helpers import quat_inv_trans, quat_trans, check_filepath, import_value, quat_mult, quat_conj
+from .helpers import quat_inv_trans, quat_trans, check_filepath, import_value, quat_mult, quat_conj, quat_to_euler, euler_to_quat
 from .airplane import Airplane
 from .standard_atmosphere import StandardAtmosphere
 from .exceptions import SolverNotConvergedError
@@ -2180,7 +2180,7 @@ class Scene:
                 aircraft_object.set_control_state(control_state=pert_control_state)
                 FM_fwd = self.solve_forces(dimensional=False, **kwargs)
 
-                #Perturb forward
+                #Perturb backward
                 pert_control_state[control_name] = curr_control_val - dtheta
                 aircraft_object.set_control_state(control_state=pert_control_state)
                 FM_bwd = self.solve_forces(dimensional=False, **kwargs)
@@ -2514,159 +2514,6 @@ class Scene:
         return trim_angles
 
 
-    def _general_trim(self, **kwargs):
-        """Trims the given aircraft at the given condition. Angular rates are assumed to be
-        zero and the position of the aircraft will not be changed.
-
-        Parameters
-        ----------
-        aircraft : str, optional
-            Aircraft to trim in pitch. If there is only one aircraft in the scene, this does not
-            need to be given.
-
-        airspeed : float or list, optional
-            Airspeed at which to trim the aircraft. Defaults to the current airspeed.
-
-        climb_angle : float, optional
-            Desired climb angle in degrees. Defaults to 0.0.
-
-        bank_angle : float, optional
-            Desired bank angle in degrees. Defaults to 0.0.
-
-        heading_angle : float, optional
-            Desired heading angle in degrees. Defaults to 0.0.
-
-        trim_controls : list, optional
-            List of which controls are to be used to trim the aircraft. Defaults
-            to all controls available.
-
-        fixed_controls : list, optional
-            List of which controls are to be fixed (not used for trim). Defaults
-            to none.
-
-        verbose : bool, optional
-
-        Returns
-        -------
-        trim_state : dict
-            The aircraft state at trim.
-
-        trim_controls : dict
-            The control deflections at trim.
-        """
-
-        # Get the aircraft object
-        if len(list(self._airplanes.keys())) == 1:
-            aircraft_name = list(self._airplanes.keys())[0]
-        else:
-            aircraft_name = kwargs.get("aircraft")
-        airplane_object = self._airplanes[aircraft_name]
-
-        # Get current state
-        v0, w0, p0, q0 = airplane_object.get_state()
-        v_wind = self._get_wind(p0)
-
-        # Get kwargs
-        V0 = kwargs.get("airspeed", np.linalg.norm(v0-v_wind))
-        climb = m.radians(kwargs.get("climb_angle", 0.0))
-        bank = m.radians(kwargs.get("bank_angle", 0.0))
-        heading = m.radians(kwargs.get("heading_angle", 0.0))
-        verbose = kwargs.get("verbose", False)
-
-        # Parse controls
-        avail_controls = kwargs.get("trim_controls", list(airplane_object.controls.keys()))
-        fixed_controls = kwargs.get("fixed_controls", {})
-        for name in self._control_names:
-            if name in self._avail_controls:
-                continue
-            self._fixed_controls[name] = self._fixed_controls.get(name, 0.0)
-
-        # Check we have enough
-        if len(self._avail_controls) != 4:
-            raise IOError("Exactly 4 controls must be used to trim the aircraft. Got {0}.".format(len(self._avail_controls)))
-
-        # Initialize output
-        if self._trim_verbose:
-            print("Trimming at {0} deg bank and {1} deg climb...".format(m.degrees(self._bank), m.degrees(self._climb)))
-            header = ["{0:>20}{1:>20}".format("Alpha [deg]", "Beta [deg]")]
-            for name in self._avail_controls:
-                header.append("{0:>20}".format(name.title()))
-            header.append("{0:>20}".format("Elevation [deg]"))
-            print("".join(header))
-
-        # Solve for trim
-        trim_val_guess = np.zeros(6)
-        x, info_dict, ier, mesg = opt.fsolve(self._trim_residual_function, trim_val_guess, full_output=True)
-        trim_settings = x
-
-        # Output results of trim
-        if self._trim_verbose:
-            if ier != 1:
-                print("No trim solution found. Scipy returned '{0}'.".format(mesg))
-            print("\nFinal trim residuals: {0}".format(info_dict["fvec"]))
-
-        # Parse trimmed state
-        alpha = trim_settings[0]
-        beta = trim_settings[1]
-        controls = copy.deepcopy(self._fixed_controls)
-        for i, name in enumerate(self._avail_controls):
-            controls[name] = trim_settings[i+2]
-
-        # Set state
-        self._set_state_in_coordinated_turn(alpha, beta, controls)
-
-
-    def _trim_residual_function(self, trim_vals):
-        # Returns the trim residuals as a function of the control inputs
-
-        # Unpack args
-        alpha = trim_vals[0]
-        beta = trim_vals[1]
-        controls = copy.deepcopy(self._fixed_controls)
-        for i, name in enumerate(self._avail_controls):
-            controls[name] = trim_vals[i+2]
-
-        # Calculate elevation angle
-        theta = self._get_elevation(alpha, beta, self._bank, self._climb)
-
-        # Output
-        if self._trim_verbose:
-            print("{0:>20.10f}{1:>20.10f}{2:>20.10f}{3:>20.10f}{4:>20.10f}{5:>20.10f}{6:>20.10f}".format(m.degrees(alpha), m.degrees(beta), *trim_vals[2:], m.degrees(theta)))
-
-        # Set state
-        self._set_state_in_coordinated_turn(alpha, beta, controls)
-
-        # Get residuals
-        dy_dt = self.dy_dt(0.0)
-        return dy_dt[:6]
-
-
-    def _set_state_in_coordinated_turn(self, alpha, beta, controls):
-
-        # Set state
-        theta = self._get_elevation(alpha, beta, self._bank, self._climb)
-        C_theta = m.cos(theta)
-        S_theta = m.sin(theta)
-        C_phi = m.cos(self._bank)
-        S_phi = m.sin(self._bank)
-        C_a = m.cos(alpha)
-        S_a = m.sin(alpha)
-        C_B = m.cos(beta)
-        S_B = m.sin(beta)
-        D = m.sqrt(1-S_a*S_a*S_B*S_B)
-        u = self._V0*C_a*C_B/D
-        v = self._V0*C_a*S_B/D
-        w = self._V0*S_a*C_B/D
-        self.y[0] = u
-        self.y[1] = v
-        self.y[2] = w
-        self.y[3:6] = self._get_rotation_rates(C_phi, S_phi, C_theta, S_theta, self._g, u, w)
-        self.y[9:] = Euler2Quat([self._bank, theta, self._heading])
-
-        # Set controls
-        self.controls = controls
-
-
     def _get_aircraft_pitch_trim_residuals(self, aircraft_name):
         # Returns the residual force in the earth-fixed z-direction and the residual moment about the body y-axis
         FM = self.solve_forces(dimensional=False)
@@ -2685,6 +2532,198 @@ class Scene:
         v_wind = self._get_wind(aircraft_object.p_bar)
         V = np.linalg.norm(aircraft_object.v-v_wind)
         return 0.5*rho*V*V
+
+
+    def _pitch_trim_using_orientation(self, **kwargs):
+        """Trims the given aircraft in pitch.
+
+        Parameters
+        ----------
+        aircraft : str, optional
+            Aircraft to trim in pitch. If there is only one aircraft in the scene, this does not
+            need to be given.
+
+        pitch_control : str, optional
+            Control to be used to trim the aircraft in pitch. Defaults to "elevator".
+
+        set_trim_state : bool, optional
+            Whether to use the determined trim state as the new state of the aircraft. This will
+            maintain the Earth-fixed velocity of the aircraft while changing the elevation angle.
+            Defaults to True.
+
+        filename : str
+            File to output the results to. Defaults to no file.
+
+        verbose : bool, optional
+
+        Returns
+        -------
+        trim_state : dict
+            The aircraft state at trim.
+
+        trim_controls : dict
+            The control deflections at trim.
+        """
+
+        # Print info
+        verbose = kwargs.get("verbose", False)
+
+        # Get the aircraft object
+        if len(list(self._airplanes.keys())) == 1:
+            aircraft_name = list(self._airplanes.keys())[0]
+        else:
+            aircraft_name = kwargs.get("aircraft")
+        airplane_object = self._airplanes[aircraft_name]
+
+        # Store the current state
+        v_orig, w_orig, p_orig, q_orig = airplane_object.get_state()
+        phi, theta_orig, psi = quat_to_euler(q_orig)
+        v_wind = self._get_wind(airplane_object.p_bar)
+        controls_original = copy.copy(airplane_object.current_control_state)
+
+        # Determine the pitch control
+        pitch_control = kwargs.get("pitch_control", "elevator")
+        try:
+            delta_flap0 = copy.copy(controls_original[pitch_control])
+        except KeyError:
+            raise IOError("{0} has no control named {1}. Cannot be trimmed in pitch.".format(aircraft_name, pitch_control))
+
+        # Set up output
+        if verbose:
+            print("Trimming {0} using {1}.".format(aircraft_name, pitch_control))
+            print("{0:<20}{1:<20}{2:<25}{3:<25}".format("Elevation", pitch_control, "Lift Residual", "Moment Residual"))
+
+        # Get residuals
+        R = self._get_aircraft_pitch_trim_residuals(aircraft_name)
+
+        # Get initial elevation angle and control deflection
+        theta0 = copy.copy(theta_orig)
+
+        # Output initial residuals
+        if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(m.degrees(theta0), delta_flap0, R[0], R[1]))
+
+        # Iterate until residuals go to zero.
+        J = np.zeros((2,2))
+        pert_control_state = copy.copy(controls_original)
+        while (abs(R)>1e-10).any():
+            
+            # Determine control derivatives
+            dtheta = 0.001
+
+            # Perturb forward
+            pert_control_state[pitch_control] = delta_flap0 + dtheta
+            airplane_object.set_control_state(control_state=pert_control_state)
+            FM_fwd = self.solve_forces(dimensional=False)
+
+            # Perturb backward
+            pert_control_state[pitch_control] = delta_flap0 - dtheta
+            airplane_object.set_control_state(control_state=pert_control_state)
+            FM_bwd = self.solve_forces(dimensional=False)
+
+            # Reset controls
+            pert_control_state[pitch_control] = delta_flap0
+            airplane_object.set_control_state(control_state=pert_control_state)
+            self._solved = False
+
+            # Calculate derivatives
+            diff = 2.0*dtheta
+            CL_de = (FM_fwd[aircraft_name]["total"]["CL"]-FM_bwd[aircraft_name]["total"]["CL"])/diff
+            Cm_de = (FM_fwd[aircraft_name]["total"]["Cm"]-FM_bwd[aircraft_name]["total"]["Cm"])/diff
+            
+            # Determine elevation derivatives
+            dtheta = 0.001
+
+            # Perturb forward
+            E_fwd = [phi, theta0+dtheta, psi]
+            q_fwd = euler_to_quat(E_fwd)
+            v_fwd = quat_trans(q_fwd, v_orig-v_wind)
+            fwd_state = {
+                "position" : p_orig,
+                "velocity" : v_fwd,
+                "orientation" : q_fwd,
+                "angular_rates" : w_orig
+            }
+            airplane_object.set_state(**fwd_state)
+            self._perform_geometry_and_atmos_calcs()
+            FM_fwd = self.solve_forces(dimensional=False)
+
+            # Perturb backward
+            E_bwd = [phi, theta0-dtheta, psi]
+            q_bwd = euler_to_quat(E_bwd)
+            v_bwd = quat_trans(q_bwd, v_orig-v_wind)
+            bwd_state = {
+                "position" : p_orig,
+                "velocity" : v_bwd,
+                "orientation" : q_bwd,
+                "angular_rates" : w_orig
+            }
+            airplane_object.set_state(**bwd_state)
+            self._perform_geometry_and_atmos_calcs()
+            FM_bwd = self.solve_forces(dimensional=False)
+
+            # Calculate derivatives
+            diff = 2.0*dtheta
+            CL_dtheta = (FM_fwd[aircraft_name]["total"]["CL"]-FM_bwd[aircraft_name]["total"]["CL"])/diff
+            Cm_dtheta = (FM_fwd[aircraft_name]["total"]["Cm"]-FM_bwd[aircraft_name]["total"]["Cm"])/diff
+
+            # Arrange Jacobian
+            J[0,0] = CL_dtheta
+            J[0,1] = CL_de
+            J[1,0] = Cm_dtheta
+            J[1,1] = Cm_de
+
+            # Calculate update
+            delta = np.linalg.solve(J,-R)
+
+            # Update trim variables
+            theta0 += delta[0]
+            delta_flap0 += delta[1]
+
+            # Update state
+            E = [phi, theta0, psi]
+            q = euler_to_quat(E)
+            v = quat_trans(q, v_orig-v_wind)
+            curr_state = {
+                "position" : list(p_orig),
+                "velocity" : list(v),
+                "orientation" : list(q),
+                "angular_rates" : list(w_orig)
+            }
+            airplane_object.set_state(**curr_state)
+            self._perform_geometry_and_atmos_calcs()
+
+            # Update control state
+            pert_control_state[pitch_control] = delta_flap0
+            airplane_object.set_control_state(pert_control_state)
+
+            # Determine new residuals
+            R = self._get_aircraft_pitch_trim_residuals(aircraft_name=aircraft_name)
+            
+            # Output progress
+            if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(m.degrees(theta0), delta_flap0, R[0], R[1]))
+
+        # If the user wants, reset to the original state
+        set_trim_state = kwargs.get("set_trim_state", True)
+        if not set_trim_state:
+            orig_state = {
+                "position" : p_orig,
+                "velocity" : quat_trans(q_orig, v_orig-v_wind),
+                "orientation" : q_orig,
+                "angular_rates" : w_orig
+            }
+            airplane_object.set_state(**orig_state)
+            self._perform_geometry_and_atmos_calcs()
+            self.set_aircraft_control_state(controls_original, aircraft=aircraft_name)
+            self._solved = False
+
+        # Output results to file
+        filename = kwargs.get("filename", None)
+        if filename is not None:
+            with open(filename, 'w') as file_handle:
+                json.dump(curr_state, file_handle, indent=4)
+                json.dump(pert_control_state, file_handle, indent=4)
+
+        return curr_state, pert_control_state
 
 
     def aero_center(self, **kwargs):

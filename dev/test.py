@@ -113,7 +113,12 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    scene._general_trim(aircraft="plane", verbose=True)
+    trim = scene.pitch_trim(aircraft="plane", pitch_control="elevator", verbose=True, set_trim_state=False)
+    print(json.dumps(trim))
+
+    state, controls = scene._pitch_trim_using_orientation(aircraft="plane", pitch_control="elevator", verbose=True)
+    print(json.dumps(state, indent=4))
+    print(json.dumps(controls, indent=4))
 
     #scene.display_wireframe(show_vortices=True)
     #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"

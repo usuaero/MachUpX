@@ -111,7 +111,7 @@ class Airplane:
             Earth-fixed position. Defaults to [0.0, 0.0, 0.0].
 
         velocity : float or list
-            Aircraft velocity.
+            Aircraft body-fixed velocity.
 
         alpha : float, optional
             Aircraft angle of attack. Defaults to 0.0.
@@ -219,7 +219,7 @@ class Airplane:
         Returns
         -------
         ndarray
-            Current body-fixed velocity vector.
+            Current Earth-fixed velocity vector.
 
         ndarray
             Current body-fixed angular velocity vector.
