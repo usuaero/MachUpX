@@ -14,7 +14,8 @@ if __name__=="__main__":
     input_dict = {
         "solver" : {
             "type" : "nonlinear",
-            "relaxation" : 1.0
+            "relaxation" : 1.0,
+            "max_iterations" : 10000
         },
         "units" : "English",
         "scene" : {
@@ -100,7 +101,8 @@ if __name__=="__main__":
     state = {
         "velocity" : 100.0,
         "alpha" : 0.0,
-        "beta" : 0.0
+        "beta" : 0.0,
+        "orientation" : [30.0, 30.0, 90.0]
     }
 
     control_state = {
@@ -119,7 +121,8 @@ if __name__=="__main__":
     state, controls = scene._pitch_trim_using_orientation(aircraft="plane", pitch_control="elevator", verbose=True)
     print(json.dumps(state, indent=4))
     print(json.dumps(controls, indent=4))
-
+    alpha,_,_ = scene._airplanes["plane"].get_aerodynamic_state()
+    print(alpha)
     #scene.display_wireframe(show_vortices=True)
     #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
     #scene.export_stl(filename=stl_file, section_resolution=41)

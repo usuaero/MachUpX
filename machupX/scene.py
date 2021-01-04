@@ -2386,6 +2386,12 @@ class Scene:
 
     def pitch_trim(self, **kwargs):
         """Returns the required angle of attack and pitch control deflection for trim at the current state.
+        Trim is achieved when the lift cancels out the weight of the aircraft and the pitching moment is zero.
+        This alters the body-fixed aircraft velocity in order to achieve trim.
+
+        It is recommended this trim function be used when the aircraft is the only one in the scene, there is no
+        wind, and the bank angle is zero (a majority of cases). For more complex cases, pitch_trim_using_orientation()
+        is recommended.
 
         Parameters
         ----------
@@ -2534,8 +2540,13 @@ class Scene:
         return 0.5*rho*V*V
 
 
-    def _pitch_trim_using_orientation(self, **kwargs):
-        """Trims the given aircraft in pitch.
+    def pitch_trim_using_orientation(self, **kwargs):
+        """Trims the given aircraft in pitch by altering the elevation angle of the aircraft and the specified
+        control deflection. This will maintain the Earth-fixed velocity of the aircraft and the heading and
+        bank angle. Since bank angle is maintained, trim is achieved when the *vertical* component of lift
+        cancels out the weight of the aircraft.
+
+        This trim function is more general than pitch_trim() and can be used in all cases.
 
         Parameters
         ----------
