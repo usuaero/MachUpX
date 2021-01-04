@@ -2592,6 +2592,15 @@ class Scene:
         v_wind = self._get_wind(airplane_object.p_bar)
         controls_original = copy.copy(airplane_object.current_control_state)
 
+        # In case we're already trimmed, parse the original state as the solution
+        v = quat_trans(q_orig, v_orig-v_wind)
+        curr_state = {
+            "position" : list(p_orig),
+            "velocity" : list(v),
+            "orientation" : list(q_orig),
+            "angular_rates" : list(w_orig)
+        }
+
         # Determine the pitch control
         pitch_control = kwargs.get("pitch_control", "elevator")
         try:
