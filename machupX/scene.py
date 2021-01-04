@@ -1829,7 +1829,7 @@ class Scene:
         return derivs
 
 
-    def stability_derivatives(self, dtheta=0.5, **kwargs):
+    def stability_derivatives(self, **kwargs):
         """Determines the stability derivatives at the current state. Uses 
         a central difference scheme.
 
@@ -1864,6 +1864,9 @@ class Scene:
 
         # Determine output frames
         body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
+
+        # Get finite step
+        dtheta = kwargs.get("dtheta", 0.5)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -1947,7 +1950,7 @@ class Scene:
         return derivs
 
 
-    def damping_derivatives(self, aircraft=None, dtheta_dot=0.005, **kwargs):
+    def damping_derivatives(self, **kwargs):
         """Determines the damping derivatives at the current state. Uses 
         a central difference scheme. Note, the damping derivatives are non-
         dimensionalized with respect to 2V/l_ref_lat and 2V/l_ref_lon. Also,
@@ -1985,6 +1988,9 @@ class Scene:
 
         # Determine output frames
         body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
+
+        # Get finite step
+        dtheta_dot = kwargs.get('dtheta_dot', 0.005)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
@@ -2127,7 +2133,7 @@ class Scene:
         return derivs
 
 
-    def control_derivatives(self, aircraft=None, dtheta=0.5, **kwargs):
+    def control_derivatives(self, **kwargs):
         """Determines the control derivatives at the current state. Uses 
         a central difference scheme.
 
@@ -2163,6 +2169,9 @@ class Scene:
 
         # Determine output frames
         body_frame, stab_frame, wind_frame = self._get_frames(**kwargs)
+
+        # Get finite step
+        dtheta = kwargs.get('dtheta', 0.5)
 
         for aircraft_name in aircraft_names:
             derivs[aircraft_name] = {}
