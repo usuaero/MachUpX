@@ -219,6 +219,9 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>**"number_guide_curves" : int, optional**
 >>>>Number of guide curves to be created for the wing egment. Defaults to 2 (one at the leading edge, one at the trailing edge). An even number is recommened to ensure one guide curves runs along the leading edge of the wing segment.
 >>>
+>>>**"export_english_units" : bool, optional**
+>>>>Whether to export the dxf file in English units (in). Else exports in SI units (m). Defaults to True.
+>>>
 >>>**"dxf_line_type" : str, optional**
 >>>>Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
 >>>
