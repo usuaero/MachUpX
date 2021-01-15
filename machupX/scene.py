@@ -3320,6 +3320,9 @@ class Scene:
         number_guide_curves : int
             Number of guidecurves to create. Defaults to 2 (one at the leading edge, one at the trailing edge).
         
+        export_english_units : bool
+            Whether to export the dxf file in English units. Defaults to True.
+
         dxf_line_type : str
             Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
         """
