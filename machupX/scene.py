@@ -2891,6 +2891,8 @@ class Scene:
             "My" : body-y moment acting on each section
             "Mz" : body-z moment acting on each section
             "circ" : circulation
+            "CD_i" : induced drag coefficient acting on each section (nondimensionalized by the freestream
+                velocity and the section discrete area dS)
 
 
         Parameters
@@ -2957,10 +2959,10 @@ class Scene:
                           ("Mx", "float"),
                           ("My", "float"),
                           ("Mz", "float"),
-                          ("circ", "float")]
+                          ("circ", "float"),
+                          ("CD_i", "float")]
 
             table_data = np.zeros(self._N, dtype=item_types)
-
 
         # Loop through airplanes
         radians = kwargs.get("radians", True)
@@ -2968,6 +2970,24 @@ class Scene:
         for airplane_object in self._airplane_objects:
             airplane_name = airplane_object.name
             dist[airplane_name] = {}
+
+            # Convert forces and moments to body-fixed
+            dF_b_inv = quat_trans(airplane_object.q, self._dF_inv)
+            dF_b_visc = quat_trans(airplane_object.q, self._dF_visc)
+            dF_b = dF_b_inv+dF_b_visc
+            dM_b = quat_trans(airplane_object.q, self._dM_inv+self._dM_visc)
+
+            # Determine induced drag
+            v_trans = -airplane_object.v
+            v_wind = self._get_wind(airplane_object.p_bar)
+            v_inf = v_trans+v_wind
+            V_inf = np.linalg.norm(v_inf)
+            u_inf = quat_trans(airplane_object.q, v_inf/V_inf)
+            D_i = np.einsum('j,ij->i', u_inf, dF_b_inv)
+
+            # Nondimensionalize
+            rho = self._get_density(airplane_object.p_bar)
+            CD_i = 2.0*D_i/(rho*V_inf**2*self._dS)
 
             # Loop through segments
             for segment_object in airplane_object.segments:
@@ -3024,13 +3044,14 @@ class Scene:
                 dist[airplane_name][segment_name]["section_parasitic_CD"] = list(self._CD[cur_slice])
 
                 # Section force and moment components
-                dist[airplane_name][segment_name]["Fx"] = list(self._dF_inv[cur_slice,0]+self._dF_visc[cur_slice,0])
-                dist[airplane_name][segment_name]["Fy"] = list(self._dF_inv[cur_slice,1]+self._dF_visc[cur_slice,1])
-                dist[airplane_name][segment_name]["Fz"] = list(self._dF_inv[cur_slice,2]+self._dF_visc[cur_slice,2])
-                dist[airplane_name][segment_name]["Mx"] = list(self._dM_inv[cur_slice,0]+self._dM_visc[cur_slice,0])
-                dist[airplane_name][segment_name]["My"] = list(self._dM_inv[cur_slice,1]+self._dM_visc[cur_slice,1])
-                dist[airplane_name][segment_name]["Mz"] = list(self._dM_inv[cur_slice,2]+self._dM_visc[cur_slice,2])
+                dist[airplane_name][segment_name]["Fx"] = list(dF_b[cur_slice,0])
+                dist[airplane_name][segment_name]["Fy"] = list(dF_b[cur_slice,1])
+                dist[airplane_name][segment_name]["Fz"] = list(dF_b[cur_slice,2])
+                dist[airplane_name][segment_name]["Mx"] = list(dM_b[cur_slice,0])
+                dist[airplane_name][segment_name]["My"] = list(dM_b[cur_slice,1])
+                dist[airplane_name][segment_name]["Mz"] = list(dM_b[cur_slice,2])
                 dist[airplane_name][segment_name]["circ"] = list(self._gamma[cur_slice])
+                dist[airplane_name][segment_name]["CD_i"] = list(CD_i[cur_slice])
 
                 # Atmospheric properties
                 v = quat_trans(airplane_object.q, self._v_i[cur_slice,:])
@@ -3046,49 +3067,14 @@ class Scene:
 
                 # Save to data table
                 if filename is not None:
+
                     # Names
                     table_data[cur_slice]["aircraft"] = airplane_name
                     table_data[cur_slice]["segment"] = segment_name
 
-                    # Control point locations
-                    table_data[cur_slice]["span_frac"] = dist[airplane_name][segment_name]["span_frac"]
-                    table_data[cur_slice]["cpx"] = dist[airplane_name][segment_name]["cpx"]
-                    table_data[cur_slice]["cpy"] = dist[airplane_name][segment_name]["cpy"]
-                    table_data[cur_slice]["cpz"] = dist[airplane_name][segment_name]["cpz"]
-
-                    # Geometry
-                    table_data[cur_slice]["chord"] = dist[airplane_name][segment_name]["chord"]
-                    table_data[cur_slice]["swept_chord"] = dist[airplane_name][segment_name]["swept_chord"]
-                    table_data[cur_slice]["twist"] = dist[airplane_name][segment_name]["twist"]
-                    table_data[cur_slice]["dihedral"] = dist[airplane_name][segment_name]["dihedral"]
-                    table_data[cur_slice]["sweep"] = dist[airplane_name][segment_name]["sweep"]
-                    table_data[cur_slice]["aero_sweep"] = dist[airplane_name][segment_name]["aero_sweep"]
-                    table_data[cur_slice]["area"] = dist[airplane_name][segment_name]["area"]
-
-                    # Airfoil info
-                    table_data[cur_slice]["alpha"] = dist[airplane_name][segment_name]["alpha"]
-                    table_data[cur_slice]["delta_flap"] = dist[airplane_name][segment_name]["delta_flap"]
-                    table_data[cur_slice]["Re"] = dist[airplane_name][segment_name]["Re"]
-                    table_data[cur_slice]["M"] = dist[airplane_name][segment_name]["M"]
-                    table_data[cur_slice]["q"] = dist[airplane_name][segment_name]["q"]
-                    table_data[cur_slice]["u"] = dist[airplane_name][segment_name]["u"]
-                    table_data[cur_slice]["v"] = dist[airplane_name][segment_name]["v"]
-                    table_data[cur_slice]["w"] = dist[airplane_name][segment_name]["w"]
-
-                    # Section coefficients
-                    table_data[cur_slice]["section_CL"] = dist[airplane_name][segment_name]["section_CL"]
-                    table_data[cur_slice]["section_Cm"] = dist[airplane_name][segment_name]["section_Cm"]
-                    table_data[cur_slice]["section_parasitic_CD"] = dist[airplane_name][segment_name]["section_parasitic_CD"]
-                    table_data[cur_slice]["section_aL0"] = dist[airplane_name][segment_name]["section_aL0"]
-
-                    # Section force and moment components
-                    table_data[cur_slice]["Fx"] = dist[airplane_name][segment_name]["Fx"]
-                    table_data[cur_slice]["Fy"] = dist[airplane_name][segment_name]["Fy"]
-                    table_data[cur_slice]["Fz"] = dist[airplane_name][segment_name]["Fz"]
-                    table_data[cur_slice]["Mx"] = dist[airplane_name][segment_name]["Mx"]
-                    table_data[cur_slice]["My"] = dist[airplane_name][segment_name]["My"]
-                    table_data[cur_slice]["Mz"] = dist[airplane_name][segment_name]["Mz"]
-                    table_data[cur_slice]["circ"] = dist[airplane_name][segment_name]["circ"]
+                    # Loop through data
+                    for key in list(dist[airplane_name][segment_name].keys()):
+                        table_data[cur_slice][key] = dist[airplane_name][segment_name][key]
 
                 index += num_cps
 
@@ -3096,10 +3082,10 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
+            header = "{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}{:<21}".format(
                 "Aircraft", "Segment", "Span Fraction", "Control (x)", "Control (y)", "Control (z)", "Chord", "Swept Chord", "Twist", "Dihedral", "Sweep", "Aero Sweep", "Area", "Alpha",
-                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha", "Fx", "Fy", "Fz", "Mx", "My", "Mz", "Circ")
-            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
+                "Flap Defl.", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "Parasitic CD", "Zero-Lift Alpha", "Fx", "Fy", "Fz", "Mx", "My", "Mz", "Circ", "CD_i")
+            format_string = "%-20s %-20s %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e %20.12e"
 
             # Save
             np.savetxt(filename, table_data, fmt=format_string, header=header)

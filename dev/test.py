@@ -102,7 +102,7 @@ if __name__=="__main__":
         "velocity" : 100.0,
         "alpha" : 0.0,
         "beta" : 0.0,
-        "orientation" : [30.0, 30.0, 90.0]
+        "orientation" : [0.0, 0.0, 0.0]
     }
 
     control_state = {
@@ -115,24 +115,23 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    trim = scene.pitch_trim(aircraft="plane", pitch_control="elevator", verbose=True, set_trim_state=False)
-    print(json.dumps(trim))
+    #trim = scene.pitch_trim(aircraft="plane", pitch_control="elevator", verbose=True, set_trim_state=False)
+    #print(json.dumps(trim))
 
-    state, controls = scene._pitch_trim_using_orientation(aircraft="plane", pitch_control="elevator", verbose=True)
-    print(json.dumps(state, indent=4))
-    print(json.dumps(controls, indent=4))
-    alpha,_,_ = scene._airplanes["plane"].get_aerodynamic_state()
-    print(alpha)
+    #state, controls = scene.pitch_trim_using_orientation(aircraft="plane", pitch_control="elevator", verbose=True)
+    #print(json.dumps(state, indent=4))
+    #print(json.dumps(controls, indent=4))
+    #alpha,_,_ = scene._airplanes["plane"].get_aerodynamic_state()
+    #print(alpha)
     #scene.display_wireframe(show_vortices=True)
     #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
     #scene.export_stl(filename=stl_file, section_resolution=41)
 
-    ## Solve forces
-    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    #print(json.dumps(FM["plane"]["total"], indent=4))
-    #scene.out_gamma()
+    # Solve forces
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
 
-    #scene.distributions(filename="dist.txt")
+    scene.distributions(filename="dist.txt")
 
     ## Get derivatives
     #derivs = scene.derivatives(wind_frame=False)
