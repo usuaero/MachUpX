@@ -1,8 +1,3 @@
-from .helpers import quat_inv_trans, quat_trans, check_filepath, import_value, quat_mult, quat_conj, quat_to_euler, euler_to_quat
-from .airplane import Airplane
-from .standard_atmosphere import StandardAtmosphere
-from .exceptions import SolverNotConvergedError
-
 import json
 import time
 import copy
@@ -17,6 +12,12 @@ import matplotlib.pyplot as plt
 from stl import mesh
 from mpl_toolkits.mplot3d import Axes3D
 from airfoil_db import DatabaseBoundsError
+
+from machupX.helpers import quat_inv_trans, quat_trans, check_filepath, import_value, quat_mult, quat_conj, quat_to_euler, euler_to_quat
+from machupX.airplane import Airplane
+from machupX.standard_atmosphere import StandardAtmosphere
+from machupX.exceptions import SolverNotConvergedError
+
 
 class Scene:
     """A class defining a scene containing one or more aircraft.
@@ -74,11 +75,14 @@ class Scene:
         self._solver_convergence = solver_params.get("convergence", 1e-10)
         self._solver_relaxation = solver_params.get("relaxation", 1.0)
         self._max_solver_iterations = solver_params.get("max_iterations", 100)
+
+        # Aerodynamic parameters
         self._use_swept_sections = solver_params.get("use_swept_sections", True)
         self._use_total_velocity = solver_params.get("use_total_velocity", True)
         self._use_in_plane = solver_params.get("use_in_plane", True)
         self._match_machup_pro = solver_params.get("match_machup_pro", False)
         self._impingement_threshold = solver_params.get("impingement_threshold", 1e-10)
+        self._constrain_vortex_sheet = solver_params.get("constrain_vortex_sheet", False)
 
         # Store unit system
         self._unit_sys = self._input_dict.get("units", "English")
@@ -576,9 +580,24 @@ class Scene:
         if self._match_machup_pro:
             self._V_inf_w_o_rotation = np.linalg.norm(self._v_inf_w_o_rotation, axis=1)
 
-        # Calculate nodal freestream unit vectors to determine the direction of the trailing vortices
-        self._P0_joint_u_inf = self._P0_joint_v_inf/np.linalg.norm(self._P0_joint_v_inf, axis=-1, keepdims=True)
-        self._P1_joint_u_inf = self._P1_joint_v_inf/np.linalg.norm(self._P1_joint_v_inf, axis=-1, keepdims=True)
+        # Calculate the direction of the trailing vortices
+        self._u_trailing_0 = self._P0_joint_v_inf/np.linalg.norm(self._P0_joint_v_inf, axis=-1, keepdims=True)
+        self._u_trailing_1 = self._P1_joint_v_inf/np.linalg.norm(self._P1_joint_v_inf, axis=-1, keepdims=True)
+
+        # Constrain trailing vortex directions, if need be
+        if self._constrain_vortex_sheet:
+
+            # Loop through airplanes
+            for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
+            
+                # Create projection matrix
+                z_f = quat_inv_trans(airplane_object.q, [0.0, 0.0, 1.0])
+                P = np.identity(3)-np.matmul(z_f[:,np.newaxis], z_f[np.newaxis,:])
+                
+                # Project vortex directions
+                N = airplane_slice.stop-airplane_slice.start
+                self._u_trailing_0[airplane_slice] = np.matmul(P[np.newaxis,:,:], self._u_trailing_0[airplane_slice,:,np.newaxis]).reshape((N,3))
+                self._u_trailing_1[airplane_slice] = np.matmul(P[np.newaxis,:,:], self._u_trailing_1[airplane_slice,:,np.newaxis]).reshape((N,3))
 
         # Calculate V_ji
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero.
@@ -587,16 +606,16 @@ class Scene:
         # it off. I'm loathe to make such a model-specific decision here... Maybe we could make this a user parameter?
         # I don't trust most users to use this responsibly though. Not sure what to do. For now, I've set the cutoff very
         # low, so it shouldn't really ever kick in.
-        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._P0_joint_u_inf[np.newaxis], self._r_0_joint)))
+        denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._u_trailing_0[np.newaxis], self._r_0_joint)))
         if (np.abs(denom)<self._impingement_threshold).any():
             warnings.warn("""MachUpX detected a trailing vortex impinging upon a control point. This can lead to greatly exaggerated induced velocities at the control point. See "Common Issues" in the documentation for more information. This warning can be suppressed by reducing "impingement_threshold" in the solver parameters.""")
-        V_ji_due_to_0 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(-np.cross(self._P0_joint_u_inf, self._r_0_joint)/denom[:,:,np.newaxis]), 0.0)
+        V_ji_due_to_0 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(-np.cross(self._u_trailing_0, self._r_0_joint)/denom[:,:,np.newaxis]), 0.0)
 
         # Influence of vortex segment 1 after the joint
-        denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._P1_joint_u_inf[np.newaxis], self._r_1_joint)))
+        denom = (self._r_1_joint_mag*(self._r_1_joint_mag-np.einsum('ijk,ijk->ij', self._u_trailing_1[np.newaxis], self._r_1_joint)))
         if (np.abs(denom)<self._impingement_threshold).any():
             warnings.warn("""MachUpX detected a trailing vortex impinging upon a control point. This can lead to greatly exaggerated induced velocities at the control point. See "Common Issues" in the documentation for more information. This warning can be suppressed by reducing "impingement_threshold" in the solver parameters.""")
-        V_ji_due_to_1 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(np.cross(self._P1_joint_u_inf, self._r_1_joint)/denom[:,:,np.newaxis]), 0.0)
+        V_ji_due_to_1 = np.where(denom[:,:,np.newaxis]>1e-13, np.nan_to_num(np.cross(self._u_trailing_1, self._r_1_joint)/denom[:,:,np.newaxis]), 0.0)
 
         # Sum
         # In my definition of V_ji, the first index is the control point, the second index is the horseshoe vortex, and the third index is the vector components
@@ -1575,7 +1594,7 @@ class Scene:
         """
 
         # Setup 3D figure
-        fig = plt.figure(figsize=plt.figaspect(1.0))
+        fig = plt.figure(figsize=plt.figaspect(1.0)*2.0)
         ax = fig.gca(projection='3d')
 
         # This matters for setting up the plot axis limits
@@ -1625,6 +1644,7 @@ class Scene:
             # Add vortices
             if show_vortices:
                 q = airplane_object.q
+                p = airplane_object.p_bar
 
                 # Loop through wings
                 for wing_slice in airplane_object.wing_slices:
@@ -1634,12 +1654,12 @@ class Scene:
                     vortex_points = np.zeros((wing_N*6,3))
                     
                     # Gather and arrange node locations
-                    vortex_points[0:wing_N*6+0:6,:] = quat_inv_trans(q, airplane_object.P0_joint[wing_slice])+self._P0_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
-                    vortex_points[1:wing_N*6+1:6,:] = quat_inv_trans(q, airplane_object.P0_joint[wing_slice])
-                    vortex_points[2:wing_N*6+2:6,:] = quat_inv_trans(q, airplane_object.P0[wing_slice])
-                    vortex_points[3:wing_N*6+3:6,:] = quat_inv_trans(q, airplane_object.P1[wing_slice])
-                    vortex_points[4:wing_N*6+4:6,:] = quat_inv_trans(q, airplane_object.P1_joint[wing_slice])
-                    vortex_points[5:wing_N*6+5:6,:] = quat_inv_trans(q, airplane_object.P1_joint[wing_slice])+self._P1_joint_u_inf[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[0:wing_N*6+0:6,:] = p+quat_inv_trans(q, airplane_object.P0_joint[wing_slice])+self._u_trailing_0[wing_slice]*2*airplane_object.l_ref_lon
+                    vortex_points[1:wing_N*6+1:6,:] = p+quat_inv_trans(q, airplane_object.P0_joint[wing_slice])
+                    vortex_points[2:wing_N*6+2:6,:] = p+quat_inv_trans(q, airplane_object.P0[wing_slice])
+                    vortex_points[3:wing_N*6+3:6,:] = p+quat_inv_trans(q, airplane_object.P1[wing_slice])
+                    vortex_points[4:wing_N*6+4:6,:] = p+quat_inv_trans(q, airplane_object.P1_joint[wing_slice])
+                    vortex_points[5:wing_N*6+5:6,:] = p+quat_inv_trans(q, airplane_object.P1_joint[wing_slice])+self._u_trailing_1[wing_slice]*2*airplane_object.l_ref_lon
 
                     # Add to plot
                     ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')

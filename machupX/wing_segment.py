@@ -1,5 +1,5 @@
-from .helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans, quat_mult
-from .dxf import dxf
+from machupX.helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans, quat_mult
+from machupX.dxf import dxf
 
 import json
 import os
