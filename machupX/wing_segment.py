@@ -160,38 +160,55 @@ class WingSegment:
             if diff != 0:
                 sec_N[0] -= diff # Use the root segment to make up the difference
 
-            # Create node and control point span locations
+            # Initialize span location storage
             node_span_locs = [0.0]
             cp_span_locs = []
 
+            # Loop through sections (between clustering points); will iterate at least once
             for i in range(num_sec):
 
-                # For segments with no assigned control points, raise a warning and skip
+                # For Sections with no assigned control points, raise a warning and skip
                 if sec_N[i] == 0:
                     warnings.warn("""Not enough control points for {0} to distribute between {1} and {2} percent span. Properties of this section will not factor into results. If undesired, increase number of control points or alter clustering.""".format(self.name, int(discont[i]*100), int(discont[i+1]*100)))
                     continue
 
+                # Create node distribution
                 node_theta_space = list(np.linspace(0.0, np.pi, sec_N[i]+1))
                 for theta in node_theta_space[1:]:
                     s = 0.5*(1-np.cos(theta)) # Span fraction
                     node_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
+                # Create control point distribution
                 cp_theta_space = np.linspace(np.pi/sec_N[i], np.pi, sec_N[i])-np.pi/(2*sec_N[i])
                 for theta in cp_theta_space:
                     s = 0.5*(1-np.cos(theta)) # Span fraction
                     cp_span_locs.append(discont[i]+s*(discont[i+1]-discont[i]))
 
+            # Convert to numpy arrays for faster manipulation later
             self.node_span_locs = np.array(node_span_locs)
             self.cp_span_locs = np.array(cp_span_locs)
 
-        elif distribution == "linear": # Linear spacing
+        # Linear spacing
+        elif distribution == "linear":
             self.node_span_locs = np.linspace(0.0, 1.0, self.N+1)
             self.cp_span_locs = np.linspace(1/(2*self.N), 1.0-1/(2*self.N), self.N)
 
-        elif isinstance(distribution, list): # User-specified distribution
+        # User-specified distribution
+        elif isinstance(distribution, list):
+
+            # Check they've given the right number of points
             if len(distribution) != self.N*2+1:
                 raise IOError("User specified distribution must have length of 2*N+1. Got length {0}; needed length {1}.".format(len(distribution), self.N*2+1))
 
+            # Check we start at zero and end at one
+            if distribution[0] != 0.0 or distribution[-1] != 1.0:
+                raise IOError("User specified distribution must begin at 0 and end at 1.")
+
+            # Check it is sorted
+            if not (all(distribution[i]<distribution[i+1] for i in range(len(distribution)-1))): 
+                raise IOError("User specified distribution must be monotonically increasing.")
+
+            # Store
             self.node_span_locs = np.array(distribution[0::2])
             self.cp_span_locs = np.array(distribution[1::2])
 

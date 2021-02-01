@@ -591,7 +591,7 @@ class Scene:
             for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
             
                 # Create projection matrix
-                z_f = quat_inv_trans(airplane_object.q, [0.0, 0.0, 1.0])
+                z_f = quat_inv_trans(airplane_object.q, [0.0, 0.0, 1.0]) # Body z-axis expressed in the earth frame
                 P = np.identity(3)-np.matmul(z_f[:,np.newaxis], z_f[np.newaxis,:])
                 
                 # Project vortex directions
