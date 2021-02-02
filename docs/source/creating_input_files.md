@@ -432,8 +432,8 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>**"CLa" : float, optional**
 >>>>The lift slope in radians^-1. Defaults to 2pi
 >>>
->>>**"am0" : float, optional**
->>>>The zero-moment angle of attack in radians. Defaults to 0.0.
+>>>**"CmL0" : float, optional**
+>>>>Pitching moment at zero lift. Defaults to 0.0.
 >>>
 >>>**"Cma" : float, optional**
 >>>>The moment slope in radians^-1. Defaults to 0.0.

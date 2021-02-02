@@ -100,6 +100,7 @@ if __name__=="__main__":
 
     # Specify state
     state = {
+        "position" : [0.0, 0.0, -1000.0],
         "velocity" : 100.0,
         "alpha" : 15.0,
         "beta" : 15.0,
@@ -116,14 +117,14 @@ if __name__=="__main__":
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
 
-    state = {
-        "position" : [0.0, -10.0, -10.0],
-        "velocity" : 100.0,
-        "alpha" : 20.0,
-        "beta" : 20.0,
-        "orientation" : [30.0, 0.0, 0.0]
-    }
-    scene.add_aircraft("plane2", airplane_dict, state=state, control_state=control_state)
+    #state = {
+    #    "position" : [0.0, -10.0, -10.0],
+    #    "velocity" : 100.0,
+    #    "alpha" : 20.0,
+    #    "beta" : 20.0,
+    #    "orientation" : [30.0, 0.0, 0.0]
+    #}
+    #scene.add_aircraft("plane2", airplane_dict, state=state, control_state=control_state)
 
     #trim = scene.pitch_trim(aircraft="plane", pitch_control="elevator", verbose=True, set_trim_state=False)
     #print(json.dumps(trim))
