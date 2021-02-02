@@ -1,5 +1,3 @@
-from machupX.helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans, quat_mult
-from machupX.dxf import dxf
 
 import json
 import os
@@ -12,6 +10,8 @@ import numpy as np
 import math as m
 
 from mpl_toolkits.mplot3d import Axes3D
+from machupX.helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans, quat_mult
+from machupX.dxf import dxf
 
 
 class WingSegment:

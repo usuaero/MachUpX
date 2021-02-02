@@ -1,18 +1,18 @@
-from .helpers import import_value,  euler_to_quat, check_filepath, quat_trans, quat_inv_trans, quat_conj
-from .wing_segment import WingSegment
-from airfoil_db import Airfoil
+"""Contains classes and methods for handling airplanes in MachUpX."""
 
 import json
+import copy
+
+import matplotlib.pyplot as plt
 import numpy as np
 import math as m
 import scipy.integrate as integ
+
+from airfoil_db import Airfoil
 from stl import mesh
-import sys
-import os
-import warnings
-import copy
-import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from machupX.helpers import import_value,  euler_to_quat, check_filepath, quat_trans, quat_inv_trans, quat_conj
+from machupX.wing_segment import WingSegment
 
 
 class Airplane:
@@ -549,7 +549,8 @@ class Airplane:
         # Calculate joint locations for actual lifting line
         # I feel as if there needs to be some blending in u_a here as well. This would make the trailing vortex sheet
         # discontinuous when seen by another lifting surface. Right? But I can't think of a good way to fix this right now,
-        # so I'm going to leave it. Have fun Brad ;)
+        # so I'm going to leave it. Have fun ;)
+        # Granted, I don't think we ever actually use the actual lifting-line to calculate induced velocities...so probably not
         self.P0_joint = self.P0+(self.P0_chord*delta_joint*reid_corr)[:,np.newaxis]*self.P0_u_a
         self.P1_joint = self.P1+(self.P1_chord*delta_joint*reid_corr)[:,np.newaxis]*self.P1_u_a
         self.P0_joint_eff[:] = np.copy(self.P0_joint)[np.newaxis,:,:]
