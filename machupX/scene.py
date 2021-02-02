@@ -3124,7 +3124,7 @@ class Scene:
                         plt.show()
                     else:
                         plt.savefig("{0}_{1}_{2}_vs_span_fraction".format(aircraft_object.name, segment_name, param))
-                    plt.close()
+                        plt.close()
 
         return dist
 
