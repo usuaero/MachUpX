@@ -354,7 +354,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>>>Describes the state of the aircraft.
 >>>>>
 >>>>>**"position" : vector, optional**
->>>>>>Position of the origin of the aircraft's body-fixed coordinate system in earth-fixed coordinates. Defaults to [0.0, 0.0, 0.0]
+>>>>>>Position of the origin of the aircraft's body-fixed coordinate system in earth-fixed coordinates. Defaults to [0.0, 0.0, 0.0]. It is recommended this only be used if multiple aircraft are being modeled and "position" is being used to specify separation between the aircraft. Otherwise, it is recommended the aircraft always be placed at the origin and the atmospheric properties changed accordingly.
 >>>>>
 >>>>>**"velocity" : float or vector**
 >>>>>>Velocity vector of the aircraft in body-fixed coordinates (i.e. u, v, and w) or magnitude of the freestream velocity at the origin of the aircraft. In the case of a vector, "alpha" and "beta" may not be specified.
