@@ -1662,7 +1662,7 @@ class Scene:
                     vortex_points[5:wing_N*6+5:6,:] = p+quat_inv_trans(q, airplane_object.P1_joint[wing_slice])+self._u_trailing_1[wing_slice]*2*airplane_object.l_ref_lon
 
                     # Add to plot
-                    ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--')
+                    ax.plot(vortex_points[:,0], vortex_points[:,1], vortex_points[:,2], 'b--', linewidth=0.2)
 
         # Add legend
         if show_legend:
