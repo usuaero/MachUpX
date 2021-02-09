@@ -599,6 +599,11 @@ class Scene:
                 self._u_trailing_0[airplane_slice] = np.matmul(P[np.newaxis,:,:], self._u_trailing_0[airplane_slice,:,np.newaxis]).reshape((N,3))
                 self._u_trailing_1[airplane_slice] = np.matmul(P[np.newaxis,:,:], self._u_trailing_1[airplane_slice,:,np.newaxis]).reshape((N,3))
 
+            # Renormalize
+            self._u_trailing_0 = self._u_trailing_0/np.linalg.norm(self._u_trailing_0, axis=-1, keepdims=True)
+            self._u_trailing_1 = self._u_trailing_1/np.linalg.norm(self._u_trailing_1, axis=-1, keepdims=True)
+
+
         # Calculate V_ji
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero.
         # Problem is, if the radius almost goes to zero, that can blow up the influence matrix without making it a nan.
