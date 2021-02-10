@@ -67,7 +67,7 @@ class WingSegment:
             self._initialize_params()
             self._initialize_airfoils(airfoil_dict)
             self._initialize_getters()
-            self._initialize_ac_locus()
+            self._initialize_lifting_line()
             self._initialize_unit_vector_dists()
             self._setup_control_surface(self._input_dict.get("control_surface", None))
 
@@ -518,7 +518,7 @@ class WingSegment:
         # Initializes distributions of unit normal, spanwise, and axial vectors for quick access later
 
         # Determine cumulative length along the LAC
-        ac_loc = self._get_section_ac_loc(self.node_span_locs)
+        ac_loc = self._get_ll_loc(self.node_span_locs)
         d_ac_loc = np.diff(ac_loc, axis=0)
         ds = np.zeros(self.N+1)
         ds[1:] = np.cumsum(np.linalg.norm(d_ac_loc, axis=1))
@@ -695,11 +695,13 @@ class WingSegment:
         self.c_node = self.get_chord(self.node_span_locs)
 
     
-    def _initialize_ac_locus(self):
-        # Sets up the locus of aerodynamic centers for this wing segment.
+    def _initialize_lifting_line(self):
+        # Sets up the lifting-line for this wing segment.
+
+        # Get user offset
         ll_offset_data = import_value("ll_offset", self._input_dict, self._unit_sys, 0)
 
-        # Generate Kuchemann offset
+        # Set lifting-line on LAC as predicted by Kuchemann
         if ll_offset_data == "kuchemann":
 
             # If the sweep is not constant, don't calculate an offset
@@ -778,10 +780,10 @@ class WingSegment:
             self._get_ll_offset = self._build_getter_linear_f_of_span(ll_offset_data, "ll_offset")
 
         # Store control points
-        self.control_points = self._get_section_ac_loc(self.cp_span_locs)
+        self.control_points = self._get_ll_loc(self.cp_span_locs)
 
         # Store nodes on AC
-        self.nodes = self._get_section_ac_loc(self.node_span_locs)
+        self.nodes = self._get_ll_loc(self.node_span_locs)
 
 
     def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
@@ -1001,8 +1003,8 @@ class WingSegment:
         return np.asarray([np.zeros(span_array.size), C_dihedral, S_dihedral]).T
 
 
-    def _get_section_ac_loc(self, span):
-        # Returns the location of the section aerodynamic center at the given span fraction.
+    def _get_ll_loc(self, span):
+        # Returns the location of the lifting line at the given span fraction.
         if isinstance(span, float):
             single = True
             span = np.asarray(span)[np.newaxis]
