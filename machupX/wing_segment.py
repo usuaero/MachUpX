@@ -1092,18 +1092,6 @@ class WingSegment:
         """
             
         return self._get_control_point_coef(alpha, Rey, Mach, "get_CLa")
-        #if self._num_airfoils == 1:
-        #    return self._airfoils[0].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #else:
-
-        #    # Gather lift slopes
-        #    CLas = np.zeros((self.N,self._num_airfoils))
-        #    for j in range(self._num_airfoils):
-        #        CLas[:,j] = self._airfoils[j].get_CLa(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #    # Interpolate
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLas)
 
 
     def get_cp_aL0(self, Rey, Mach):
@@ -1125,18 +1113,6 @@ class WingSegment:
         """
 
         return self._get_control_point_coef(np.zeros_like(Rey), Rey, Mach, "get_aL0") # Need to pass a dummy variable for alpha
-        #if self._num_airfoils == 1:
-        #    return self._airfoils[0].get_aL0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #else:
-
-        #    # Gather zero-lift angles of attack
-        #    aL0s = np.zeros((self.N,self._num_airfoils))
-        #    for j in range(self._num_airfoils):
-        #        aL0s[:,j] = self._airfoils[j].get_aL0(Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #    # Interpolate
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, aL0s)
 
 
     def get_cp_CLRe(self, alpha, Rey, Mach):
@@ -1160,16 +1136,6 @@ class WingSegment:
         """
 
         return self._get_control_point_coef(alpha, Rey, Mach, "get_CLRe")
-        ## Gather Reynolds slopes
-        #CLRes = np.zeros((self.N,self._num_airfoils))
-        #for j in range(self._num_airfoils):
-        #    CLRes[:,j] = self._airfoils[j].get_CLRe(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        ## Interpolate
-        #if self._num_airfoils == 1:
-        #    return CLRes.flatten()
-        #else:
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLRes)
 
     
     def get_cp_CLM(self, alpha, Rey, Mach):
@@ -1193,18 +1159,6 @@ class WingSegment:
         """
 
         return self._get_control_point_coef(alpha, Rey, Mach, "get_CLM")
-        #if self._num_airfoils == 1:
-        #    return self._airfoils[0].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #else:
-
-        #    # Get Mach slopes
-        #    CLMs = np.zeros((self.N,self._num_airfoils))
-        #    for j in range(self._num_airfoils):
-        #        CLMs[:,j] = self._airfoils[j].get_CLM(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #    # Interpolate
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLMs)
 
 
     def get_cp_CL(self, alpha, Rey, Mach):
@@ -1228,16 +1182,6 @@ class WingSegment:
         """
 
         return self._get_control_point_coef(alpha, Rey, Mach, "get_CL")
-        ## Get CL
-        #if self._num_airfoils == 1:
-        #    return self._airfoils[0].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #else:
-        #    # Interpolate
-        #    CLs = np.zeros((self.N,self._num_airfoils))
-        #    for j in range(self._num_airfoils):
-        #        CLs[:,j] = self._airfoils[j].get_CL(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CLs)
 
 
     def get_cp_CD(self, alpha, Rey, Mach):
@@ -1261,18 +1205,6 @@ class WingSegment:
         """
 
         return self._get_control_point_coef(alpha, Rey, Mach, "get_CD")
-        #if self._num_airfoils == 1:
-        #    return self._airfoils[0].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #else:
-
-        #    # Get CD
-        #    CDs = np.zeros((self.N,self._num_airfoils))
-        #    for j in range(self._num_airfoils):
-        #        CDs[:,j] = self._airfoils[j].get_CD(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #    # Interpolate
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, CDs)
 
 
     def get_cp_Cm(self, alpha, Rey, Mach):
@@ -1296,18 +1228,6 @@ class WingSegment:
         """
 
         return self._get_control_point_coef(alpha, Rey, Mach, "get_Cm")
-        #if self._num_airfoils == 1:
-        #    return self._airfoils[0].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #else:
-
-        #    # Get Cm
-        #    Cms = np.zeros((self.N,self._num_airfoils))
-        #    for j in range(self._num_airfoils):
-        #        Cms[:,j] = self._airfoils[j].get_Cm(alpha=alpha, Rey=Rey, Mach=Mach, trailing_flap_deflection=self._delta_flap, trailing_flap_fraction=self._cp_c_f)
-
-        #    # Interpolate
-        #    return self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, Cms)
 
 
     def get_outline_points(self):
@@ -1389,14 +1309,6 @@ class WingSegment:
                 self._delta_flap += deflection*self._control_mixing.get(key, 0.0)*self._cp_in_cntrl_surf
             else:
                 self._delta_flap -= deflection*self._control_mixing.get(key, 0.0)*self._cp_in_cntrl_surf
-
-        ## Determine flap efficiency
-        ## From a fit of Mechanics of Flight Fig. 1.7.5
-        #if self._delta_flap < 11:
-        #    self._eta_defl = 1.0
-        #else:
-        #    self._eta_defl = -8.71794871794872E-03*self._delta_flap+1.09589743589744
-        #self._flap_eff = self._eta_h_eps_f*self._eta_defl
 
         # Convert to radians
         self._delta_flap = np.radians(self._delta_flap)
