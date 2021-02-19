@@ -59,22 +59,13 @@ if __name__=="__main__":
                            [1.0, 1.0]],
                 "sweep" : [[0.0, 45.0],
                            [1.0, 45.0]],
-                "control_surface" : {
-                    "chord_fraction" : 0.4,
-                    "root_span" : 0.4,
-                    "tip_span" : 0.8,
-                    "control_mixing" : {
-                        "aileron" : 1.0,
-                        "elevator" : 1.0
-                    }
-                },
                 "grid" : {
-                    "N" : 30
+                    "N" : 55
                 },
                 "CAD_options" :{
                     "round_wing_tip" : True,
                     "round_wing_root" : False,
-                    "n_rounding_sections" : 10
+                    "n_rounding_sections" : 30
                 }
             }
         }
@@ -95,7 +86,7 @@ if __name__=="__main__":
 
     # Export vtk
     vtk_file = "swept_wing.vtk"
-    scene.export_vtk(filename="swept_wing.vtk", section_resolution=31)
+    scene.export_vtk(filename="swept_wing.vtk", section_resolution=61)
 
     my_mesh = pp.Mesh(mesh_file=vtk_file, mesh_file_type="VTK", kutta_angle=90.0, verbose=True)
     my_mesh.export_vtk("swept_wing_pp.vtk")

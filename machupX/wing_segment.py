@@ -1382,7 +1382,7 @@ class WingSegment:
             if i == 0 and round_root:
                 d_theta = np.pi/n_round
                 for j in range(n_round):
-                    round_outline = self._get_round_outline(root_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")[::-1]
+                    round_outline = self._get_round_outline(root_outline, d_theta*j, d_theta*(j+1), section_res, self.side=="right", abs(self.get_sweep(0.0)), False)[::-1]
                     if j == 0:
                         vectors[:num_root_facets*3] = self._get_stl_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
                     else:
@@ -1392,7 +1392,7 @@ class WingSegment:
             if i == self.N-1 and round_tip:
                 d_theta = np.pi/n_round
                 for j in range(n_round):
-                    round_outline = self._get_round_outline(tip_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="left")
+                    round_outline = self._get_round_outline(tip_outline, d_theta*j, d_theta*(j+1), section_res, self.side=="left", abs(self.get_sweep(1.0)), True)
                     if j == n_round-1:
                         vectors[-(num_tip_facets*3)*(n_round-j):] = self._get_stl_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
                     else:
@@ -1532,7 +1532,7 @@ class WingSegment:
         return vectors
 
 
-    def _get_round_outline(self, orig_outline, theta_start, theta_end, N, rev_rot):
+    def _get_round_outline(self, orig_outline, theta_start, theta_end, N, rev_rot, sweep_mag, sweep_back):
         # Gives the outline points for a slice of the tip rounding
 
         # TODO Shear the curve back by the tangent of the sweep angle.
@@ -1612,8 +1612,17 @@ class WingSegment:
         start_outline = np.einsum('ij,kj->ki', T_from_top_to_start, top_outline)*start_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_start, bottom_outline)*start_bottom_weight
         end_outline = np.einsum('ij,kj->ki', T_from_top_to_end, top_outline)*end_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_end, bottom_outline)*end_bottom_weight
 
-        # Concatenate and transform
+        # Concatenate
         rounding_outline = np.concatenate((start_outline, end_outline[-2::-1]), axis=0)
+
+        # Apply sweep
+        offset = np.tan(sweep_mag)*np.abs(rounding_outline[:,2])
+        if sweep_back:
+            rounding_outline[:,0] += offset # Back in local coords is forward in global coords
+        else:
+            rounding_outline[:,0] -= offset
+
+        # Transform to global coords
         return np.einsum('ij,ki->kj', T.T, rounding_outline)+p0[np.newaxis]
 
 
@@ -1652,6 +1661,8 @@ class WingSegment:
         # Seal root
         if close_root:
             outline = self._get_airfoil_outline_coords_at_span(0.0, section_res, close_te)
+            if self.side=="left":
+                outline = outline[::-1]
             vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
 
         # Round root
@@ -1659,8 +1670,8 @@ class WingSegment:
             outline = self._get_airfoil_outline_coords_at_span(0.0, section_res, close_te)
             d_theta = np.pi/n_round
             for j in range(n_round):
-                round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
-                if self.side=="right":
+                round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, self.side=="right", abs(self.get_sweep(0.0)), False)
+                if self.side=="left":
                     round_outline = round_outline[::-1]
                 if j == 0:
                     vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
@@ -1670,6 +1681,8 @@ class WingSegment:
         # Seal tip
         if close_tip:
             outline = self._get_airfoil_outline_coords_at_span(1.0, section_res, close_te)
+            if self.side=="right":
+                outline = outline[::-1]
             vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
 
         # Round tip
@@ -1677,8 +1690,8 @@ class WingSegment:
             outline = self._get_airfoil_outline_coords_at_span(1.0, section_res, close_te)
             d_theta = np.pi/n_round
             for j in range(n_round):
-                round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
-                if self.side=="left":
+                round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, self.side=="left", abs(self.get_sweep(1.0)), True)
+                if self.side=="right":
                     round_outline = round_outline[::-1]
                 if j == 0:
                     vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
