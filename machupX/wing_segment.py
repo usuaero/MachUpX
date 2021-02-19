@@ -1421,7 +1421,7 @@ class WingSegment:
         # Takes a set of four vertices and gives the two minimum AR triangles with the same orientation
 
         # Split along v0-v2
-        if np.linalg.norm(v0-v2) > np.linalg.norm(v1-v3):
+        if np.linalg.norm(v0-v2) > np.linalg.norm(v1-v3): # I don't get why this works, but it does
             return v0, v1, v2, v0, v2, v3
         
         # Split along v1-v3
@@ -1522,7 +1522,8 @@ class WingSegment:
             vectors[curr_vec_ind+1] = outline_points[N//2]
             vectors[curr_vec_ind+2] = outline_points[N//2+1]
 
-        # Reorder to keep the normal pointing outward
+        # Reorder vertices on the right side to keep the normal pointing outward
+        # This is simpler than having side-dependent logic at each previous point
         if self.side == "right":
             t = np.copy(vectors[1::3])
             vectors[1::3] = np.copy(vectors[2::3])
@@ -1533,6 +1534,8 @@ class WingSegment:
 
     def _get_round_outline(self, orig_outline, theta_start, theta_end, N, rev_rot):
         # Gives the outline points for a slice of the tip rounding
+
+        # TODO Shear the curve back by the tangent of the sweep angle.
 
         # For even number of outline points, add a dummy point at the leading edge
         if N%2==0:
