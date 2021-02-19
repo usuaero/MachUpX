@@ -1057,6 +1057,79 @@ class Airplane:
         model_mesh.save(filename)
 
 
+    def export_vtk(self, **kwargs):
+        """Exports a .vtk model of the aircraft.
+
+        Parameters
+        ----------
+        filename
+            File to export the model to. Must be .vtk.
+
+        section_resolution
+            Number of points to use in discretizing the airfoil section outlines. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to True
+        """
+
+        # Check for .stl file
+        filename = kwargs.get("filename")
+        if ".vtk" not in filename:
+            raise IOError("{0} is not a .vtk file.".format(filename))
+
+        # Open file
+        with open(filename, 'w') as export_handle:
+            
+            # Write header
+            print("# vtk DataFile Version 3.0", file=export_handle)
+            print("MachUpX aircraft mesh, USU AeroLab (c) 2020.", file=export_handle)
+            print("ASCII", file=export_handle)
+
+            # Write dataset
+            print("DATASET POLYDATA", file=export_handle)
+
+            # Write vertices
+            vertices, panel_indices = self._get_vtk_data(**kwargs)
+            print("POINTS {0} float".format(len(vertices)), file=export_handle)
+            for vertex in vertices:
+                print("{0:<20.12}{1:<20.12}{2:<20.12}".format(*vertex), file=export_handle)
+
+            # Determine polygon list size
+            size = 0
+            for pi in panel_indices:
+                size += len(pi)
+
+            # Write panel polygons
+            print("POLYGONS {0} {1}".format(self.N, size), file=export_handle)
+            for panel in panel_indices:
+                print(" ".join([str(i) for i in panel]), file=export_handle)
+
+
+    def _get_vtk_data(self, **kwargs):
+        # Assembles a list of vertices and panel vertex indices for creating a vtk mesh
+
+        # Get vtk data
+        raw_vertices = []
+        N_raw_vert = 0
+        panel_N = []
+        for segment in self.segments:
+            for panel in segment.get_vtk_panel_vertices(**kwargs):
+                N_raw_vert += len(panel)
+                panel_N.append(len(panel))
+                raw_vertices.extend(panel)
+
+        # Get vertex list
+        raw_vertices = np.array(raw_vertices)
+        vertices, inverse_indices = np.unique(raw_vertices, return_inverse=True, axis=0)
+        panel_vertex_indices = []
+        i = 0
+        for N in panel_N:
+            panel_vertex_indices.append([N, *inverse_indices[i:i+N]])
+            i += N
+
+        return vertices, panel_vertex_indices
+
+
     def export_stp(self, **kwargs):
         """Exports .STEP files representing the aircraft.
 

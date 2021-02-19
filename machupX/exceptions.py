@@ -23,9 +23,9 @@ class SolverNotConvergedError(Exception):
 
         # Determine message
         if self.solver_type == "scipy_fsolve":
-            self.message = "The scipy solver failed to converge, after which the nonlinear solver also failed to converge."
+            self.message = "The scipy solver failed to converge, after which the nonlinear solver also failed to converge. Try relaxing the solver, increasing the maximum iterations, or increasing the convergence threshold."
         else:
-            self.message = "The nonlinear solver failed to converge."
+            self.message = "The nonlinear solver failed to converge. Try relaxing the solver, increasing the maximum iterations, or increasing the convergence threshold."
 
         # Initialize super
         super().__init__(self.message)

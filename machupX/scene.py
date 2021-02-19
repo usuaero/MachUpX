@@ -3236,6 +3236,41 @@ class Scene:
             model_mesh.save(filename)
 
 
+    def export_vtk(self, **kwargs):
+        """Generates a 3D model of the specified aircraft in body-fixed coordinates using the VTK format.
+        This will generate an unstructured mesh of 4-sided polygons, (except where triangles are required
+        to resolve the mesh).
+
+        Parameters
+        ----------
+        filename: str
+            Name of the file to export the model to. Must be .vtk.
+
+        section_resolution : int, optional
+            Number of points to use in dicretizing the airfoil section outlines. Defaults to 200. Note this is the
+            number of outline points where two exist at the trailing edge. Thus the number of panels will be one less
+            than this number.
+
+        aircraft : str, optional
+            Name of the aircraft. If there is only one aircraft in the scene, this is optional.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to True
+        """
+
+        # Specify the aircraft
+        if len(self._airplanes) == 1:
+            default = list(self._airplanes.keys())[0]
+        else:
+            default = None
+        aircraft_name = kwargs.get("aircraft", default)
+        if aircraft_name is None:
+            raise IOError("'aircraft' must be specified if more than one is in the scene.")
+
+        # Get model
+        self._airplanes[aircraft_name].export_vtk(**kwargs)
+
+
     def MAC(self, **kwargs):
         """Returns the mean aerodynamic chord (MAC) for the specified aircraft.
 

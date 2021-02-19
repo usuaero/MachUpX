@@ -1372,11 +1372,11 @@ class WingSegment:
 
             # Seal root
             if i == 0 and close_root:
-                vectors[:num_root_facets*3] = self._get_end_vectors(section_res, root_outline, close_te, num_root_facets, le_tri=section_res%2!=0)[::-1]
+                vectors[:num_root_facets*3] = self._get_stl_end_vectors(section_res, root_outline, close_te, num_root_facets, le_tri=section_res%2!=0)[::-1]
 
             # Seal tip
             if i == self.N-1 and close_tip:
-                vectors[-num_tip_facets*3:] = self._get_end_vectors(section_res, tip_outline, close_te, num_tip_facets, le_tri=section_res%2!=0)
+                vectors[-num_tip_facets*3:] = self._get_stl_end_vectors(section_res, tip_outline, close_te, num_tip_facets, le_tri=section_res%2!=0)
 
             # Round root
             if i == 0 and round_root:
@@ -1384,9 +1384,9 @@ class WingSegment:
                 for j in range(n_round):
                     round_outline = self._get_round_outline(root_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")[::-1]
                     if j == 0:
-                        vectors[:num_root_facets*3] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
+                        vectors[:num_root_facets*3] = self._get_stl_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
                     else:
-                        vectors[num_root_facets*3*j:num_root_facets*3*(j+1)] = self._get_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
+                        vectors[num_root_facets*3*j:num_root_facets*3*(j+1)] = self._get_stl_end_vectors(section_res, round_outline, close_te, num_root_facets, le_tri=True)
 
             # Round tip
             if i == self.N-1 and round_tip:
@@ -1394,9 +1394,9 @@ class WingSegment:
                 for j in range(n_round):
                     round_outline = self._get_round_outline(tip_outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="left")
                     if j == n_round-1:
-                        vectors[-(num_tip_facets*3)*(n_round-j):] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
+                        vectors[-(num_tip_facets*3)*(n_round-j):] = self._get_stl_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
                     else:
-                        vectors[-(num_tip_facets*3)*(n_round-j):-(num_tip_facets*3)*(n_round-j-1)] = self._get_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
+                        vectors[-(num_tip_facets*3)*(n_round-j):-(num_tip_facets*3)*(n_round-j-1)] = self._get_stl_end_vectors(section_res, round_outline, close_te, num_tip_facets, le_tri=True)
 
             # Create facets between the outlines
             for j in range(section_res-1):
@@ -1485,7 +1485,7 @@ class WingSegment:
         return coords
 
 
-    def _get_end_vectors(self, N, outline_points, close_te, num_facets, le_tri):
+    def _get_stl_end_vectors(self, N, outline_points, close_te, num_facets, le_tri):
         # Determines the stl vectors that seal an end of the wing segment
 
         # Initialize storage
@@ -1615,6 +1615,131 @@ class WingSegment:
         # Concatenate and transform
         rounding_outline = np.concatenate((start_outline, end_outline[-2::-1]), axis=0)
         return np.einsum('ij,ki->kj', T.T, rounding_outline)+p0[np.newaxis]
+
+
+    def get_vtk_panel_vertices(self, **kwargs):
+        """Calculates and returns a list of lists containing the vertices defining each panel for
+        a vtk mesh.
+
+        Parameters
+        ----------
+        section_resolution : int, optional
+            Number of points to use in distcretizing the airfoil sections. Defaults to 200.
+
+        close_te : bool, optional
+            Whether to force the trailing edge to be sealed. Defaults to true
+
+        Returns
+        -------
+        list
+            Panel vertices.
+        """
+
+        # Determine params
+        section_res = kwargs.get("section_resolution", 200)
+        close_te = kwargs.get("close_te", True)
+        close_root = self._cad_options.get("close_wing_root", False)
+        close_tip = self._cad_options.get("close_wing_tip", False)
+        round_root = self._cad_options.get("round_wing_root", False)
+        round_tip = self._cad_options.get("round_wing_tip", False)
+        if (round_root and close_root) or (round_tip and close_tip):
+            raise IOError("Options to close or round the end of a wing segment may not both be selected. Please choose one or the other.")
+        n_round = self._cad_options.get("n_rounding_sections", 10)
+
+        # Initialize panel storage
+        vertices = []
+
+        # Generate vectors
+        for i in range(self.N):
+
+            # Left spanwise node
+            left_span = self.node_span_locs[i]
+            left_outline = self._get_airfoil_outline_coords_at_span(left_span, section_res, close_te)
+
+            # Right spanwise node
+            right_span = self.node_span_locs[i+1]
+            right_outline = self._get_airfoil_outline_coords_at_span(right_span, section_res, close_te)
+
+            # At root
+            if (i==self.N-1 and self.side=="left") or (i==0 and self.side=="right"):
+
+                # Pick which outline to use
+                if self.side=="left":
+                    outline = right_outline
+                else:
+                    outline = left_outline
+
+                # Seal root
+                if close_root:
+                    vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
+
+                # Round root
+                if round_root:
+                    d_theta = np.pi/n_round
+                    for j in range(n_round):
+                        round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
+                        if self.side=="right":
+                            round_outline = round_outline[::-1]
+                        if j == 0:
+                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+                        else:
+                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+
+            # At tip
+            if (i==self.N-1 and self.side=="right") or (i==0 and self.side=="left"):
+
+                # Pick which outline to use
+                if self.side=="left":
+                    outline = left_outline
+                else:
+                    outline = right_outline
+
+                # Seal tip
+                if close_tip:
+                    vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
+
+                # Round tip
+                if round_tip:
+                    d_theta = np.pi/n_round
+                    for j in range(n_round):
+                        round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
+                        if self.side=="left":
+                            round_outline = round_outline[::-1]
+                        if j == 0:
+                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+                        else:
+                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+
+            # Create panels between the outlines along the inside of the wing
+            for j in range(section_res-1):
+                vertices.append([right_outline[j], right_outline[j+1], left_outline[j+1], left_outline[j]])
+
+        return vertices
+
+
+    def _get_vtk_end_panels(self, N, outline_points, close_te):
+        # Determines the stl vectors that seal an end of the wing segment
+
+        # Initialize storage
+        vertices = []
+
+        # Create panels starting at trailing edge
+        if close_te:
+            vertices.append([outline_points[0], outline_points[1], outline_points[-2]])
+        else:
+            vertices.append([outline_points[0], outline_points[1], outline_points[-2], outline_points[-1]])
+
+        # Loop through middle part
+        for i in range(1, N//2-1):
+
+            # Store vectors
+            vertices.append([outline_points[i], outline_points[i+1], outline_points[-(i+2)], outline_points[-(i+1)]])
+
+        # Handle triangle at leading edge
+        if len(outline_points)%2!=0:
+            vertices.append([outline_points[N//2-1], outline_points[N//2], outline_points[N//2+1]])
+
+        return vertices
 
 
     def export_stp(self, **kwargs):
