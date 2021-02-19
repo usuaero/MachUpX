@@ -2,7 +2,7 @@
    Takes the input JSON as an argument and runs all analyses specified by 
    the "run" key."""
 
-from .scene import Scene
+from machupX import Scene
 import sys
 import json
 

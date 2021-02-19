@@ -13,10 +13,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "linear",
-            "relaxation" : 1.0,
-            "max_iterations" : 10000,
-            "constrain_vortex_sheet" : True
+            "type" : "nonlinear"
         },
         "units" : "English",
         "scene" : {
@@ -61,22 +58,14 @@ if __name__=="__main__":
                 "side" : "both",
                 "is_main" : True,
                 "airfoil" : [[0.0, "NACA_0010"],
-                             [0.1, "NACA_0010"],
-                             [0.2, "NACA_2410"],
-                             [0.8, "NACA_2410"],
-                             [0.9, "NACA_0010"],
                              [1.0, "NACA_0010"]],
                 "semispan" : 6.0,
                 "dihedral" : [[0.0, 0.0],
-                              [0.2, 5.0],
-                              [0.8, 5.0],
-                              [1.0, 80.0]],
-                "chord" : [[0.0, 3.0],
-                           [0.1, 2.0],
-                           [0.2, 1.0],
-                           [1.0, 0.5]],
-                "sweep" : [[0.0, 0.0],
-                           [1.0, 30.0]],
+                              [1.0, 0.0]],
+                "chord" : [[0.0, 1.0],
+                           [1.0, 1.0]],
+                "sweep" : [[0.0, 45.0],
+                           [1.0, 45.0]],
                 "control_surface" : {
                     "chord_fraction" : 0.4,
                     "root_span" : 0.4,
@@ -87,7 +76,7 @@ if __name__=="__main__":
                     }
                 },
                 "grid" : {
-                    "N" : 80
+                    "N" : 30
                 },
                 "CAD_options" :{
                     "round_stl_tip" : True,
@@ -100,10 +89,10 @@ if __name__=="__main__":
 
     # Specify state
     state = {
-        "position" : [0.0, 0.0, -1000.0],
+        "position" : [0.0, 0.0, 0.0],
         "velocity" : 100.0,
-        "alpha" : 15.0,
-        "beta" : 15.0,
+        "alpha" : 5.0,
+        "beta" : 0.0,
         "orientation" : [0.0, 0.0, 0.0]
     }
 
@@ -134,13 +123,13 @@ if __name__=="__main__":
     #print(json.dumps(controls, indent=4))
     #alpha,_,_ = scene._airplanes["plane"].get_aerodynamic_state()
     #print(alpha)
-    scene.display_wireframe(show_vortices=True)
-    #stl_file = "swept_wing_40_span_41_sec_10_tip.stl"
-    #scene.export_stl(filename=stl_file, section_resolution=41)
+    #scene.display_wireframe(show_vortices=True)
+    stl_file = "swept_wing_30_span_31_sec_10_tip.stl"
+    scene.export_stl(filename=stl_file, section_resolution=31)
 
-    # Solve forces
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)
-    print(json.dumps(FM["plane"]["total"], indent=4))
+    ## Solve forces
+    #FM = scene.solve_forces(non_dimensional=False, verbose=True)
+    #print(json.dumps(FM["plane"]["total"], indent=4))
 
     #scene.distributions(filename="dist.txt")
 
