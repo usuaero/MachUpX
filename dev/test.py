@@ -60,12 +60,12 @@ if __name__=="__main__":
                 "sweep" : [[0.0, 45.0],
                            [1.0, 45.0]],
                 "grid" : {
-                    "N" : 55
+                    "N" : 65
                 },
                 "CAD_options" :{
                     "round_wing_tip" : True,
                     "round_wing_root" : False,
-                    "n_rounding_sections" : 30
+                    "n_rounding_sections" : 20
                 }
             }
         }
@@ -74,15 +74,15 @@ if __name__=="__main__":
     # Specify state
     state = {
         "position" : [0.0, 0.0, 0.0],
-        "velocity" : 100.0,
-        "alpha" : 5.0,
-        "beta" : 0.0,
+        "velocity" : [100.0, 0.0, 10],
         "orientation" : [0.0, 0.0, 0.0]
     }
 
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
+    FM = scene.solve_forces(non_dimensional=False, verbose=True)["total"]
+    print(json.dumps(FM, indent=4))
 
     # Export vtk
     vtk_file = "swept_wing.vtk"
