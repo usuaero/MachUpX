@@ -99,9 +99,8 @@ if __name__=="__main__":
 
     my_mesh = pp.Mesh(mesh_file=vtk_file, mesh_file_type="VTK", kutta_angle=90.0, verbose=True)
     my_mesh.export_vtk("swept_wing_pp.vtk")
-#    solver = pp.VortexRingSolver(mesh=my_mesh, verbose=True)
-#    solver.set_condition(V_inf=[-100.0, 0.0, -10.0], rho=0.0023769)
-#    FM = solver.solve(lifting=True, verbose=True)
-#    print(FM)
-#    solver.export_vtk("case.vtk")
-#
+    solver = pp.VortexRingSolver(mesh=my_mesh, verbose=True)
+    solver.set_condition(V_inf=[-100.0, 0.0, -10.0], rho=0.0023769)
+    FM = solver.solve(lifting=True, verbose=True)
+    print(FM)
+    solver.export_vtk("case.vtk")

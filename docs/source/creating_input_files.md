@@ -602,8 +602,14 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>**"CAD_options" : dict, optional**
 >>>>Contains options for how this wing segment is to be treated when exporting in a CAD-type file (STL, STP, DXF).
 >>>>
->>>>**"close_stl_tip" : bool, optional**
->>>>>Whether to close the tip of the wing when exporting an STL file. Does so using a flot surface of the same shape as the tip airfoil section. Defaults to False.
+>>>>**"close_wing_tip" : bool, optional**
+>>>>>Whether to close the tip of the wing when exporting an STL or VTK file. Does so using a flat surface of the same shape as the tip airfoil section. Defaults to False.
 >>>>
->>>>**"close_stl_root" : bool, optional**
->>>>>Same as "close_stl_root", but for the root.
+>>>>**"close_wing_root" : bool, optional**
+>>>>>Same as "close_wing_root", but for the root.
+>>>>
+>>>>**"round_wing_tip" : bool, optional**
+>>>>>Whether to close the tip of the wing when exporting an STL or VTK file. Does so by rotating and blending the airfoil outline about the chord. Defaults to False.
+>>>>
+>>>>**"round_wing_root" : bool, optional**
+>>>>>Same as "round_wing_root", but for the root.

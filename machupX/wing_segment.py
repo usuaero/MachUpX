@@ -1336,10 +1336,10 @@ class WingSegment:
         # Determine params
         section_res = kwargs.get("section_resolution", 200)
         close_te = kwargs.get("close_te", True)
-        close_root = self._cad_options.get("close_stl_root", False)
-        close_tip = self._cad_options.get("close_stl_tip", False)
-        round_root = self._cad_options.get("round_stl_root", False)
-        round_tip = self._cad_options.get("round_stl_tip", False)
+        close_root = self._cad_options.get("close_wing_root", False)
+        close_tip = self._cad_options.get("close_wing_tip", False)
+        round_root = self._cad_options.get("round_wing_root", False)
+        round_tip = self._cad_options.get("round_wing_tip", False)
         if (round_root and close_root) or (round_tip and close_tip):
             raise IOError("Options to close or round the end of a wing segment may not both be selected. Please choose one or the other.")
         if round_tip or round_root:
@@ -1649,7 +1649,43 @@ class WingSegment:
         # Initialize panel storage
         vertices = []
 
-        # Generate vectors
+        # Seal root
+        if close_root:
+            outline = self._get_airfoil_outline_coords_at_span(0.0, section_res, close_te)
+            vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
+
+        # Round root
+        if round_root:
+            outline = self._get_airfoil_outline_coords_at_span(0.0, section_res, close_te)
+            d_theta = np.pi/n_round
+            for j in range(n_round):
+                round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
+                if self.side=="right":
+                    round_outline = round_outline[::-1]
+                if j == 0:
+                    vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+                else:
+                    vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+
+        # Seal tip
+        if close_tip:
+            outline = self._get_airfoil_outline_coords_at_span(1.0, section_res, close_te)
+            vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
+
+        # Round tip
+        if round_tip:
+            outline = self._get_airfoil_outline_coords_at_span(1.0, section_res, close_te)
+            d_theta = np.pi/n_round
+            for j in range(n_round):
+                round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
+                if self.side=="left":
+                    round_outline = round_outline[::-1]
+                if j == 0:
+                    vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+                else:
+                    vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
+
+        # Generate panels over the surface of the wing
         for i in range(self.N):
 
             # Left spanwise node
@@ -1659,56 +1695,6 @@ class WingSegment:
             # Right spanwise node
             right_span = self.node_span_locs[i+1]
             right_outline = self._get_airfoil_outline_coords_at_span(right_span, section_res, close_te)
-
-            # At root
-            if (i==self.N-1 and self.side=="left") or (i==0 and self.side=="right"):
-
-                # Pick which outline to use
-                if self.side=="left":
-                    outline = right_outline
-                else:
-                    outline = left_outline
-
-                # Seal root
-                if close_root:
-                    vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
-
-                # Round root
-                if round_root:
-                    d_theta = np.pi/n_round
-                    for j in range(n_round):
-                        round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
-                        if self.side=="right":
-                            round_outline = round_outline[::-1]
-                        if j == 0:
-                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
-                        else:
-                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
-
-            # At tip
-            if (i==self.N-1 and self.side=="right") or (i==0 and self.side=="left"):
-
-                # Pick which outline to use
-                if self.side=="left":
-                    outline = left_outline
-                else:
-                    outline = right_outline
-
-                # Seal tip
-                if close_tip:
-                    vertices.extend(self._get_vtk_end_panels(section_res, outline, close_te))
-
-                # Round tip
-                if round_tip:
-                    d_theta = np.pi/n_round
-                    for j in range(n_round):
-                        round_outline = self._get_round_outline(outline, d_theta*j, d_theta*(j+1), section_res, rev_rot=self.side=="right")
-                        if self.side=="left":
-                            round_outline = round_outline[::-1]
-                        if j == 0:
-                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
-                        else:
-                            vertices.extend(self._get_vtk_end_panels(section_res, round_outline, close_te))
 
             # Create panels between the outlines along the inside of the wing
             for j in range(section_res-1):
