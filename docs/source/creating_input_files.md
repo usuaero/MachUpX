@@ -297,7 +297,7 @@ The following are keys which can be specified in the scene JSON object. NOTE: al
 >>>Whether to include induced velocities when redimensionalizing section coefficients. It is highly recommended that this not be turned off. Defaults to True.
 >>
 >>**"use_in_plane" : int, optional**
->>>Whether to use only the in-plane velocity for determining airfoil section behavior. It is highly recommended that this not be turned off. Defaults to True.
+>>>Whether to use only the in-plane velocity for determining airfoil section behavior. If True, the velocity in the plane normal to the lifting-line will be used to redimensionalize the section lift coefficient. If False, the true velocity is used for redimensionalization. Due to the definition of angle of attack from the section direction vectors, this does not affect swept section/original section angle of attack calculations. It is highly recommended that this not be turned off. Defaults to True.
 >>
 >>**"match_machup_pro" : int, optional**
 >>>Changes how miscelaneous other aspects of NLL are handled to match the nondimensional derivation used in MachUp Pro. Defaults to False. **If you desire to match MachUp Pro exactly, "use_swept_sections", "use_total_velocity", "use_in_plane", "reid_corrections", and "flap_edge_cluster" must be set to False along with setting this to True (not recommended).** Even with this, MachUpX is unable to match MachUp Pro in the case of angular rates.
