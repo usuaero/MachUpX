@@ -1421,7 +1421,7 @@ class WingSegment:
         # Takes a set of four vertices and gives the two minimum AR triangles with the same orientation
 
         # Split along v0-v2
-        if np.linalg.norm(v0-v2) > np.linalg.norm(v1-v3): # I don't get why this works, but it does
+        if np.linalg.norm(v0-v2) < np.linalg.norm(v1-v3): # I don't get why this works, but it does
             return v0, v1, v2, v0, v2, v3
         
         # Split along v1-v3
