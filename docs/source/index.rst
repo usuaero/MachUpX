@@ -12,6 +12,7 @@ MachUpX
    scene_object
    dxf
    common_issues
+   multiprocessing
    error_handling
    version_notes
    support

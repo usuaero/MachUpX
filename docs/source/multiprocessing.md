@@ -1,0 +1,2 @@
+# Multiprocessing with MachUpX
+In order to run MachUpX efficiently on multiple threads, MachUpX sets a few environment variables upon initialization. Because of this, if you are scripting MachUpX and using numpy, MachUpX must be imported before numpy. Otherwise, the time savings will not be seen.
