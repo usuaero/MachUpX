@@ -5,11 +5,11 @@ C. D. Goates and D. F. Hunsaker, "Practical Implementation of a General Numerica
 
 Further background can be found in the following sources:
 
-W. F. Phillips and D. O. Snyder. "Modern Adaptation of Prandtl's Classic Lifting-Line Theory", Journal of Aircraft, Vol. 37, No. 4 (2000), pp. 662-670.
+W. F. Phillips and D. O. Snyder. "Modern Adaptation of Prandtl's Classic Lifting-Line Theory", *Journal of Aircraft*, Vol. 37, No. 4 (2000), pp. 662-670.
 
-W. F. Phillips, "Flow over Multiple Lifting Surfaces," Mechanics of Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
+W. F. Phillips, "Flow over Multiple Lifting Surfaces," *Mechanics of Flight*, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
-J. T. Reid and D. F. Hunsaker, "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," AIAA SciTech Forum, Orlando, 2020.
+J. T. Reid and D. F. Hunsaker, "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, Orlando, 2020.
 
 ## Documentation
 Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Please refer to the documentation for instructions on installation, etc. Specific help with package functions can also be found in the docstrings. Please read the documentation thoroughly before contacting the development team.
