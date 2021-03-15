@@ -1,20 +1,15 @@
 # MachUpX
-A new implementation of Warren F. Phillips' numerical lifting-line algorithm, combining the best of MachUp Pro and MachUp_Py.
+An implementation of the Goates-Hunsaker method for solving the general numerical lifting-line problem. This method has been developed in recent years based on the original numerical liting-line method developed by Phillips and Snyder. The main reference for the Goates-Hunsaker method is:
 
-Written by Cory Goates (graduate student, USU)
+C. D. Goates and D. F. Hunsaker, "Practical Implementation of a General Numerical Lifting-Line Theory," *AIAA SciTech Forum*, Virtual Event, 2021.
 
-Discussion of the numerical lifting-line algorithm can be found in the following sources:
+Further background can be found in the following sources:
 
-W. F. Phillips and D. O. Snyder. "Modern Adaptation of Prandtl's
-Classic Lifting-Line Theory", Journal of Aircraft, Vol. 37, No. 4
-(2000), pp. 662-670.
+W. F. Phillips and D. O. Snyder. "Modern Adaptation of Prandtl's Classic Lifting-Line Theory", *Journal of Aircraft*, Vol. 37, No. 4 (2000), pp. 662-670.
 
-W. F. Phillips, "Flow over Multiple Lifting Surfaces," Mechanics of
-Flight, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
+W. F. Phillips, "Flow over Multiple Lifting Surfaces," *Mechanics of Flight*, 2nd ed., Wiley, New Jersey, 2010, pp. 94 -107.
 
-This version of MachUpX optionally incorporates changes to Phillips' algorithm to ensure grid convergence in the case of swept wings and wings in sideslip. More on this can be found in the following sources:
-
-J. T. Reid and D. F. Hunsaker, "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," AIAA SciTech Forum, Orlando, 2020.
+J. T. Reid and D. F. Hunsaker, "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, Orlando, 2020.
 
 ## Documentation
 Documentation can be found at [ReadTheDocs](https://machupx.readthedocs.io). Please refer to the documentation for instructions on installation, etc. Specific help with package functions can also be found in the docstrings. Please read the documentation thoroughly before contacting the development team.
