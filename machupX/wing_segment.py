@@ -1535,8 +1535,6 @@ class WingSegment:
     def _get_round_outline(self, orig_outline, theta_start, theta_end, N, rev_rot, sweep_mag, sweep_back):
         # Gives the outline points for a slice of the tip rounding
 
-        # TODO Shear the curve back by the tangent of the sweep angle.
-
         # For even number of outline points, add a dummy point at the leading edge
         if N%2==0:
             p = 0.5*(orig_outline[N//2-1]+orig_outline[N//2])
@@ -1603,9 +1601,9 @@ class WingSegment:
             T_from_top_to_start = T_from_top_to_start.T
         
         # Get weightings
-        start_top_weight = theta_start/np.pi
+        start_top_weight = 1.0-theta_start/np.pi
         start_bottom_weight = 1.0-start_top_weight
-        end_top_weight = theta_end/np.pi
+        end_top_weight = 1.0-theta_end/np.pi
         end_bottom_weight = 1.0-end_top_weight
         
         # Get new outlines

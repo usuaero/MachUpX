@@ -38,9 +38,9 @@ if __name__=="__main__":
             }
         },
         "airfoils" : {
-            "NACA_0010" : {
+            "NACA_2410" : {
                 "geometry" : {
-                    "NACA" : "0010"
+                    "NACA" : "2410"
                 }
             }
         },
@@ -50,8 +50,8 @@ if __name__=="__main__":
                 "ID" : 1,
                 "side" : "both",
                 "is_main" : True,
-                "airfoil" : [[0.0, "NACA_0010"],
-                             [1.0, "NACA_0010"]],
+                "airfoil" : [[0.0, "NACA_2410"],
+                             [1.0, "NACA_2410"]],
                 "semispan" : 6.0,
                 "dihedral" : [[0.0, 0.0],
                               [1.0, 0.0]],
@@ -81,17 +81,9 @@ if __name__=="__main__":
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state)
-    FM = scene.solve_forces(non_dimensional=False, verbose=True)["total"]
-    print(json.dumps(FM, indent=4))
+
+    # Export stl
+    scene.export_stl(filename="swept_wing.stl", section_resolution=61)
 
     # Export vtk
-    vtk_file = "swept_wing.vtk"
     scene.export_vtk(filename="swept_wing.vtk", section_resolution=61)
-
-    my_mesh = pp.Mesh(mesh_file=vtk_file, mesh_file_type="VTK", kutta_angle=90.0, verbose=True)
-    my_mesh.export_vtk("swept_wing_pp.vtk")
-    solver = pp.VortexRingSolver(mesh=my_mesh, verbose=True)
-    solver.set_condition(V_inf=[-100.0, 0.0, -10.0], rho=0.0023769)
-    FM = solver.solve(lifting=True, verbose=True)
-    print(FM)
-    solver.export_vtk("case.vtk")
