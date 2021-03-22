@@ -36,6 +36,8 @@ class Scene:
 
     def __init__(self, scene_input={}):
 
+        np.set_printoptions(threshold=1000000)
+
         # Initialize basic storage objects
         self._airplanes = {}
         self._N = 0
@@ -603,7 +605,6 @@ class Scene:
             self._u_trailing_0 = self._u_trailing_0/np.linalg.norm(self._u_trailing_0, axis=-1, keepdims=True)
             self._u_trailing_1 = self._u_trailing_1/np.linalg.norm(self._u_trailing_1, axis=-1, keepdims=True)
 
-
         # Calculate V_ji
         # Influence of vortex segment 0 after the joint; ignore if the radius goes to zero.
         # Problem is, if the radius almost goes to zero, that can blow up the influence matrix without making it a nan.
@@ -656,10 +657,10 @@ class Scene:
 
             # Estimate lift slope
             with np.errstate(divide='ignore', invalid='ignore'):
-                self._CLa = np.nan_to_num(self._CL/(self._alpha_inf-self._aL0))
+                CLa = np.nan_to_num(self._CL/(self._alpha_inf-self._aL0)) # Don't store this CLa because that would degrade the linear approximation
 
             # Get new estimate
-            self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
+            self._CL = CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
 
         self._solved = False
 
@@ -721,7 +722,7 @@ class Scene:
 
     def _calc_v_i(self):
         # Determines the local velocity at each control point
-        self._v_i = self._v_inf+(self._V_ji.transpose((2,0,1))@self._gamma).T
+        self._v_i = self._v_inf+np.einsum('ijk,j->ik', self._V_ji, self._gamma)
 
     
     def _get_section_lift(self):
@@ -788,7 +789,7 @@ class Scene:
 
         # Estimate lift slope
         with np.errstate(divide='ignore', invalid='ignore'):
-            self._CLa = np.nan_to_num(self._CL/(self._alpha-self._aL0))
+            self._CLa = np.nan_to_num(self._CL/(self._alpha-self._aL0)) # Not sure if this CLa should be stored. Seems less important because Newton's solver is being used
 
         # Get new estimate
         self._CL = self._CLa*(self._alpha-self._aL0*self._C_sweep_inv)
@@ -2419,13 +2420,9 @@ class Scene:
 
 
     def pitch_trim(self, **kwargs):
-        """Returns the required angle of attack and pitch control deflection for trim at the current state.
-        Trim is achieved when the lift cancels out the weight of the aircraft and the pitching moment is zero.
-        This alters the body-fixed aircraft velocity in order to achieve trim.
+        """Returns the required angle of attack and pitch control deflection for trim at the current state. Trim is achieved when the lift cancels out the weight of the aircraft and the pitching moment is zero. This alters the body-fixed aircraft velocity in order to achieve trim.
 
-        It is recommended this trim function be used when the aircraft is the only one in the scene, there is no
-        wind, and the bank angle is zero (a majority of cases). For more complex cases, pitch_trim_using_orientation()
-        is recommended.
+        It is recommended this trim function be used when the aircraft is the only one in the scene, there is no wind, and the bank angle is zero (a majority of cases). For more complex cases, pitch_trim_using_orientation() is recommended.
 
         Parameters
         ----------
@@ -2440,20 +2437,15 @@ class Scene:
             File to output the results to. Defaults to no file.
 
         set_trim_state : bool
-            If set to True, once trim is determined, the state of the aircraft will be set to this trim state.
-            Note this will only affect the velocity of the aircraft; its orientation will remain unchanged.
-            If False, the state of the aircraft will return to what it was before this method was called.
-            Defaults to True.
+            If set to True, once trim is determined, the state of the aircraft will be set to this trim state. Note this will only affect the velocity of the aircraft; its orientation will remain unchanged. If False, the state of the aircraft will return to what it was before this method was called. Defaults to True.
 
         verbose : bool
-            If set to true, information will be output about the progress of Newton's method. Defaults to 
-            False.
+            If set to true, information will be output about the progress of Newton's method. Defaults to False.
 
         Returns
         -------
         dict
-            The angle of attack and deflection of the specified control required to trim the aircraft in 
-            pitch in the current state.
+            The angle of attack and deflection of the specified control required to trim the aircraft in pitch in the current state.
         """
 
         # Initialize data
@@ -2575,10 +2567,7 @@ class Scene:
 
 
     def pitch_trim_using_orientation(self, **kwargs):
-        """Trims the given aircraft in pitch by altering the elevation angle of the aircraft and the specified
-        control deflection. This will maintain the Earth-fixed velocity of the aircraft and the heading and
-        bank angle. Since bank angle is maintained, trim is achieved when the *vertical* component of lift
-        cancels out the weight of the aircraft.
+        """Trims the given aircraft in pitch by altering the elevation angle of the aircraft and the specified control deflection. This will maintain the Earth-fixed velocity of the aircraft and the heading and bank angle. Since bank angle is maintained, trim is achieved when the *vertical* component of lift cancels out the weight of the aircraft.
 
         This trim function is more general than pitch_trim() and can be used in all cases.
 
@@ -2592,9 +2581,7 @@ class Scene:
             Control to be used to trim the aircraft in pitch. Defaults to "elevator".
 
         set_trim_state : bool, optional
-            Whether to use the determined trim state as the new state of the aircraft. This will
-            maintain the Earth-fixed velocity of the aircraft while changing the elevation angle.
-            Defaults to True.
+            Whether to use the determined trim state as the new state of the aircraft. This will maintain the Earth-fixed velocity of the aircraft while changing the elevation angle. Defaults to True.
 
         filename : str
             File to output the results to. Defaults to no file.
@@ -2879,46 +2866,71 @@ class Scene:
 
 
     def distributions(self, **kwargs):
-        """Returns various parameters, as well as forces and moments, at each control point for all
-        aircraft at the current state. Note that if "correct_sections_for_sweep" (default True) is
-        set to True, the section *aerodynamic* properties given here will be the swept section properties.
-        All angular values are given in radians by default.
+        """Returns various parameters, as well as forces and moments, at each control point for all aircraft at the current state. Note that if "correct_sections_for_sweep" (default True) is set to True, the section *aerodynamic* properties given here will be the swept section properties. All angular values are given in radians by default.
         
         The following properties are stored as distributions:
         
             "span_frac" : fraction along the span (distance along the LQC projected into the y-z plane)
-            "cpx" : control point x location
-            "cpy" : control point y location
-            "cpz" : control point z location
-            "chord" : section geometric chord
-            "swept_chord" : section chord normal to the lifting-line (corrected for sweep)
-            "twist" : section geometric twist
-            "dihedral" : section geometric dihedral
-            "sweep" : section geometric sweep
-            "aero_sweep" : section aerodynamic sweep (based on the lifting-line)
-            "area" : section differential planform area
-            "alpha" : angle of attack (corrected for sweep)
-            "delta_flap" : flap deflection
-            "u" : body-x velocity
-            "v" : body-y velocity
-            "w" : body-z velocity
-            "Re" : Reynolds number
-            "M" : Mach number
-            "q" : dynamic pressure
-            "section_CL" : lift coefficient
-            "section_Cm" : moment coefficient
-            "section_parasitic_CD" : drag coefficient
-            "section_aL0" : zero-lift angle of attack
-            "Fx" : body-x force acting on each section
-            "Fy" : body-y force acting on each section
-            "Fz" : body-z force acting on each section
-            "Mx" : body-x moment acting on each section
-            "My" : body-y moment acting on each section
-            "Mz" : body-z moment acting on each section
-            "circ" : circulation
-            "CD_i" : induced drag coefficient acting on each section (nondimensionalized by the freestream
-                velocity and the section discrete area dS)
 
+            "cpx" : control point x location
+
+            "cpy" : control point y location
+
+            "cpz" : control point z location
+
+            "chord" : section geometric chord
+
+            "swept_chord" : section chord normal to the lifting-line (corrected for sweep)
+
+            "twist" : section geometric twist
+
+            "dihedral" : section geometric dihedral
+
+            "sweep" : section geometric sweep
+
+            "aero_sweep" : section aerodynamic sweep (based on the lifting-line)
+
+            "area" : section differential planform area
+
+            "alpha" : angle of attack (corrected for sweep)
+
+            "delta_flap" : flap deflection
+
+            "u" : body-x velocity
+
+            "v" : body-y velocity
+
+            "w" : body-z velocity
+
+            "Re" : Reynolds number
+
+            "M" : Mach number
+
+            "q" : dynamic pressure
+
+            "section_CL" : lift coefficient
+
+            "section_Cm" : moment coefficient
+
+            "section_parasitic_CD" : drag coefficient
+
+            "section_aL0" : zero-lift angle of attack
+
+            "Fx" : body-x force acting on each section
+
+            "Fy" : body-y force acting on each section
+
+            "Fz" : body-z force acting on each section
+
+            "Mx" : body-x moment acting on each section
+
+            "My" : body-y moment acting on each section
+
+            "Mz" : body-z moment acting on each section
+
+            "circ" : circulation
+
+            "CD_i" : induced drag coefficient acting on each section (nondimensionalized by the freestream velocity and the section discrete area dS)
 
         Parameters
         ----------
@@ -2926,14 +2938,10 @@ class Scene:
             Output file to write the distributions to. Saves as a .txt file. Defaults to no file.
 
         radians : bool
-            Whether to output angular values in radians. Defaults to True. If set to False, all
-            angular values will be output in degrees. Note this also affects the plots generated
-            by make_plots.
+            Whether to output angular values in radians. Defaults to True. If set to False, all angular values will be output in degrees. Note this also affects the plots generated by make_plots.
 
         make_plots : list, optional
-            List of keys from the dist dictionary to make plots of. A plot of the parameter as a function 
-            of span fraction for each wing segment will then be generated and saved. This can create 
-            a lot of plots!
+            List of keys from the dist dictionary to make plots of. A plot of the parameter as a function of span fraction for each wing segment will then be generated and saved. This can create a lot of plots!
 
         show_plots : bool, optional
             Whether to show the plots, rather than automatically saving them. Defaults to False.
@@ -2941,8 +2949,7 @@ class Scene:
         Returns
         -------
         dist : dict
-            A dictionary containing lists of each parameter at each control point. The distributions are
-            organized by aircraft then by wing segment. The nested keys are then each parameter.
+            A dictionary containing lists of each parameter at each control point. The distributions are organized by aircraft then by wing segment. The nested keys are then each parameter.
         """
 
         # Make sure the LL equations have been solved in this state
