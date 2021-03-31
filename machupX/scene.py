@@ -723,6 +723,7 @@ class Scene:
     def _calc_v_i(self):
         # Determines the local velocity at each control point
         self._v_i = self._v_inf+np.einsum('ijk,j->ik', self._V_ji, self._gamma)
+        #self._v_i = self._v_inf+(self._V_ji.transpose((2,0,1))@self._gamma).T
 
     
     def _get_section_lift(self):

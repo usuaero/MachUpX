@@ -1100,7 +1100,7 @@ class Airplane:
                 size += len(pi)
 
             # Write panel polygons
-            print("POLYGONS {0} {1}".format(self.N, size), file=export_handle)
+            print("POLYGONS {0} {1}".format(len(panel_indices), size), file=export_handle)
             for panel in panel_indices:
                 print(" ".join([str(i) for i in panel]), file=export_handle)
 
