@@ -580,19 +580,22 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>
 >>>**"control_surface" : dict, optional**
 >>>>Defines a control surface on the trailing edge of the wing segment. The flap aerodynamics are determined by the airfoil type given for the wing segment. A "linear" airfoil will use Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).
->>>
+>>>>
 >>>>**"root_span" : float, optional**
 >>>>>The span location, as a fraction of total span, where the control surface begins. Defaults to 0.0.
->>>
+>>>>
 >>>>**"tip_span" : float, optional**
 >>>>>The span location, as a fraction of total span, where the control surface ends. Defaults to 1.0.
->>>
+>>>>
 >>>>**"chord_fraction" : float, array, or string, optional**
 >>>>>The depth of the control surface, as a fraction of the local chord length. Defined the same as "twist". If an array or file is specified, however, the start and end of the data must coincide with "root_span" and "tip_span", respectively. Defaults to 0.25.
->>>
+>>>>
+>>>>**"saturation_angle" : float, optional**
+>>>>>Positive angle (in degrees) at which this control surface saturates. It is assumed the control surface also saturates at the negative of this angle. Defaults to infinite (no saturation).
+>>>>
 >>>>**"is_sealed" : bool, optional**
 >>>>>Whether or not the flap is sealed. Affects the effectiveness of the flap. Defaults to true.
->>>
+>>>>
 >>>>**"control_mixing" : dict**
 >>>>>Determines which control inputs move this control surface. A control surface can be affected by any number of controls.
 >>>>>

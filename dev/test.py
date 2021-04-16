@@ -62,6 +62,13 @@ if __name__=="__main__":
                 "grid" : {
                     "N" : 65
                 },
+                "control_surface" : {
+                    "chord_fraction" : 0.25,
+                    "saturation_angle" : 10.0,
+                    "control_mixing" : {
+                        "aileron" : 1.0
+                    }
+                },
                 "CAD_options" :{
                     "round_wing_tip" : True,
                     "round_wing_root" : False,
@@ -77,13 +84,12 @@ if __name__=="__main__":
         "velocity" : [100.0, 0.0, 10],
         "orientation" : [0.0, 0.0, 0.0]
     }
+    control_state = {
+        "aileron" : -15.0
+    }
 
     # Load scene
     scene = MX.Scene(input_dict)
-    scene.add_aircraft("plane", airplane_dict, state=state)
-
-    # Export stl
-    scene.export_stl(filename="swept_wing.stl", section_resolution=61)
-
-    # Export vtk
-    scene.export_vtk(filename="swept_wing.vtk", section_resolution=61)
+    scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
+    FM = scene.solve_forces()
+    print(json.dumps(FM["plane"]["total"], indent=4))

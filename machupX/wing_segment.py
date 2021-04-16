@@ -626,6 +626,7 @@ class WingSegment:
             # Determine which control points are affected by the control surface
             self._cntrl_root_span = control_dict.get("root_span", 0.0)
             self._cntrl_tip_span = control_dict.get("tip_span", 1.0)
+            self._saturation_angle = np.radians(control_dict.get("saturation_angle", np.inf))
             self._cp_in_cntrl_surf = (self.cp_span_locs >= self._cntrl_root_span) & (self.cp_span_locs <= self._cntrl_tip_span)
 
             # Get chord data
@@ -1312,6 +1313,10 @@ class WingSegment:
 
         # Convert to radians
         self._delta_flap = np.radians(self._delta_flap)
+
+        # Apply saturation
+        self._delta_flap = np.where(self._delta_flap>self._saturation_angle, self._saturation_angle, self._delta_flap)
+        self._delta_flap = np.where(self._delta_flap<-self._saturation_angle, -self._saturation_angle, self._delta_flap)
 
 
     def get_stl_vectors(self, **kwargs):
