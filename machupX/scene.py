@@ -655,12 +655,7 @@ class Scene:
         # Correct CL estimate for sweep (we don't use self._correct_CL_for_sweep() here because we are dealing with alpha_inf rather than true alpha)
         if self._use_swept_sections:
 
-            # Estimate lift slope
-            with np.errstate(divide='ignore', invalid='ignore'):
-                CLa = np.nan_to_num(self._CL/(self._alpha_inf-self._aL0)) # Don't store this CLa because that would degrade the linear approximation
-
-            # Get new estimate
-            self._CL = CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
+            self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
 
         self._solved = False
 
@@ -787,10 +782,6 @@ class Scene:
 
     def _correct_CL_for_sweep(self):
         # Applies thin-airfoil corrections for swept section lift
-
-        # Estimate lift slope
-        with np.errstate(divide='ignore', invalid='ignore'):
-            self._CLa = np.nan_to_num(self._CL/(self._alpha-self._aL0)) # Not sure if this CLa should be stored. Seems less important because Newton's solver is being used
 
         # Get new estimate
         self._CL = self._CLa*(self._alpha-self._aL0*self._C_sweep_inv)

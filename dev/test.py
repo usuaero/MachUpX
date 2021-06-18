@@ -13,7 +13,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "nonlinear"
+            "type" : "linear"
         },
         "units" : "English",
         "scene" : {
@@ -39,6 +39,7 @@ if __name__=="__main__":
         },
         "airfoils" : {
             "NACA_2410" : {
+                "CLa" : 6.28,
                 "geometry" : {
                     "NACA" : "2410"
                 }
@@ -48,26 +49,19 @@ if __name__=="__main__":
         "wings" : {
             "main_wing" : {
                 "ID" : 1,
-                "side" : "both",
+                "side" : "right",
                 "is_main" : True,
                 "airfoil" : [[0.0, "NACA_2410"],
                              [1.0, "NACA_2410"]],
-                "semispan" : 6.0,
+                "semispan" : 10.0,
                 "dihedral" : [[0.0, 0.0],
                               [1.0, 0.0]],
                 "chord" : [[0.0, 1.0],
                            [1.0, 1.0]],
-                "sweep" : [[0.0, 45.0],
-                           [1.0, 45.0]],
+                "sweep" : [[0.0, 0.0],
+                           [1.0, 0.0]],
                 "grid" : {
-                    "N" : 65
-                },
-                "control_surface" : {
-                    "chord_fraction" : 0.25,
-                    "saturation_angle" : 10.0,
-                    "control_mixing" : {
-                        "aileron" : 1.0
-                    }
+                    "N" : 5
                 },
                 "CAD_options" :{
                     "round_wing_tip" : True,
@@ -81,11 +75,11 @@ if __name__=="__main__":
     # Specify state
     state = {
         "position" : [0.0, 0.0, 0.0],
-        "velocity" : [100.0, 0.0, 10],
+        "velocity" : 10.0,
+        "alpha" : 5.0,
         "orientation" : [0.0, 0.0, 0.0]
     }
     control_state = {
-        "aileron" : -15.0
     }
 
     # Load scene

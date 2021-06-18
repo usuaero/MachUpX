@@ -410,3 +410,48 @@ def test_jackson_compare():
     # Check circulation distribution
     correct_gamma = np.array([0.47123536, 1.36936314, 2.16971088, 2.78795243, 3.18301932, 3.41035458, 3.53474218, 3.59736899, 3.62115168, 3.61858063, 3.59673976, 3.56030944, 3.5136121,  3.46215726, 3.41358434, 3.37738807, 3.36088964, 3.35806733, 3.35540463, 3.353645,   3.353645,   3.35540463, 3.35806733, 3.36088964, 3.37738807, 3.41358434, 3.46215726, 3.5136121,  3.56030944, 3.59673976, 3.61858063, 3.62115168, 3.59736899, 3.53474218, 3.41035458, 3.18301932, 2.78795243, 2.16971088, 1.36936314, 0.47123536])
     assert np.allclose(scene._gamma, correct_gamma)
+
+
+def test_swept_wing_with_aerodynamic_twist():
+    # Tests for fix implemented 6/18/2021 based on a bug report from Julian Schmidt
+
+    # Load input
+    input_dict, aircraft_name, aircraft_dict, state, control_state = MX.helpers.parse_input(input_file)
+
+    # Alter input
+    input_dict["solver"]["type"] = "nonlinear"
+    aircraft_dict["airfoils"] = {
+        "root" : {
+            "type" : "database",
+            "input_file" : "test/NACA 2414.txt"
+        },
+        "tip" : {
+            "type" : "database",
+            "input_file" : "test/NACA 0012.txt"
+        }
+    }
+
+    aircraft_dict["wings"]["main_wing"]["sweep"] = 20.0
+    aircraft_dict["wings"]["main_wing"]["airfoil"] = [[0.0, "root"],
+                                                      [1.0, "tip"]]
+    aircraft_dict["wings"]["main_wing"]["grid"]["N"] = 100
+    aircraft_dict["wings"].pop("h_stab")
+    aircraft_dict["wings"].pop("v_stab")
+
+    state['alpha'] = -1.5
+
+    # Create scene
+    scene = MX.Scene(input_dict)
+    scene.add_aircraft(aircraft_name, aircraft_dict, state=state, control_state=control_state)
+    FM = scene.solve_forces(non_dimensional=True, verbose=True)
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    assert abs(FM["test_plane"]["total"]["FL"]+1.9779420442753566)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-0.6900994871376844)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.6380865206300966)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]-1.9953289515390809)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"])<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]-0.4455540896663294)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
+
