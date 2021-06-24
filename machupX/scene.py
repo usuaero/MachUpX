@@ -3453,7 +3453,7 @@ class Scene:
 
         # Store params
         model_dict["units"] = self._unit_sys
-        model_dict["CG"] = list(aircraft_object.CG)
+        model_dict["CG"] = aircraft_object.CG.tolist()
         model_dict["weight"] = float(aircraft_object.W)
         model_dict["reference"] = {
             "area" : float(aircraft_object.S_w),
@@ -3613,6 +3613,19 @@ class Scene:
         filename = kwargs.get("filename", aircraft_name+"_linearized.json")
         with open(filename, 'w') as output_handle:
             json.dump(model_dict, output_handle, indent=4)
+
+
+    def print_dict_types(self, d):
+        for k, v in d.items():
+            if isinstance(v, dict):
+                self.print_dict_types(v)
+
+            if isinstance(v, list):
+                for i in v:
+                    print(type(i))
+
+            else:
+                print(k,type(v))
 
 
     def _get_aircraft(self, **kwargs):
