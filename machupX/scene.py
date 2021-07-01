@@ -655,7 +655,8 @@ class Scene:
         # Correct CL estimate for sweep (we don't use self._correct_CL_for_sweep() here because we are dealing with alpha_inf rather than true alpha)
         if self._use_swept_sections:
 
-            self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv)
+            self._CL += self._CLa*(self._aL0-self._aL0*self._C_sweep_inv) # New method
+            #self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv) # Old method
 
         self._solved = False
 
@@ -783,8 +784,8 @@ class Scene:
     def _correct_CL_for_sweep(self):
         # Applies thin-airfoil corrections for swept section lift
 
-        # Get new estimate
-        self._CL = self._CLa*(self._alpha-self._aL0*self._C_sweep_inv)
+        self._CL += self._CLa*(self._aL0-self._aL0*self._C_sweep_inv) # New method
+        #self._CL = self._CLa*(self._alpha-self._aL0*self._C_sweep_inv) # Old method
 
 
     def _solve_linear(self, **kwargs):
@@ -3615,7 +3616,7 @@ class Scene:
             json.dump(model_dict, output_handle, indent=4)
 
 
-    def print_dict_types(self, d):
+    def _print_dict_types(self, d):
         for k, v in d.items():
             if isinstance(v, dict):
                 self.print_dict_types(v)
