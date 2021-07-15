@@ -45,11 +45,11 @@ if __name__=="__main__":
                 }
             }
         },
-        "plot_lacs" : False,
+        "plot_lacs" : True,
         "wings" : {
             "main_wing" : {
                 "ID" : 1,
-                "side" : "right",
+                "side" : "both",
                 "is_main" : True,
                 "airfoil" : [[0.0, "NACA_2410"],
                              [1.0, "NACA_2410"]],
@@ -58,10 +58,11 @@ if __name__=="__main__":
                               [1.0, 0.0]],
                 "chord" : [[0.0, 1.0],
                            [1.0, 1.0]],
-                "sweep" : [[0.0, 0.0],
-                           [1.0, 0.0]],
+                "sweep" : [[0.0, 30.0],
+                           [1.0, 30.0]],
                 "grid" : {
-                    "N" : 5
+                    "N" : 30,
+                    "blending_distance" : 2.5
                 },
                 "CAD_options" :{
                     "round_wing_tip" : True,
@@ -87,3 +88,4 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
     FM = scene.solve_forces()
     print(json.dumps(FM["plane"]["total"], indent=4))
+    scene.distributions(make_plots=['circ'], show_plots=True)
