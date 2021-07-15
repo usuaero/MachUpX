@@ -656,7 +656,6 @@ class Scene:
         if self._use_swept_sections:
 
             self._CL += self._CLa*(self._aL0-self._aL0*self._C_sweep_inv) # New method
-            #self._CL = self._CLa*(self._alpha_inf-self._aL0*self._C_sweep_inv) # Old method
 
         self._solved = False
 
@@ -3124,7 +3123,7 @@ class Scene:
                     plt.plot(segment_dist["span_frac"], segment_dist[param])
                     plt.xlabel("Span Fraction")
                     plt.ylabel(param)
-                    plt.title(segment_name)
+                    plt.title(segment_name.replace("_", " "))
                     if kwargs.get("show_plots", False):
                         plt.show()
                     else:
