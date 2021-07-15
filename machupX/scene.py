@@ -2422,6 +2422,12 @@ class Scene:
             Aircraft to trim in pitch. If there is only one aircraft in the scene, this does not
             need to be given.
 
+        CL : float, optional
+            Lift coefficient to trim the aircraft to. Defaults to the aircraft's weight coefficient.
+
+        Cm : float, optional
+            Pitching moment coefficient to trim the aircraft to. Defaults to 0.0.
+
         pitch_control : str
             The name of the control that should be used to trim in pitch. Defaults to "elevator".
 
@@ -2459,6 +2465,11 @@ class Scene:
         alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
         controls_original = copy.copy(airplane_object.current_control_state)
 
+        # Determine target vals
+        CW = self._airplanes[aircraft_name].W/(self._get_aircraft_q_inf(aircraft_name)*self._airplanes[aircraft_name].S_w)
+        CL_des = kwargs.get("CL", CW)
+        Cm_des = kwargs.get("Cm", 0.0)
+
         # Determine the pitch control
         pitch_control = kwargs.get("pitch_control", "elevator")
         try:
@@ -2472,7 +2483,7 @@ class Scene:
             print("{0:<20}{1:<20}{2:<25}{3:<25}".format("Alpha", pitch_control, "Lift Residual", "Moment Residual"))
 
         # Get residuals
-        R = self._get_aircraft_pitch_trim_residuals(aircraft_name)
+        R = self._get_aircraft_pitch_trim_residuals(aircraft_name, CL_des, Cm_des)
 
         # Get initial angle of attack and control deflections
         controls = copy.copy(controls_original)
@@ -2510,7 +2521,7 @@ class Scene:
             delta_flap0 = delta_flap1
 
             # Determine new residuals
-            R = self._get_aircraft_pitch_trim_residuals(aircraft_name=aircraft_name)
+            R = self._get_aircraft_pitch_trim_residuals(aircraft_name, CL_des, Cm_des)
             if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
 
         # Store results
@@ -2538,13 +2549,13 @@ class Scene:
         return trim_angles
 
 
-    def _get_aircraft_pitch_trim_residuals(self, aircraft_name):
-        # Returns the residual force in the earth-fixed z-direction and the residual moment about the body y-axis
+    def _get_aircraft_pitch_trim_residuals(self, aircraft_name, CL_des, Cm_des):
+        # Returns the pitch trim residuals
         FM = self.solve_forces(dimensional=False)
 
         # Balance lift and weight with zero moment
-        RL = FM[aircraft_name]["total"]["CL"]-self._airplanes[aircraft_name].W/(self._get_aircraft_q_inf(aircraft_name)*self._airplanes[aircraft_name].S_w)
-        Rm = FM[aircraft_name]["total"]["Cm"]
+        RL = FM[aircraft_name]["total"]["CL"]-CL_des
+        Rm = FM[aircraft_name]["total"]["Cm"]-Cm_des
 
         return np.array([RL, Rm])
 
@@ -2568,6 +2579,12 @@ class Scene:
         aircraft : str, optional
             Aircraft to trim in pitch. If there is only one aircraft in the scene, this does not
             need to be given.
+
+        CL : float, optional
+            Lift coefficient to trim the aircraft to. Defaults to the aircraft's weight coefficient.
+
+        Cm : float, optional
+            Pitching moment coefficient to trim the aircraft to. Defaults to 0.0.
 
         pitch_control : str, optional
             Control to be used to trim the aircraft in pitch. Defaults to "elevator".
@@ -2614,6 +2631,11 @@ class Scene:
             "angular_rates" : list(w_orig)
         }
 
+        # Determine target vals
+        CW = self._airplanes[aircraft_name].W/(self._get_aircraft_q_inf(aircraft_name)*self._airplanes[aircraft_name].S_w)
+        CL_des = kwargs.get("CL", CW)
+        Cm_des = kwargs.get("Cm", 0.0)
+
         # Determine the pitch control
         pitch_control = kwargs.get("pitch_control", "elevator")
         try:
@@ -2627,7 +2649,7 @@ class Scene:
             print("{0:<20}{1:<20}{2:<25}{3:<25}".format("Elevation", pitch_control, "Lift Residual", "Moment Residual"))
 
         # Get residuals
-        R = self._get_aircraft_pitch_trim_residuals(aircraft_name)
+        R = self._get_aircraft_pitch_trim_residuals(aircraft_name, CL_des, Cm_des)
 
         # Get initial elevation angle and control deflection
         theta0 = copy.copy(theta_orig)
@@ -2730,7 +2752,7 @@ class Scene:
             airplane_object.set_control_state(pert_control_state)
 
             # Determine new residuals
-            R = self._get_aircraft_pitch_trim_residuals(aircraft_name=aircraft_name)
+            R = self._get_aircraft_pitch_trim_residuals(aircraft_name, CL_des, Cm_des)
             
             # Output progress
             if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(m.degrees(theta0), delta_flap0, R[0], R[1]))
