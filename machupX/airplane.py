@@ -510,7 +510,7 @@ class Airplane:
 
                 # General NLL parameters
                 reid_corr[cur_slice] = segment.reid_corr
-                sigma_blend[cur_slice] = (np.cos(segment.sweep_cp)/(segment.b*segment.blend_dist))**2
+                sigma_blend[cur_slice] = (2.0/(segment.blend_dist*np.cos(segment.sweep_cp)))**2 # Jackson kinda did it wrong...
                 delta_joint[cur_slice] = segment.delta_joint
 
                 # Store control point and node span locations

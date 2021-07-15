@@ -567,13 +567,13 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used if "distribution" is "cosine_cluster". Defaults to no extra clustering.
 >>>>
 >>>>**"reid_corrections" : bool, optional**
->>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). For those not familiar with the general implementation of numerical lifting-line, it is highly recommended to read the paper. These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip. Defaults to True.
+>>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). For those not familiar with the general implementation of numerical lifting-line, it is highly recommended to read the paper. These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip. Should not be set to False unless you know what you're doing. Defaults to True.
 >>>>
 >>>>**"joint_length" : float, optional**
->>>>>Non-dimensional joint length, as a fraction of the chord, of the jointed horseshoe vortices. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive.
+>>>>>Non-dimensional joint length, as a fraction of the chord, of the jointed horseshoe vortices. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
 >>>>
 >>>>**"blending_distance" : float, optional**
->>>>>Non-dimensional lifting-line blending distance to be used in setting conditional concavity. Defaults to 0.25. Note that any blending distance less than the default is considered by Reid to be numerically sensitive.
+>>>>>Non-dimensional lifting-line blending distance to be used in setting conditional concavity. Defaults to 2.5. Note that any blending distance less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
 >>>>
 >>>>**"wing_ID" : int, optional**
 >>>>>ID of the wing this wing segment belongs to. This is not the same as the ID of the wing segment that this wing segment connects to. Rather, this parameter is used to group wing segments into contiguous wings that share a single lifting-line. If this is not specified, MachUpX will assume this wing segment is isolated in space, except from its mirror image if the two halves are contiguous. Must be positive. Defaults to None. Not required if "reid_corrections" is False.
