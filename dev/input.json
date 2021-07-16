@@ -1,0 +1,26 @@
+{
+    "run" : {
+        "solve_forces" : {
+            "verbose" : true
+        },
+        "distributions" : {
+        },
+        "display_wireframe" : {}
+    },
+    "solver" : {
+        "type" : "nonlinear"
+    },
+    "units" : "English",
+    "scene" : {
+        "atmosphere" : {
+        },
+        "aircraft" : {
+            "airplane" : {
+                "file" : "dev/mux_airplane.json",
+                "state" : {
+                    "velocity" : 100
+                }
+            }
+        }
+    }
+}

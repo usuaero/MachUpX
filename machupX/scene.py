@@ -548,6 +548,11 @@ class Scene:
         self._solved = False
 
 
+    def get_max_bound_vortex_length(self):
+        """Returns the maximum bound vortex segment length in the scene."""
+        return np.max(np.linalg.norm(self._dl, axis=1)).item()
+
+
     def _calc_invariant_flow_properties(self):
         # Calculates the invariant flow properties at each control point and node location. These are
         # dependent upon aircraft velocity and angular rate.
