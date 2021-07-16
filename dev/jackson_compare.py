@@ -35,7 +35,7 @@ if __name__=="__main__":
                 "chord" : 1.0,
                 "airfoil" : "NACA_0012",
                 "sweep" : 45.0,
-                "ac_offset" : "kuchemann",
+                "ll_offset" : "kuchemann",
                 "grid" : {
                     "N" : 80,
                     "reid_corrections" : True,
@@ -47,7 +47,7 @@ if __name__=="__main__":
     }
 
     # Select comparison case
-    case_no = 3
+    case_no = 1
     if case_no == 0:
         with open("dev/jackson_data/10_a_10_b_circ.dat", 'r') as jackson_file:
             gamma_jackson = np.genfromtxt(jackson_file)
@@ -81,7 +81,7 @@ if __name__=="__main__":
             "beta" : 15.0
         }
 
-    not_grid = 1
+    not_grid = 0
     if not_grid:
 
         # Initialize
