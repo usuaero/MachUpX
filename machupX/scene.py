@@ -16,7 +16,7 @@ from airfoil_db import DatabaseBoundsError
 from machupX.helpers import quat_inv_trans, quat_trans, check_filepath, import_value, quat_mult, quat_conj, quat_to_euler, euler_to_quat
 from machupX.airplane import Airplane
 from machupX.standard_atmosphere import StandardAtmosphere
-from machupX.exceptions import SolverNotConvergedError
+from machupX.exceptions import SolverNotConvergedError, MaxIterationError
 
 
 class Scene:
@@ -2437,6 +2437,12 @@ class Scene:
         set_trim_state : bool
             If set to True, once trim is determined, the state of the aircraft will be set to this trim state. Note this will only affect the velocity of the aircraft; its orientation will remain unchanged. If False, the state of the aircraft will return to what it was before this method was called. Defaults to True.
 
+        max_iterations : int
+            Maximum number of iterations to use in the iterative solver. Defaults to 100.
+
+        relaxation : float
+            Relaxation factor to use in the iterative solver. Defaults to 1.0.
+
         verbose : bool
             If set to true, information will be output about the progress of Newton's method. Defaults to False.
 
@@ -2477,6 +2483,10 @@ class Scene:
         except KeyError:
             raise IOError("{0} has no control named {1}. Cannot be trimmed in pitch.".format(aircraft_name, pitch_control))
 
+        # Get solver params
+        max_iter = kwargs.get("max_iterations", 100)
+        relax = kwargs.get("relaxation", 1.0)
+
         # Setup output
         if verbose:
             print("Trimming {0} using {1}.".format(aircraft_name, pitch_control))
@@ -2494,6 +2504,7 @@ class Scene:
 
         # Iterate until residuals go to zero.
         J = np.zeros((2,2))
+        i = 0
         while (abs(R)>1e-10).any():
 
             # Determine Jacobian
@@ -2508,11 +2519,11 @@ class Scene:
             delta = np.linalg.solve(J,-R)
 
             # Update angle of attack
-            alpha1 = alpha0 + np.degrees(delta[0])
+            alpha1 = alpha0 + np.degrees(delta[0])*relax
             airplane_object.set_aerodynamic_state(alpha=alpha1)
 
             # Update control
-            delta_flap1 = delta_flap0 + np.degrees(delta[1])
+            delta_flap1 = delta_flap0 + np.degrees(delta[1])*relax
             controls[pitch_control] = delta_flap1
             airplane_object.set_control_state(controls)
 
@@ -2523,6 +2534,11 @@ class Scene:
             # Determine new residuals
             R = self._get_aircraft_pitch_trim_residuals(aircraft_name, CL_des, Cm_des)
             if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(alpha0, delta_flap0, R[0], R[1]))
+
+            # Check iterations
+            i += 1
+            if i == max_iter:
+                raise MaxIterationError("pitch_trim", np.max(np.abs(R)))
 
         # Store results
         trim_angles[aircraft_name] = {
@@ -2592,6 +2608,12 @@ class Scene:
         set_trim_state : bool, optional
             Whether to use the determined trim state as the new state of the aircraft. This will maintain the Earth-fixed velocity of the aircraft while changing the elevation angle. Defaults to True.
 
+        max_iterations : int
+            Maximum number of iterations to use in the iterative solver. Defaults to 100.
+
+        relaxation : float
+            Relaxation factor to use in the iterative solver. Defaults to 1.0.
+
         filename : str
             File to output the results to. Defaults to no file.
 
@@ -2643,6 +2665,10 @@ class Scene:
         except KeyError:
             raise IOError("{0} has no control named {1}. Cannot be trimmed in pitch.".format(aircraft_name, pitch_control))
 
+        # Get solver params
+        max_iter = kwargs.get("max_iterations", 100)
+        relax = kwargs.get("relaxation", 1.0)
+
         # Set up output
         if verbose:
             print("Trimming {0} using {1}.".format(aircraft_name, pitch_control))
@@ -2658,6 +2684,7 @@ class Scene:
         if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(m.degrees(theta0), delta_flap0, R[0], R[1]))
 
         # Iterate until residuals go to zero.
+        i = 0
         J = np.zeros((2,2))
         pert_control_state = copy.copy(controls_original)
         while (abs(R)>1e-10).any():
@@ -2731,8 +2758,8 @@ class Scene:
             delta = np.linalg.solve(J,-R)
 
             # Update trim variables
-            theta0 += delta[0]
-            delta_flap0 += delta[1]
+            theta0 += delta[0]*relax
+            delta_flap0 += delta[1]*relax
 
             # Update state
             E = [phi, theta0, psi]
@@ -2756,6 +2783,11 @@ class Scene:
             
             # Output progress
             if verbose: print("{0:<20}{1:<20}{2:<25}{3:<25}".format(m.degrees(theta0), delta_flap0, R[0], R[1]))
+
+            # Check iterations
+            i += 1
+            if i == max_iter:
+                raise MaxIterationError("pitch_trim_using_orientation", np.max(np.abs(R)))
 
         # If the user wants, reset to the original state
         set_trim_state = kwargs.get("set_trim_state", True)
@@ -3787,6 +3819,12 @@ class Scene:
         filename : str, optional
             File to output results to. Defaults to no file.
 
+        max_iterations : int
+            Maximum number of iterations to use in the iterative solver. Defaults to 100.
+
+        relaxation : float
+            Relaxation factor to use in the iterative solver. Defaults to 1.0.
+
         verbose : bool, optional
             Whether to output the progress of the iterative solver. Defaults to False.
 
@@ -3825,15 +3863,21 @@ class Scene:
         alpha_original,_,_ = airplane_object.get_aerodynamic_state(v_wind=v_wind)
         controls_original = copy.copy(airplane_object.current_control_state)
 
+        # Get solver params
+        max_iter = kwargs.get("max_iterations", 100)
+        relax = kwargs.get("relaxation", 1.0)
+
         # Get residuals
         airplane_object.set_aerodynamic_state(alpha=alpha)
         airplane_object.set_control_state(controls)
         CL = self.solve_forces(dimensional=False)[aircraft_name]["total"]["CL"]
+        res = abs(CL-CL_target)
 
         if verbose: print("{0:<25}{1:<25}".format(alpha, CL))
 
         # Iterate until residuals go to zero.
-        while (abs(CL-CL_target)>1e-10).any():
+        i = 0
+        while res>1e-10:
 
             # Perturb forward in alpha
             airplane_object.set_aerodynamic_state(alpha=alpha+0.005)
@@ -3845,13 +3889,19 @@ class Scene:
 
             # Determine update
             CLa = (CL_fwd-CL_bwd)/0.01
-            alpha += (CL_target-CL)/CLa
+            alpha += (CL_target-CL)/CLa*relax
 
             # Determine new residuals
             airplane_object.set_aerodynamic_state(alpha=alpha)
             CL = self.solve_forces(dimensional=False)[aircraft_name]["total"]["CL"]
+            res = abs(CL-CL_target)
 
             if verbose: print("{0:<25}{1:<25}".format(alpha, CL))
+
+            # Check iterations
+            i += 1
+            if i == max_iter:
+                raise MaxIterationError("target_CL", res)
 
         # If the user wants, set the state to the new trim state
         set_state = kwargs.get("set_state", True)
