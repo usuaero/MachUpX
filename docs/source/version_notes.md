@@ -17,3 +17,6 @@ To simplify code structure, most of the scene member methods now use keyword arg
 
 ## Version 2.5
 Due to research conducted by the developers, it was determined that placing the lifting-line on the locus of aerodynamic centers was inappropriate. As such, the wing segment input "ac_offset" has been renamed to "ll_offset". We recommend this be left as 0, unless you have good reason to do otherwise and understand what's going on.
+
+## Version 2.6
+Further analysis of the underlying equations has led us to discover typos with how the blending distance was derived and implemented. It has been updated to fix these issues. Small changes in numerical results will be noticed by some users. The default value for blending distance is still recommended, though it has changed to fit with the correct implementation.
