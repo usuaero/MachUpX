@@ -508,11 +508,13 @@ class Airplane:
                 self.max_camber[cur_slice] = segment.max_camber_cp
                 self.max_thickness[cur_slice] = segment.max_thickness_cp
 
-                # General NLL parameters
+                # Reid-Hunsaker parameters
                 reid_corr[cur_slice] = segment.reid_corr
-                sigma_blend[cur_slice] = (2.0/(segment.blend_dist*np.cos(segment.sweep_cp)))**2 # This is not the correct method.
-                #sigma_blend[cur_slice] = (np.cos(segment.sweep_cp)/(segment.b*segment.blend_dist))**2 # This is the method originally implemented in MachUpX. It is wrong, but it matches Jackson's code.
                 delta_joint[cur_slice] = segment.delta_joint
+                sigma_blend[cur_slice] = (2.0/(segment.b*segment.blend_dist*np.cos(segment.sweep_cp)))**2 # This is not the correct method.
+                #sigma_blend[cur_slice] = (np.cos(segment.sweep_cp)/(segment.b*segment.blend_dist))**2 # This is the method originally implemented in MachUpX. It is wrong, but it matches Jackson's code.
+
+                # Let's talk about things. In the G-H journal paper, sigma is derived assuming the blending factor is formulated in terms of a nondimensional distance. However, in MachUpX, the blending factor is formulated in terms of a dimensional distance (since MachUpX has to allow for the possibility of multiple wing segments sharing a liftine line). So, the equation used here includes the wingspan while that given in the G-H paper does not.
 
                 # Store control point and node span locations
                 if segment.side == "left":

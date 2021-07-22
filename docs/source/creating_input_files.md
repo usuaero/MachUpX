@@ -573,7 +573,7 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>>Non-dimensional joint length, as a fraction of the chord, of the jointed horseshoe vortices. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
 >>>>
 >>>>**"blending_distance" : float, optional**
->>>>>Non-dimensional lifting-line blending distance to be used in setting conditional concavity. Defaults to 2.5. Note that any blending distance less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
+>>>>>Non-dimensional lifting-line blending distance to be used in setting conditional concavity. Defaults to 1.0. Note that any blending distance less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
 >>>>
 >>>>**"wing_ID" : int, optional**
 >>>>>ID of the wing this wing segment belongs to. This is not the same as the ID of the wing segment that this wing segment connects to. Rather, this parameter is used to group wing segments into contiguous wings that share a single lifting-line. If this is not specified, MachUpX will assume this wing segment is isolated in space, except from its mirror image if the two halves are contiguous. Must be positive. Defaults to None. Not required if "reid_corrections" is False.
