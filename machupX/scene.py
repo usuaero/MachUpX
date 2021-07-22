@@ -3802,7 +3802,7 @@ class Scene:
         elif instruction == "ignore":
             return
         else:
-            raise RuntimeError("MachUpX Scene got an incorrect error handling instruction. '{0}' is invalid.".format(instruction))
+            raise RuntimeError("MachUpX got an incorrect error handling instruction. '{0}' is invalid.".format(instruction))
         
 
     def target_CL(self, **kwargs):

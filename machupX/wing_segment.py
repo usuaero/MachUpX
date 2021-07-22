@@ -12,6 +12,7 @@ import math as m
 from mpl_toolkits.mplot3d import Axes3D
 from machupX.helpers import check_filepath, import_value, euler_to_quat, quat_inv_trans, quat_mult
 from machupX.dxf import dxf
+from airfoil_db.exceptions import DatabaseBoundsError
 
 
 class WingSegment:
@@ -1044,32 +1045,52 @@ class WingSegment:
 
         # Only one airfoil
         if self._num_airfoils == 1:
-            return getattr(self._airfoils[0], coef_func)(alpha=alpha,
-                                                         Rey=Rey,
-                                                         Mach=Mach,
-                                                         trailing_flap_deflection=self._delta_flap,
-                                                         trailing_flap_fraction=self._cp_c_f)
+            try:
+                return getattr(self._airfoils[0], coef_func)(alpha=alpha,
+                                                             Rey=Rey,
+                                                             Mach=Mach,
+                                                             trailing_flap_deflection=self._delta_flap,
+                                                             trailing_flap_fraction=self._cp_c_f)
+
+            except DatabaseBoundsError as e:
+
+                # Print out information
+                print()
+                print(e)
+                print("{0:<20}{1:<20}{2:<20}{3:<20}{4:<20}".format("Span Fraction", "Alpha [deg]", "Re", "Flap Def. [deg]", "Flap Frac."))
+                print("".join(["-"]*100))
+                inputs = e.inputs_dict
+                for i, alpha, Re, df, c_f in zip(e.exception_indices, np.degrees(inputs["alpha"]), inputs["Rey"], inputs["trailing_flap_deflection"], inputs["trailing_flap_fraction"]):
+                    print("{0:<20.10}{1:<20.10}{2:<20.10}{3:<20.10}{4:<20.10}".format(self.cp_span_locs[i], alpha, Re, df, c_f))
+                print()
+
+                # Raise error to be caught by MachUpX error handler
+                raise e 
 
         # Multiple airfoils
         else:
 
-            # Create array of coefficients
-            coefs = np.zeros((self.N, self._num_airfoils))
-            for j, cur_slice in enumerate(self._airfoil_slices):
-                coefs[cur_slice,j] = getattr(self._airfoils[j], coef_func)(alpha=alpha[cur_slice],
-                                                                           Rey=Rey[cur_slice],
-                                                                           Mach=Mach[cur_slice],
-                                                                           trailing_flap_deflection=self._delta_flap[cur_slice],
-                                                                           trailing_flap_fraction=self._cp_c_f[cur_slice])
-                coefs[cur_slice,j+1] = getattr(self._airfoils[j+1], coef_func)(alpha=alpha[cur_slice],
+            try:
+
+                # Create array of coefficients
+                coefs = np.zeros((self.N, self._num_airfoils))
+                for j, cur_slice in enumerate(self._airfoil_slices):
+                    coefs[cur_slice,j] = getattr(self._airfoils[j], coef_func)(alpha=alpha[cur_slice],
                                                                                Rey=Rey[cur_slice],
                                                                                Mach=Mach[cur_slice],
                                                                                trailing_flap_deflection=self._delta_flap[cur_slice],
                                                                                trailing_flap_fraction=self._cp_c_f[cur_slice])
+                    coefs[cur_slice,j+1] = getattr(self._airfoils[j+1], coef_func)(alpha=alpha[cur_slice],
+                                                                                   Rey=Rey[cur_slice],
+                                                                                   Mach=Mach[cur_slice],
+                                                                                   trailing_flap_deflection=self._delta_flap[cur_slice],
+                                                                                   trailing_flap_fraction=self._cp_c_f[cur_slice])
 
-            # Interpolate
-            return_coefs = self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, coefs)
-            return return_coefs
+                # Interpolate
+                return_coefs = self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, coefs)
+                return return_coefs
+            except DatabaseBoundsError as e:
+                raise e
 
 
     def get_cp_CLa(self, alpha, Rey, Mach):
