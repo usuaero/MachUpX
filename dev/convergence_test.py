@@ -35,11 +35,11 @@ if __name__=="__main__":
                 "is_main" : True,
                 "semispan" : 10.0,
                 "chord" : 1.0,
-                "sweep" : [[0.0, 30.0],
-                           [1.0, 30.0]],
+                "sweep" : [[0.0, 0.0],
+                           [1.0, 45.0]],
                 "grid" : {
                     "N" : 80,
-                    "blending_distance" : 0.25
+                    "blending_distancex" : 1.0
                 }
             }
         }
@@ -76,7 +76,7 @@ if __name__=="__main__":
         scene = MX.Scene(input_dict)
         scene.add_aircraft("wing", airplane_dict, state=state)
         try:
-            FM = scene.solve_forces()
+            FM = scene.solve_forces(verbose=True)
         except:
             continue
         dist = scene.distributions()
