@@ -1057,6 +1057,7 @@ class WingSegment:
                 # Print out information
                 print()
                 print(e)
+                print("Error occurred on wing {0}".format(self.name))
                 print("{0:<20}{1:<20}{2:<20}{3:<20}{4:<20}".format("Span Fraction", "Alpha [deg]", "Re", "Flap Def. [deg]", "Flap Frac."))
                 print("".join(["-"]*100))
                 inputs = e.inputs_dict
@@ -1090,6 +1091,7 @@ class WingSegment:
                 return_coefs = self._airfoil_interpolator(self.cp_span_locs, self._airfoil_spans, coefs)
                 return return_coefs
             except DatabaseBoundsError as e:
+                # TODO Make useful error message here
                 raise e
 
 

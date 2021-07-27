@@ -59,12 +59,12 @@ if __name__=="__main__":
     }
 
     # Options
-    sweeps = [-30.0, -15.0, -5.0, 5.0, 15.0, 30.0]
+    sweeps = [-25.0, -15.0, -5.0, 5.0, 15.0, 25.0]
     sweep_types = ['linear', 'constant']
     wingspans = [5.0, 10.0]
     blending_distances = np.logspace(-2, 1, 20)
     N_grids = 10
-    grids = np.logspace(1, 2.3, N_grids).astype(int)
+    grids = np.logspace(1, np.log10(200), N_grids).astype(int)
 
     # Grid colors
     grid_colors_int = np.linspace(0, 180, N_grids).astype(int)[::-1]
@@ -122,5 +122,5 @@ if __name__=="__main__":
                 plt.xlabel('$\\Delta s_b$')
                 plt.ylabel('$C_L$')
                 #plt.legend()
-                plt.savefig("dev/blending_distance_plots/{0}_{1}_sweep_b_{2}_improved_range.pdf".format(sweep, sweep_type, wingspan))
+                plt.savefig("dev/blending_distance_plots/{0}_{1}_sweep_b_{2}_mux_fixed.pdf".format(sweep, sweep_type, wingspan))
                 plt.close()
