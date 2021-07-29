@@ -489,7 +489,6 @@ class Airplane:
             # Reset params for this wing
             self._wing_N.append(0)
             cur_span_from_left_tip = 0.0
-            wing_b = 0
 
             # Loop through segments
             for segment in self._segments_in_wings[i]:
