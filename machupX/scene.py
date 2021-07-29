@@ -367,11 +367,9 @@ class Scene:
         # Control point atmospheric properties
         self._rho = np.zeros(self._N) # Density
         self._nu = np.zeros(self._N) # Viscosity
-        self._a = np.ones(self._N) # Speed of sound
 
         # Airfoil parameters
         self._Re = np.zeros(self._N) # Reynolds number
-        self._M = np.zeros(self._N) # Mach number
         self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
         self._CLa = np.zeros(self._N) # Lift slope
         self._CL = np.zeros(self._N) # Lift coefficient
@@ -541,7 +539,6 @@ class Scene:
 
         # Atmospheric wind, density, speed of sound, and viscosity
         self._rho = self._get_density(self._PC)
-        self._a = self._get_sos(self._PC)
         self._nu = self._get_viscosity(self._PC)
         self._v_wind[:,:] = self._get_wind(self._PC)
 
@@ -637,10 +634,8 @@ class Scene:
             self._v_inf_in_plane = np.matmul(self._P_in_plane, self._v_inf[:,:,np.newaxis]).reshape((self._N,3))
             self._V_inf_in_plane = np.linalg.norm(self._v_inf_in_plane, axis=1)
             self._Re = self._V_inf_in_plane*self._c_bar/self._nu
-            self._M = self._V_inf_in_plane/self._a
         else:
             self._Re = self._V_inf*self._c_bar/self._nu
-            self._M = self._V_inf/self._a
 
         self._v_n_inf = np.einsum('ij,ij->i', self._v_inf, self._u_n)
         self._v_a_inf = np.einsum('ij,ij->i', self._v_inf, self._u_a)
@@ -652,9 +647,9 @@ class Scene:
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(airplane_slice.start+seg_ind, airplane_slice.start+seg_ind+seg_N)
-                self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_inf[seg_slice], self._Re[seg_slice], self._M[seg_slice])
-                self._CL[seg_slice] = segment.get_cp_CL(self._alpha_inf[seg_slice], self._Re[seg_slice], self._M[seg_slice])
-                self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice], self._M[seg_slice])
+                self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha_inf[seg_slice], self._Re[seg_slice])
+                self._CL[seg_slice] = segment.get_cp_CL(self._alpha_inf[seg_slice], self._Re[seg_slice])
+                self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice])
                 seg_ind += seg_N
 
         # Correct CL estimate for sweep (we don't use self._correct_CL_for_sweep() here because we are dealing with alpha_inf rather than true alpha)
@@ -736,13 +731,11 @@ class Scene:
             self._V_i_in_plane = np.sqrt(self._V_i_in_plane_2)
 
             self._Re = self._V_i_in_plane*self._c_bar/self._nu
-            self._M = self._V_i_in_plane/self._a
         else:
             self._V_i_2 = np.einsum('ij,ij->i', self._v_i, self._v_i)
             self._V_i = np.sqrt(self._V_i_2)
 
             self._Re = self._V_i*self._c_bar/self._nu
-            self._M = self._V_i/self._a
 
         # Calculate angle of attack
         self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
@@ -759,7 +752,7 @@ class Scene:
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
-                self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice], self._M[seg_slice])
+                self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice])
                 seg_ind += seg_N
 
             index += N
@@ -864,9 +857,8 @@ class Scene:
                     cur_slice = slice(index, index+num_cps)
 
                     # Get lift coefficient and lift slopes
-                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
-                    C_LM[cur_slice] = segment_object.get_cp_CLM(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice])
+                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice])
 
                     index += num_cps
 
@@ -884,23 +876,21 @@ class Scene:
 
             if self._use_in_plane:
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i_in_plane)[:,np.newaxis]*v_iji
-                CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_i_in_plane)[:,np.newaxis]*v_iji
             else:
                 CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
-                CL_gamma_M = C_LM[:,np.newaxis]/(self._a*self._V_i)[:,np.newaxis]*v_iji
 
             CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
 
             if self._use_total_velocity:
                 if self._use_in_plane:
-                    J[:,:] -= (self._V_i_in_plane_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M)
+                    J[:,:] -= (self._V_i_in_plane_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re)
                 else:
-                    J[:,:] -= (self._V_i_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M)
+                    J[:,:] -= (self._V_i_2*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re)
             else:
                 if self._use_in_plane:
-                    J[:,:] -= (self._V_inf_in_plane*self._V_inf_in_plane*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M)
+                    J[:,:] -= (self._V_inf_in_plane*self._V_inf_in_plane*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re)
                 else:
-                    J[:,:] -= (self._V_inf*self._V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re+CL_gamma_M)
+                    J[:,:] -= (self._V_inf*self._V_inf*self._dS)[:,np.newaxis]*(CL_gamma_alpha+CL_gamma_Re)
 
             diag_ind = np.diag_indices(self._N)
             J[diag_ind] += 2*self._w_i_mag
@@ -971,10 +961,8 @@ class Scene:
         if self._use_in_plane:
             self._V_i_in_plane = np.sqrt(self._V_i_in_plane_2)
             self._Re = self._V_i_in_plane*self._c_bar/self._nu
-            self._M = self._V_i_in_plane/self._a
         else:
             self._Re = self._V_i*self._c_bar/self._nu
-            self._M = self._V_i/self._a
 
         # Redimensionalization parameters
         if self._use_total_velocity:
@@ -1007,10 +995,10 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Section drag coefficient
-                self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re[cur_slice])
 
                 # Section moment coefficient
-                self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
+                self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice])
 
                 index += num_cps
 
@@ -2955,8 +2943,6 @@ class Scene:
 
             "Re" : Reynolds number
 
-            "M" : Mach number
-
             "q" : dynamic pressure
 
             "section_CL" : lift coefficient
@@ -3142,7 +3128,6 @@ class Scene:
                 dist[airplane_name][segment_name]["v"] = list(v[:,1])
                 dist[airplane_name][segment_name]["w"] = list(v[:,2])
                 dist[airplane_name][segment_name]["Re"] = list(self._Re[cur_slice])
-                dist[airplane_name][segment_name]["M"] = list(self._M[cur_slice])
                 if self._use_in_plane:
                     dist[airplane_name][segment_name]["q"] = list(self._redim_in_plane[cur_slice]/self._dS[cur_slice])
                 else:

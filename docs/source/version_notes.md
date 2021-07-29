@@ -20,3 +20,6 @@ Due to research conducted by the developers, it was determined that placing the 
 
 ## Version 2.6
 Further analysis of the underlying equations has led us to discover typos with how the blending distance was derived and implemented. It has been updated to fix these issues. Small changes in numerical results will be noticed by some users. The default value for blending distance is still recommended, though it has changed to fit with the correct implementation.
+
+## Version 2.7
+Airfoil Mach dependence has been removed. This was unjustified in the first place as compressibility corrections would need to be made to both the airfoil section data and the downwash calculations. This was only ever done for the former. Proper compressibility corrections may be applied in a later version.

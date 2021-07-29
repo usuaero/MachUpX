@@ -35,12 +35,12 @@ if __name__=="__main__":
                 "chord" : 1.0,
                 "airfoil" : "NACA_0012",
                 "sweep" : 45.0,
-                "ll_offset" : "kuchemann",
+                #"ll_offset" : "kuchemann",
                 "grid" : {
                     "N" : 80,
                     "reid_corrections" : True,
                     "joint_length" : 0.15,
-                    "blending_distance" : 1.0
+                    #"blending_distance" : 1.0
                 }
             }
         }
@@ -81,7 +81,7 @@ if __name__=="__main__":
             "beta" : 15.0
         }
 
-    not_grid = 0
+    not_grid = 1
     if not_grid:
 
         # Initialize
@@ -94,11 +94,11 @@ if __name__=="__main__":
         print(json.dumps(FM["jackson_wing"]["total"], indent=4))
 
         plt.figure()
-        plt.plot(gamma_jackson[::-1,0], gamma_jackson[:,1], label='Jackson')
-        plt.plot(scene._PC[:,1], scene._gamma, label='MUX')
+        plt.plot(gamma_jackson[::-1,0], gamma_jackson[:,1], 'k--', label='R-H')
+        plt.plot(scene._PC[:,1], scene._gamma, 'k-', label='G-H')
         plt.legend()
-        plt.xlabel("Span Location")
-        plt.ylabel("Circulation")
+        plt.xlabel("$y$")
+        plt.ylabel("$\\Gamma$")
         plt.show()
 
     else:
@@ -106,13 +106,13 @@ if __name__=="__main__":
         grids = [10, 20, 40, 80, 160]
 
         plt.figure()
-        plt.plot(gamma_jackson[::-1,0], gamma_jackson[:,1], label='Jackson')
+        plt.plot(gamma_jackson[::-1,0], gamma_jackson[:,1], label='R-H')
         for grid in grids:
             airplane_dict["wings"]["main_wing"]["grid"]["N"] = grid
             scene = MUX.Scene(input_dict)
             scene.add_aircraft("jackson_wing", airplane_dict, state=state)
             scene.solve_forces(verbose=True)
-            plt.plot(scene._PC[:,1], scene._gamma, label='MUX {0}'.format(grid))
+            plt.plot(scene._PC[:,1], scene._gamma, label='G-H {0}'.format(grid))
         plt.legend()
         plt.xlabel("Span Location")
         plt.ylabel("Circulation")
