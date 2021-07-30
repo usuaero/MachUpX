@@ -8,7 +8,7 @@ import subprocess as sp
 input_file = "test/input_for_testing.json"
 
 
-def test_linear_NLL():
+def test_linear_solver():
     # Tests the NLL algorithm is correctly solved
 
     # Alter input
@@ -46,7 +46,45 @@ def test_linear_NLL():
     assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
 
 
-def test_nonlinear_NLL():
+def test_linear_solver_with_rotation():
+    # Tests the NLL algorithm is correctly solved
+
+    # Alter input
+    with open(input_file, 'r') as input_file_handle:
+        input_dict = json.load(input_file_handle)
+
+    input_dict["solver"]["type"] = "linear"
+
+    input_dict["scene"]["aircraft"]["test_plane"]["control_state"] = {
+        "elevator" : 0.0,
+        "rudder" : 0.0,
+        "aileron" : 0.0
+    }
+
+    input_dict["scene"]["aircraft"]["test_plane"]["state"] = {
+        "position" : [0, 0, 1000],
+        "angular_rates" : [0.2, 0.2, 0.2],
+        "velocity" : 100,
+        "alpha" : 2.0,
+        "beta" : 0.0
+    }
+
+    # Create scene
+    scene = MX.Scene(input_dict)
+    FM = scene.solve_forces()
+    print(json.dumps(FM["test_plane"]["total"], indent=4))
+    assert abs(FM["test_plane"]["total"]["FL"]-22.186930454802607)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-1.4185393980740466)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"]-0.4372990158896337)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.6433625559543902)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"]-0.4372990158896337)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+22.22292108728579)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+3.3323245123469865)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+16.34400378762901)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]+1.3934616936387911)<1e-10
+
+
+def test_nonlinear_solver():
     # Tests the NLL algorithm is correctly solved
 
     # Alter input

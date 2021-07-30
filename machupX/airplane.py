@@ -509,7 +509,6 @@ class Airplane:
                 self.max_thickness[cur_slice] = segment.max_thickness_cp
 
                 # Reid-Hunsaker parameters
-                wing_b += segment.b
                 reid_corr[cur_slice] = segment.reid_corr
                 delta_joint[cur_slice] = segment.delta_joint
                 sigma_blend[cur_slice] = (2.0/(segment.b*segment.blend_dist*np.cos(segment.sweep_cp)))**2
