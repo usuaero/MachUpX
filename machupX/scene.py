@@ -378,9 +378,8 @@ class Scene:
 
         # Velocities
         self._v_wind = np.zeros((self._N,3))
-        self._v_inf = np.zeros((self._N,3)) # Control point freestream vector
-        if self._match_machup_pro:
-            self._v_inf_w_o_rotation = np.zeros((self._N,3)) # Control point freestream vector minus influence of aircraft rotation
+        self._v_inf = np.zeros((self._N,3))
+        self._v_inf_and_rot = np.zeros((self._N,3))
         self._P0_joint_v_inf = np.zeros((self._N,3))
         self._P1_joint_v_inf = np.zeros((self._N,3))
 
@@ -564,9 +563,8 @@ class Scene:
             # Control point velocities
             v_rot = quat_inv_trans(airplane_object.q, -np.cross(w, airplane_object.PC_CG))
             v_wind = self._v_wind[airplane_slice]
-            self._v_inf[airplane_slice,:] = v_trans+v_wind+v_rot
-            if self._match_machup_pro:
-                self._v_inf_w_o_rotation[airplane_slice,:] = v_trans+v_wind
+            self._v_inf[airplane_slice,:] = v_trans+v_wind
+            self._v_inf_and_rot[airplane_slice,:] = self._v_inf[airplane_slice,:]+v_rot
 
             # Joint velocities for determining trailing vortex direction
             if self._match_machup_pro:
@@ -581,8 +579,8 @@ class Scene:
         # Get freestream magnitudes and directions
         self._V_inf = np.linalg.norm(self._v_inf, axis=1)
         self._u_inf = self._v_inf/self._V_inf[:,np.newaxis]
-        if self._match_machup_pro:
-            self._V_inf_w_o_rotation = np.linalg.norm(self._v_inf_w_o_rotation, axis=1)
+        self._V_inf_and_rot = np.linalg.norm(self._v_inf_and_rot, axis=1)
+        self._u_inf_and_rot = self._v_inf_and_rot/self._V_inf_and_rot[:,np.newaxis]
 
         # Calculate the direction of the trailing vortices
         self._u_trailing_0 = self._P0_joint_v_inf/np.linalg.norm(self._P0_joint_v_inf, axis=-1, keepdims=True)
@@ -614,6 +612,7 @@ class Scene:
         # it off. I'm loathe to make such a model-specific decision here... Maybe we could make this a user parameter?
         # I don't trust most users to use this responsibly though. Not sure what to do. For now, I've set the cutoff very
         # low, so it shouldn't really ever kick in.
+        # This should really be fixed by implementing wake relaxation.
         denom = (self._r_0_joint_mag*(self._r_0_joint_mag-np.einsum('ijk,ijk->ij', self._u_trailing_0[np.newaxis], self._r_0_joint)))
         if (np.abs(denom)<self._impingement_threshold).any():
             warnings.warn("""MachUpX detected a trailing vortex impinging upon a control point. This can lead to greatly exaggerated induced velocities at the control point. See "Common Issues" in the documentation for more information. This warning can be suppressed by reducing "impingement_threshold" in the solver parameters.""")
@@ -633,13 +632,16 @@ class Scene:
         if self._use_in_plane:
             self._v_inf_in_plane = np.matmul(self._P_in_plane, self._v_inf[:,:,np.newaxis]).reshape((self._N,3))
             self._V_inf_in_plane = np.linalg.norm(self._v_inf_in_plane, axis=1)
-            self._Re = self._V_inf_in_plane*self._c_bar/self._nu
+            self._v_inf_and_rot_in_plane = np.matmul(self._P_in_plane, self._v_inf_and_rot[:,:,np.newaxis]).reshape((self._N,3))
+            self._V_inf_and_rot_in_plane = np.linalg.norm(self._v_inf_and_rot_in_plane, axis=1)
+            self._Re = self._V_inf_and_rot_in_plane*self._c_bar/self._nu
         else:
             self._Re = self._V_inf*self._c_bar/self._nu
 
-        self._v_n_inf = np.einsum('ij,ij->i', self._v_inf, self._u_n)
-        self._v_a_inf = np.einsum('ij,ij->i', self._v_inf, self._u_a)
-        self._alpha_inf = np.arctan2(self._v_n_inf, self._v_a_inf)
+        # Get estimate of angle of attack
+        v_n_inf = np.einsum('ij,ij->i', self._v_inf_and_rot, self._u_n)
+        v_a_inf = np.einsum('ij,ij->i', self._v_inf_and_rot, self._u_a)
+        self._alpha_inf = np.arctan2(v_n_inf, v_a_inf)
 
         # Get lift slopes and zero-lift angles of attack for each segment
         for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
@@ -652,10 +654,9 @@ class Scene:
                 self._aL0[seg_slice] = segment.get_cp_aL0(self._Re[seg_slice])
                 seg_ind += seg_N
 
-        # Correct CL estimate for sweep (we don't use self._correct_CL_for_sweep() here because we are dealing with alpha_inf rather than true alpha)
+        # Correct CL estimate for sweep
         if self._use_swept_sections:
-
-            self._CL += self._CLa*(self._aL0-self._aL0*self._C_sweep_inv) # New method
+            self._correct_CL_for_sweep()
 
         self._solved = False
 
@@ -717,7 +718,7 @@ class Scene:
 
     def _calc_v_i(self):
         # Determines the local velocity at each control point
-        self._v_i = self._v_inf+np.einsum('ijk,j->ik', self._V_ji, self._gamma)
+        self._v_i = self._v_inf_and_rot+np.einsum('ijk,j->ik', self._V_ji, self._gamma)
         #self._v_i = self._v_inf+(self._V_ji.transpose((2,0,1))@self._gamma).T
 
     
@@ -759,7 +760,7 @@ class Scene:
 
         # Return lift to match MU Pro
         if self._match_machup_pro:
-            return self._V_inf_w_o_rotation*self._V_inf_w_o_rotation*self._CL*self._dS
+            return self._V_inf*self._V_inf*self._CL*self._dS
 
         # Correct lift coefficient
         if self._use_swept_sections:
@@ -779,10 +780,9 @@ class Scene:
 
 
     def _correct_CL_for_sweep(self):
-        # Applies thin-airfoil corrections for swept section lift
+        # Applies thin-airfoil corrections for swept section lift based on local lift slope
 
         self._CL += self._CLa*(self._aL0-self._aL0*self._C_sweep_inv) # New method
-        #self._CL = self._CLa*(self._alpha-self._aL0*self._C_sweep_inv) # Old method
 
 
     def _solve_linear(self, **kwargs):
@@ -795,19 +795,21 @@ class Scene:
         # Calculate invariant properties
         self._calc_invariant_flow_properties()
 
-        # Calculate velocity cross product and b vector
-        if self._use_in_plane:
-            u_inf_x_dl = np.cross(self._v_inf_in_plane/self._V_inf_in_plane[:,np.newaxis], self._dl)
-            b = self._V_inf_in_plane*self._dS*self._CL # Phillips and Hunsaker use CL here instead of CL,a(a-a_L0). It is more accurate for nonlinear airfoils.
-        else:
-            u_inf_x_dl = np.cross(self._u_inf, self._dl)
-            b = self._V_inf*self._dS*self._CL
+        # Calculate velocity cross product
+        V_inf_and_rot_x_dl = np.cross(self._v_inf_and_rot, self._dl)
 
-        # A matrix
-        V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n)
+        # Calculate A matrix and b vector
         A = np.zeros((self._N,self._N))
-        A[:,:] = -(self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
-        A[self._diag_ind] += 2.0*np.linalg.norm(u_inf_x_dl, axis=1)
+        V_ji_dot_u_n = np.einsum('ijk,ik->ij', self._V_ji, self._u_n)
+        if self._use_in_plane:
+            A[:,:] = -(self._V_inf_in_plane*self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
+            b = self._V_inf_in_plane*self._V_inf_in_plane*self._dS*self._CL
+        else:
+            A[:,:] = -(self._V_inf*self._CLa*self._dS)[:,np.newaxis]*V_ji_dot_u_n
+            b = self._V_inf*self._V_inf*self._dS*self._CL
+
+        # Add diagonal terms
+        A[self._diag_ind] += 2.0*np.linalg.norm(V_inf_and_rot_x_dl, axis=1)
 
         # Solve
         self._gamma = np.linalg.solve(A, b)
@@ -958,6 +960,11 @@ class Scene:
         self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
         self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
         self._alpha = np.arctan2(self._v_n, self._v_a)
+        if self._use_swept_sections:
+            self._Re_unswept = self._V_i*self._c_bar*self._C_sweep_inv/self._nu
+        else:
+            self._Re_unswept = self._V_i*self._c_bar/self._nu
+
         if self._use_in_plane:
             self._V_i_in_plane = np.sqrt(self._V_i_in_plane_2)
             self._Re = self._V_i_in_plane*self._c_bar/self._nu
@@ -995,7 +1002,7 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Section drag coefficient
-                self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re[cur_slice])
+                self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re_unswept[cur_slice])
 
                 # Section moment coefficient
                 self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice])
