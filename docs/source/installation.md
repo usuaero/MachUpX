@@ -47,7 +47,11 @@ Once the installation is complete, run
 
     $ py.test
 
-to verify MachUpX is working properly on your machine. Some warnings and depreciation notices are normal.
+on Unix or
+
+    > py.test-script.py
+
+on Windows to verify MachUpX is working properly on your machine. Some warnings and depreciation notices are normal.
 
 ## FreeCAD for Exporting STEP Files
 
