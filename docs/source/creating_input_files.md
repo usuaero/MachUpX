@@ -104,13 +104,6 @@ Units of measurement may be specified for certain inputs. For information on how
 >>>>
 >>>>Defaults to standard viscosity at sea-level.
 >>>
->>>**"speed_of_sound" : float or string**
->>>>Speed of sound in the atmosphere. If a float, the speed of sound is assumed to be constant. If a string, it is assumed the speed of sound is determined using an analytically defined atmosphere profile. The following profiles can be specified:
->>>>
->>>>>"standard" - Standard atmosphere profile.
->>>>
->>>>Defaults to standard speed of sound at sea-level.
->>>
 >>**"aircraft" : dict**
 >>>Lists the aircraft to be placed in the scene. At least one must be specified. Please note that MachUpX is able to model interactions between multiple aircraft within the limitations of lifting-line theory. It is assumed the user understands these limitations and will use MachUpX appropriately. If importing more than one aircraft, simply repeat the following structure:
 >>>
