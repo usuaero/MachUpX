@@ -33,7 +33,7 @@ def test_main():
     sp.run(["python", "-m", "machupX", altered_input_name])
 
     # Check the proper files have been created
-    assert os.path.exists(altered_input_name.replace(".json", "_forces.json"))
+    assert os.path.exists(altered_input_name.replace(".json", "_solve_forces.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_derivatives.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_distributions.txt"))
     assert os.path.exists(altered_input_name.replace(".json", "_pitch_trim.json"))
@@ -41,7 +41,7 @@ def test_main():
     assert os.path.exists(altered_input_name.replace(".json", ".stl"))
 
     # Cleanup
-    os.remove(altered_input_name.replace(".json", "_forces.json"))
+    os.remove(altered_input_name.replace(".json", "_solve_forces.json"))
     os.remove(altered_input_name.replace(".json", "_derivatives.json"))
     os.remove(altered_input_name.replace(".json", "_distributions.txt"))
     os.remove(altered_input_name.replace(".json", "_pitch_trim.json"))

@@ -25,3 +25,6 @@ Further analysis of the underlying equations has led us to discover typos with h
 Airfoil Mach dependence has been removed. This was unjustified in the first place as compressibility corrections would need to be made to both the airfoil section data and the downwash calculations. This was only ever done for the former. Proper compressibility corrections may be applied in a later version.
 
 Improvements have also been made to increase the accuracy of the linear solver in the case of solid body rotations. Viscous drag predictions have also been updated.
+
+## Version 2.7.1
+Streamlined command line interface to use Scene class function names and arguments directly. Documentation updated accordingly. Back-compatibility with input files is not guaranteed.
