@@ -941,7 +941,7 @@ class Scene:
 
         # Scale gammas to match MachUp Pro (this is approximate; I can't figure out how to get these to match exactly; it'd due to how Phillips nondimensionalizes things)
         if self._match_machup_pro:
-            self._gamma *= (self._V_inf/self._V_inf_w_o_rotation)**2
+            self._gamma *= (self._V_inf_and_rot/self._V_inf)**2
 
         # Get velocities
         if self._use_total_velocity or self._match_machup_pro:
