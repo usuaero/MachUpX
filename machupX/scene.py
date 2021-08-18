@@ -922,6 +922,106 @@ class Scene:
         return time.time()-self._nonlinear_start_time
 
 
+    fd_size = 1e-8
+g_test = np.identity(self._N)*fd_size
+g_test += np.resize(copy.deepcopy(self._gamma), [self._N, 1])
+R_init =
+np.resize(self._lifting_line_residual_conG(copy.deepcopy(self._gamma)),
+[self._N, 1])
+dR = np.asarray([self._lifting_line_residual_conG(g_test[:, i]) for i
+in range(0, self._N, 1)])
+dR = np.transpose(dR)
+dR -= R_init
+J_fd = dR / fd_size
+# extract absolute error as:
+np.max(abs(J_fd-J))
+# extract relative error as:
+np.max(abs((J-J_fd)/J_fd))
+# Here is a slower loopy version but makes it more obvious what is going on
+err_J = 0
+R_check1 =
+self._lifting_line_residual_conG(copy.deepcopy(self._gamma))
+for r1check in range(0, 260, 1):
+g2 = np.zeros(260)
+g2[r1check] = 1e-6
+R_check2 =
+self._lifting_line_residual_conG(copy.deepcopy(self._gamma) + g2)
+dR1 = (R_check2 - R_check1)/g2[r1check]
+dR2 = J[:, r1check]
+err_J = max(err_J, max(abs((dR2 - dR1)/dR1)))
+# I had to create copies of _lifting_line_residual and _get_section_lift that did not update self and
+that is what is referenced above. I just copied your function and removed the self. update.These
+functions are:
+def _lifting_line_residual_conG(self, gamma):
+# Returns the residual to nonlinear lifting-line equation without
+# updating all self parameters
+# Calculate control point velocities
+v_i = self._v_inf_and_rot + np.einsum('ijk,j->ik', self._V_ji,
+gamma)
+# Get vortex lift
+w_i = np.cross(v_i, self._dl)
+w_i_mag = np.linalg.norm(w_i, axis=1)
+L_vortex = 2.0 * w_i_mag * gamma
+# Get section lift
+L_section = self._get_section_lift_conG(v_i)
+# Return difference
+return L_vortex - L_section
+
+    def _get_section_lift_conG(self, v_i):
+        CL = copy.deepcopy(self._CL)
+        CLa = copy.deepcopy(self._CLa)
+        CLRe = copy.deepcopy(self._CLRe)
+
+        # Get section properties
+        if self._use_in_plane:
+            v_i_in_plane = np.matmul(self._P_in_plane, v_i[:, :, np.newaxis]).reshape((self._N, 3))
+            V_i_in_plane_2 = np.einsum('ij,ij->i', v_i_in_plane, v_i_in_plane)
+            V_i_in_plane = np.sqrt(V_i_in_plane_2)
+            Re = V_i_in_plane * self._c_bar / self._nu
+        else:
+            V_i_2 = np.einsum('ij,ij->i', v_i, v_i)
+            V_i = np.sqrt(V_i_2)
+            Re = V_i * self._c_bar / self._nu
+
+        # Calculate angle of attack
+        v_a = np.einsum('ij,ij->i', v_i, self._u_a)
+        v_n = np.einsum('ij,ij->i', v_i, self._u_n)
+        alpha = np.arctan2(v_n, v_a)
+
+        # Loop through airplanes
+        index = 0
+        for airplane_object in self._airplane_objects:
+            N = airplane_object.N
+            # Loop through segments
+            seg_ind = 0
+            for segment in airplane_object.segments:
+                seg_N = segment.N
+                seg_slice = slice(index + seg_ind, index + seg_ind + seg_N)
+                CLa[seg_slice] = segment.get_cp_CLa(alpha[seg_slice], Re[seg_slice])
+                CL[seg_slice] = segment.get_cp_CL(alpha[seg_slice], Re[seg_slice])
+                CLRe[seg_slice] = segment.get_cp_CLRe(alpha[seg_slice], Re[seg_slice])
+                seg_ind += seg_N
+                index += N
+
+        # Correct lift coefficient
+        if self._use_swept_sections:
+            CL += CLa * (self._aL0 - self._aL0 * self._C_sweep_inv)
+    
+        # Return lift coefficient based on certain conditions
+        if self._use_total_velocity:
+            if self._use_in_plane:
+                return V_i_in_plane_2 * CL * self._dS # in case you're wondering, this is the one you want to go for ;)
+    
+            else:
+                return V_i_2 * CL * self._dS
+    
+        else:
+            if self._use_in_plane:
+                return self._V_inf_in_plane * self._V_inf_in_plane * CL * self._dS
+            else:
+                return self._V_inf * self._V_inf * CL * self._dS
+
+
     def _get_frames(self, **kwargs):
         body_frame = kwargs.get("body_frame", True)
         stab_frame = kwargs.get("stab_frame", False)
