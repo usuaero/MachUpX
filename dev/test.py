@@ -13,7 +13,7 @@ if __name__=="__main__":
     # Specify input
     input_dict = {
         "solver" : {
-            "type" : "linear"
+            "type" : "nonlinear"
         },
         "units" : "English",
         "scene" : {
@@ -45,7 +45,7 @@ if __name__=="__main__":
                 }
             }
         },
-        "plot_lacs" : True,
+        "plot_lacs" : False,
         "wings" : {
             "main_wing" : {
                 "ID" : 1,
@@ -61,41 +61,41 @@ if __name__=="__main__":
                 "sweep" : [[0.0, 30.0],
                            [1.0, 30.0]],
                 "grid" : {
-                    "N" : 30
+                    "N" : 5
                 },
                 "CAD_options" :{
                     "round_wing_tip" : True,
                     "round_wing_root" : False,
                     "n_rounding_sections" : 20
                 }
-            },
-            "h_stab" : {
-                "ID" : 2,
-                "connect_to" : {
-                    "ID" : 1,
-                    "location" : "root",
-                    "dx" : -5.0,
-                    "dz" : -0.5
-                },
-                "side" : "both",
-                "is_main" : False,
-                "airfoil" : [[0.0, "NACA_2410"],
-                             [1.0, "NACA_2410"]],
-                "semispan" : 4.0,
-                "dihedral" : [[0.0, 0.0],
-                              [1.0, 0.0]],
-                "chord" : [[0.0, 1.0],
-                           [1.0, 1.0]],
-                "sweep" : [[0.0, 30.0],
-                           [1.0, 30.0]],
-                "grid" : {
-                    "N" : 30
-                },
-                "control_surface" : {
-                    "control_mixing" : {
-                        "elevator" : 1.0
-                    }
-                }
+            #},
+            #"h_stab" : {
+            #    "ID" : 2,
+            #    "connect_to" : {
+            #        "ID" : 1,
+            #        "location" : "root",
+            #        "dx" : -5.0,
+            #        "dz" : -0.5
+            #    },
+            #    "side" : "both",
+            #    "is_main" : False,
+            #    "airfoil" : [[0.0, "NACA_2410"],
+            #                 [1.0, "NACA_2410"]],
+            #    "semispan" : 4.0,
+            #    "dihedral" : [[0.0, 0.0],
+            #                  [1.0, 0.0]],
+            #    "chord" : [[0.0, 1.0],
+            #               [1.0, 1.0]],
+            #    "sweep" : [[0.0, 30.0],
+            #               [1.0, 30.0]],
+            #    "grid" : {
+            #        "N" : 30
+            #    },
+            #    "control_surface" : {
+            #        "control_mixing" : {
+            #            "elevator" : 1.0
+            #        }
+            #    }
             }
         }
     }
@@ -115,6 +115,3 @@ if __name__=="__main__":
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
     FM = scene.solve_forces()
     print(json.dumps(FM["plane"]["total"], indent=4))
-
-    # Trim
-    scene.target_CL(CL=0.7, Cm=-1.0, verbose=True, relaxation=0.01, max_iterations=1000)

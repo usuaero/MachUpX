@@ -36,7 +36,7 @@ class Scene:
 
     def __init__(self, scene_input={}):
 
-        np.set_printoptions(threshold=1000000)
+        np.set_printoptions(threshold=1000000, linewidth=10000)
 
         # Initialize basic storage objects
         self._airplanes = {}
@@ -372,6 +372,7 @@ class Scene:
         self._Re = np.zeros(self._N) # Reynolds number
         self._aL0 = np.zeros(self._N) # Zero-lift angle of attack
         self._CLa = np.zeros(self._N) # Lift slope
+        self._CLRe = np.zeros(self._N) # Lift slope wrt Reynolds number
         self._CL = np.zeros(self._N) # Lift coefficient
         self._CD = np.zeros(self._N) # Drag coefficient
         self._Cm = np.zeros(self._N) # Moment coefficient
@@ -900,6 +901,42 @@ class Scene:
             # Get gamma update
             dGamma = np.linalg.solve(J, -R)
 
+            # Check finite difference approximation to J
+            fd_size = 1e-4
+            g_test = np.identity(self._N)*fd_size
+            g_test += np.resize(copy.deepcopy(self._gamma), [self._N, 1])
+            R_init = np.resize(self._lifting_line_residual_conG(copy.deepcopy(self._gamma)), [self._N, 1])
+            dR = np.asarray([self._lifting_line_residual_conG(g_test[:, i]) for i in range(0, self._N, 1)])
+            dR = np.transpose(dR)
+            dR -= R_init
+            J_fd = dR / fd_size
+            print(J)
+            print()
+            print(J_fd)
+            print()
+
+            # extract absolute error as:
+            err_J = np.max(abs(J_fd-J))
+            print(err_J)
+
+            # extract relative error as:
+            err_J = np.max(abs((J-J_fd)/J_fd))
+            print(err_J)
+            print()
+
+            # Here is a slower loopy version but makes it more obvious what is going on
+            err_J = 0
+            R_check1 = self._lifting_line_residual_conG(copy.deepcopy(self._gamma))
+            for r1check in range(0, 260, 1):
+                g2 = np.zeros(260)
+                g2[r1check] = 1e-6
+                R_check2 = self._lifting_line_residual_conG(copy.deepcopy(self._gamma) + g2)
+                dR1 = (R_check2 - R_check1)/g2[r1check]
+                dR2 = J[:, r1check]
+
+            err_J = max(err_J, max(abs((dR2 - dR1)/dR1)))
+            print(err_J)
+
             # Update gamma
             self._gamma = self._gamma+self._solver_relaxation*dGamma
 
@@ -922,52 +959,26 @@ class Scene:
         return time.time()-self._nonlinear_start_time
 
 
-    fd_size = 1e-8
-g_test = np.identity(self._N)*fd_size
-g_test += np.resize(copy.deepcopy(self._gamma), [self._N, 1])
-R_init =
-np.resize(self._lifting_line_residual_conG(copy.deepcopy(self._gamma)),
-[self._N, 1])
-dR = np.asarray([self._lifting_line_residual_conG(g_test[:, i]) for i
-in range(0, self._N, 1)])
-dR = np.transpose(dR)
-dR -= R_init
-J_fd = dR / fd_size
-# extract absolute error as:
-np.max(abs(J_fd-J))
-# extract relative error as:
-np.max(abs((J-J_fd)/J_fd))
-# Here is a slower loopy version but makes it more obvious what is going on
-err_J = 0
-R_check1 =
-self._lifting_line_residual_conG(copy.deepcopy(self._gamma))
-for r1check in range(0, 260, 1):
-g2 = np.zeros(260)
-g2[r1check] = 1e-6
-R_check2 =
-self._lifting_line_residual_conG(copy.deepcopy(self._gamma) + g2)
-dR1 = (R_check2 - R_check1)/g2[r1check]
-dR2 = J[:, r1check]
-err_J = max(err_J, max(abs((dR2 - dR1)/dR1)))
-# I had to create copies of _lifting_line_residual and _get_section_lift that did not update self and
-that is what is referenced above. I just copied your function and removed the self. update.These
-functions are:
-def _lifting_line_residual_conG(self, gamma):
-# Returns the residual to nonlinear lifting-line equation without
-# updating all self parameters
-# Calculate control point velocities
-v_i = self._v_inf_and_rot + np.einsum('ijk,j->ik', self._V_ji,
-gamma)
-# Get vortex lift
-w_i = np.cross(v_i, self._dl)
-w_i_mag = np.linalg.norm(w_i, axis=1)
-L_vortex = 2.0 * w_i_mag * gamma
-# Get section lift
-L_section = self._get_section_lift_conG(v_i)
-# Return difference
-return L_vortex - L_section
+    def _lifting_line_residual_conG(self, gamma):
+        # Same as _lifting_line_residual, but makes no permanent changes to self
+
+        # Calculate control point velocities
+        v_i = self._v_inf_and_rot + np.einsum('ijk,j->ik', self._V_ji, gamma)
+
+        # Get vortex lift
+        w_i = np.cross(v_i, self._dl)
+        w_i_mag = np.linalg.norm(w_i, axis=1)
+        L_vortex = 2.0 * w_i_mag * gamma
+
+        # Get section lift
+        L_section = self._get_section_lift_conG(v_i)
+
+        # Return difference
+        return L_vortex - L_section
+
 
     def _get_section_lift_conG(self, v_i):
+        # Same as _get_section_lift(), but makes no permanent changes to self
         CL = copy.deepcopy(self._CL)
         CLa = copy.deepcopy(self._CLa)
         CLRe = copy.deepcopy(self._CLRe)
@@ -1001,7 +1012,7 @@ return L_vortex - L_section
                 CL[seg_slice] = segment.get_cp_CL(alpha[seg_slice], Re[seg_slice])
                 CLRe[seg_slice] = segment.get_cp_CLRe(alpha[seg_slice], Re[seg_slice])
                 seg_ind += seg_N
-                index += N
+            index += N
 
         # Correct lift coefficient
         if self._use_swept_sections:
