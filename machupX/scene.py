@@ -833,7 +833,6 @@ class Scene:
 
         # Airfoil coefs
         C_LRe = np.zeros(self._N)
-        C_LM = np.zeros(self._N)
 
         # Calculate the derivative of induced velocity wrt vortex strength
         if self._use_in_plane:
@@ -902,7 +901,7 @@ class Scene:
             dGamma = np.linalg.solve(J, -R)
 
             # Check finite difference approximation to J
-            fd_size = 1e-4
+            fd_size = 1e-2
             g_test = np.identity(self._N)*fd_size
             g_test += np.resize(copy.deepcopy(self._gamma), [self._N, 1])
             R_init = np.resize(self._lifting_line_residual_conG(copy.deepcopy(self._gamma)), [self._N, 1])
@@ -915,27 +914,31 @@ class Scene:
             print(J_fd)
             print()
 
-            # extract absolute error as:
-            err_J = np.max(abs(J_fd-J))
-            print(err_J)
+            ## extract absolute error as:
+            #err_J = np.max(abs(J_fd-J))
+            #print("Max abs error in J: ", err_J)
 
-            # extract relative error as:
-            err_J = np.max(abs((J-J_fd)/J_fd))
-            print(err_J)
+            # extract relative error
+            rel_err = abs((J-J_fd)/J_fd)
+            max_rel_err_loc = np.argmax(rel_err)
+            print("Max % error in J: ", np.max(rel_err)*100.0, "%")
+            print("    Occurs at: ", max_rel_err_loc)
+            print("    Corresponding abs error: ", abs(J_fd-J).flatten()[max_rel_err_loc])
+            print()
+            min_rel_err_loc = np.argmin(rel_err)
+            print("Min % error in J: ", np.min(rel_err)*100.0, "%")
+            print("    Occurs at: ", min_rel_err_loc)
+            print("    Corresponding abs error: ", abs(J_fd-J).flatten()[min_rel_err_loc])
             print()
 
-            # Here is a slower loopy version but makes it more obvious what is going on
-            err_J = 0
-            R_check1 = self._lifting_line_residual_conG(copy.deepcopy(self._gamma))
-            for r1check in range(0, 260, 1):
-                g2 = np.zeros(260)
-                g2[r1check] = 1e-6
-                R_check2 = self._lifting_line_residual_conG(copy.deepcopy(self._gamma) + g2)
-                dR1 = (R_check2 - R_check1)/g2[r1check]
-                dR2 = J[:, r1check]
-
-            err_J = max(err_J, max(abs((dR2 - dR1)/dR1)))
-            print(err_J)
+            # Plot relative error versus angle of attack
+            plt.figure()
+            for i in range(self._N):
+                plt.plot(np.degrees(self._alpha), rel_err[:,i])
+            plt.xlabel("$\\alpha [deg]$")
+            plt.ylabel("\% Error")
+            plt.yscale('log')
+            plt.show()
 
             # Update gamma
             self._gamma = self._gamma+self._solver_relaxation*dGamma
@@ -1594,9 +1597,13 @@ class Scene:
         # Output timing
         verbose = kwargs.get("verbose", False)
         if verbose:
-            print("Time to compute circulation distribution using scipy.fsolve: {0} s".format(fsolve_time))
-            print("Time to compute circulation distribution using linear equations: {0} s".format(linear_time))
-            print("Time to compute nonlinear improvement to circulation distribution: {0} s".format(nonlinear_time))
+            if fsolve_time > 0.0:
+                print("Time to compute circulation distribution using scipy.fsolve: {0} s".format(fsolve_time))
+            if linear_time > 0.0:
+                print("Time to compute circulation distribution using linear equations: {0} s".format(linear_time))
+            if nonlinear_time > 0.0:
+                print("Time to compute nonlinear improvement to circulation distribution: {0} s".format(nonlinear_time))
+
             total_time = linear_time+nonlinear_time+integrate_time+fsolve_time
             print("Time to integrate forces: {0} s".format(integrate_time))
             print("Total time: {0} s".format(total_time))
