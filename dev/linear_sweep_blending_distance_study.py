@@ -10,8 +10,8 @@ from stl import mesh
 from mpl_toolkits import mplot3d
 
 
-def get_grayscale_range(N, min, max):
-    colors_int = np.linspace(min, max, N_grids).astype(int)[::-1]
+def get_grayscale_range(N, min_val, max_val):
+    colors_int = np.linspace(min_val, max_val, N).astype(int)[::-1]
     colors = []
     for color_int in colors_int:
         hex_code = hex(color_int).replace("0x", "")

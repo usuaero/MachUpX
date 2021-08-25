@@ -1,19 +1,32 @@
 # This script is for me to easily test convergences
-import machupX as MX
-import pypan as pp
-import json
 import os
+
+import machupX as MX
 import numpy as np
-import subprocess as sp
 import matplotlib.pyplot as plt
-from stl import mesh
+import multiprocessing as mp
+
+from richardson import richardson_extrap
+from linear_sweep_blending_distance_study import get_grayscale_range
 from mpl_toolkits import mplot3d
 
-if __name__=="__main__":
 
-    # Create plot directory
-    if not os.path.exists("dev/blending_distance_plots/"):
-        os.mkdir("dev/blending_distance_plots")
+def analyze_wing(args):
+
+    sweep, sweep_type, R_A, R_T, c_root = args
+
+    # Announce output
+    print("{0:<20}{1:<20}{2:<20}{3:<20}".format(sweep, sweep_type, R_T, R_A))
+
+    # Study params
+    N_sb = 20
+    blending_distances = np.logspace(-2, 1, N_sb)
+    N_grids = 10
+    grids = np.logspace(1, np.log10(200), N_grids).astype(int)
+
+    # Color ranges
+    grid_colors = get_grayscale_range(N_grids, 0, 180)
+    blending_distance_colors = get_grayscale_range(N_sb, 0, 180)
     
     # Specify input
     input_dict = {
@@ -58,69 +71,98 @@ if __name__=="__main__":
         "alpha" : 5.0
     }
 
+    # Loop through blending distances and grids
+    CL = np.zeros((N_grids, N_sb))
+    p = np.zeros(N_sb)
+    plt.figure()
+    for i, grid in enumerate(grids):
+
+
+        for j, blending_distance in enumerate(blending_distances):
+
+            # Update params
+            if sweep_type == "linear":
+                wing_dict["wings"]["main_wing"]["sweep"] = [[0.0, 0.0],
+                                                            [1.0, sweep]]
+            else:
+                wing_dict["wings"]["main_wing"]["sweep"] = [[0.0, sweep],
+                                                            [1.0, sweep]]
+
+            wing_dict["wings"]["main_wing"]["semispan"] = 0.25*R_A*c_root*(1.0+R_T)
+            wing_dict["wings"]["main_wing"]["chord"] = [[0.0, c_root], [1.0, R_T*c_root]]
+            wing_dict["wings"]["main_wing"]["grid"]["N"] = grid
+            wing_dict["wings"]["main_wing"]["grid"]["blending_distance"] = blending_distance
+
+            # Load scene
+            scene = MX.Scene(input_dict)
+            scene.add_aircraft("wing", wing_dict, state=state)
+            try:
+                FM = scene.solve_forces()
+                CL[i,j] = FM["wing"]["total"]["CL"]
+            except:
+                CL[i,j] = np.nan
+            del scene
+
+        plt.plot(blending_distances, CL[i,:], 'o-', label=str(grid), color=grid_colors[i], markersize=3)
+
+    plt.xscale('log')
+    plt.xlabel('$\\Delta s_b$')
+    plt.ylabel('$C_L$')
+    plt.savefig("dev/blending_distance_plots/CL_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
+    plt.close()
+
+    # Calculate Richardson extrapolations
+    CL_extrap = np.zeros(N_sb)
+    plt.figure()
+    for i, blending_distance in enumerate(blending_distances):
+        CL_extrap[i],p[i] = richardson_extrap(grids, CL[:,i])
+        CL_err = np.abs(CL[:,i]-CL_extrap[i])/np.abs(CL_extrap[i])
+        plt.plot(grids, CL_err, 'o-', label=str(blending_distance), color=blending_distance_colors[i], markersize=3)
+
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('$N$')
+    plt.ylabel('Error in $C_L$')
+    plt.savefig("dev/blending_distance_plots/error_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
+    plt.close()
+
+    return p
+
+
+if __name__=="__main__":
+
+    # Create plot directory
+    if not os.path.exists("dev/blending_distance_plots/"):
+        os.mkdir("dev/blending_distance_plots")
+
     # Options
     sweeps = [-25.0, -15.0, -5.0, 5.0, 15.0, 25.0]
     sweep_types = ['linear', 'constant']
-    wingspans = [5.0, 10.0]
-    blending_distances = np.logspace(-2, 1, 20)
-    N_grids = 10
-    grids = np.logspace(1, np.log10(200), N_grids).astype(int)
+    taper_ratios = [1.0, 0.75, 0.5, 0.25, 0.0]
+    aspect_ratios = [4.0, 8.0, 12.0, 16.0]
+    c_root = 1.0
 
-    # Grid colors
-    grid_colors_int = np.linspace(0, 180, N_grids).astype(int)[::-1]
-    grid_colors = []
-    for grid_color_int in grid_colors_int:
-        hex_code = hex(grid_color_int).replace("0x", "")
-        if len(hex_code) == 1:
-            hex_code = "0"+hex_code
-        color = "#"+"".join([hex_code]*3)
-        grid_colors.append(color)
+    # Create args list
+    args_list = []
+    for sweep in sweeps[:1]:
+        for sweep_type in sweep_types[:1]:
+            for R_T in taper_ratios[:1]:
+                for R_A in aspect_ratios[:1]:
+                    args_list.append((sweep, sweep_type, R_A, R_T, c_root))
 
-    # Loop through options
-    print("{0:<20}{1:<20}{2:<20}{3:<20}".format("Sweep [deg]", "Sweep Type", "Wingspan [ft]", "Grid Nodes"))
+
+    print("{0:<20}{1:<20}{2:<20}{3:<20}".format("Sweep [deg]", "Sweep Type", "Taper Ratio", "Aspect Ratio"))
     print("".join(["-"]*80))
-    for sweep in sweeps:
-        for sweep_type in sweep_types:
-            for wingspan in wingspans:
 
-                # Loop through blending distances and grids
-                plt.figure()
-                for i, grid in enumerate(grids):
+    # Send to pool
+    with mp.Pool(processes=8) as pool:
+        convergence_rates = pool.map(analyze_wing, args_list)
 
-                    print("{0:<20}{1:<20}{2:<20}{3:<20}".format(sweep, sweep_type, wingspan, grid))
-                    CL = []
+    # Write convergence rates to file
+    N_sb = 20
+    blending_distances = np.logspace(-2, 1, N_sb)
+    with open("dev/blending_distance_plots/convergence_rates.csv", 'w') as file_handle:
+        print("sweep,type,R_A,R_T,"+",".join([str(s) for s in blending_distances]), file=file_handle)
 
-                    for blending_distance in blending_distances:
-
-                        # Update params
-                        if sweep_type == "linear":
-                            wing_dict["wings"]["main_wing"]["sweep"] = [[0.0, 0.0],
-                                                                        [1.0, sweep]]
-                        else:
-                            wing_dict["wings"]["main_wing"]["sweep"] = [[0.0, sweep],
-                                                                        [1.0, sweep]]
-
-                        wing_dict["wings"]["main_wing"]["semispan"] = wingspan*0.5
-                        wing_dict["wings"]["main_wing"]["grid"]["N"] = grid
-                        wing_dict["wings"]["main_wing"]["grid"]["blending_distance"] = blending_distance
-
-                        # Load scene
-                        scene = MX.Scene(input_dict)
-                        scene.add_aircraft("wing", wing_dict, state=state)
-                        try:
-                            FM = scene.solve_forces()
-                            CL.append(FM["wing"]["total"]["CL"])
-                        except:
-                            CL.append(np.nan)
-                        del scene
-
-                    plt.plot(blending_distances, CL, 'x-', label=str(grid), color=grid_colors[i])
-
-                #plt.axvline(x=0.25)
-                #plt.title("{0} deg {1} sweep, b = {2} ft".format(sweep, sweep_type, wingspan))
-                plt.xscale('log')
-                plt.xlabel('$\\Delta s_b$')
-                plt.ylabel('$C_L$')
-                #plt.legend()
-                plt.savefig("dev/blending_distance_plots/{0}_{1}_sweep_b_{2}_mux_fixed.pdf".format(sweep, sweep_type, wingspan))
-                plt.close()
+        for args, rates in zip(args_list, convergence_rates):
+            print("{0},{1},{2},{3},".format(*args)+",".join([str(p) for p in rates]), file=file_handle)
