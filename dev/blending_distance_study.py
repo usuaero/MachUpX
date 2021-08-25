@@ -144,10 +144,10 @@ if __name__=="__main__":
 
     # Create args list
     args_list = []
-    for sweep in sweeps[:1]:
-        for sweep_type in sweep_types[:1]:
-            for R_T in taper_ratios[:1]:
-                for R_A in aspect_ratios[:1]:
+    for sweep in sweeps:
+        for sweep_type in sweep_types:
+            for R_T in taper_ratios:
+                for R_A in aspect_ratios:
                     args_list.append((sweep, sweep_type, R_A, R_T, c_root))
 
 
