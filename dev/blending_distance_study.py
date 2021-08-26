@@ -6,8 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 
-from richardson import richardson_extrap
-from linear_sweep_blending_distance_study import get_grayscale_range
+from helpers import get_grayscale_range, richardson_extrap
 from mpl_toolkits import mplot3d
 
 
