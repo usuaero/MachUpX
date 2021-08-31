@@ -754,7 +754,9 @@ class Scene:
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
+                self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha[seg_slice], self._Re[seg_slice])
                 self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice])
+                self._CLRe[seg_slice] = segment.get_cp_CLRe(self._alpha[seg_slice], self._Re[seg_slice])
                 seg_ind += seg_N
 
             index += N
@@ -831,9 +833,6 @@ class Scene:
 
         J = np.zeros((self._N, self._N))
 
-        # Airfoil coefs
-        C_LRe = np.zeros(self._N)
-
         # Calculate the derivative of induced velocity wrt vortex strength
         if self._use_in_plane:
             V_ji = np.matmul(self._P_in_plane, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
@@ -849,21 +848,6 @@ class Scene:
             R = self._lifting_line_residual(self._gamma)
             error = np.linalg.norm(R)
 
-            # Loop through airplanes
-            index = 0
-            for airplane_object in self._airplane_objects:
-
-                # Loop through segments
-                for segment_object in airplane_object.segments:
-                    num_cps = segment_object.N
-                    cur_slice = slice(index, index+num_cps)
-
-                    # Get lift coefficient and lift slopes
-                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice])
-                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice])
-
-                    index += num_cps
-
             # Intermediate calcs
             if self._use_in_plane:
                 v_iji = np.einsum('ijk,ijk->ij', self._v_i_in_plane[:,np.newaxis,:], V_ji)
@@ -877,9 +861,9 @@ class Scene:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._use_in_plane:
-                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i_in_plane)[:,np.newaxis]*v_iji
+                CL_gamma_Re = self._CLRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i_in_plane)[:,np.newaxis]*v_iji
             else:
-                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
+                CL_gamma_Re = self._CLRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
 
             CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
 
@@ -941,7 +925,7 @@ class Scene:
 
         # Scale gammas to match MachUp Pro (this is approximate; I can't figure out how to get these to match exactly; it'd due to how Phillips nondimensionalizes things)
         if self._match_machup_pro:
-            self._gamma *= (self._V_inf/self._V_inf_w_o_rotation)**2
+            self._gamma *= (self._V_inf_and_rot/self._V_inf)**2
 
         # Get velocities
         if self._use_total_velocity or self._match_machup_pro:
@@ -3683,7 +3667,7 @@ class Scene:
     def _print_dict_types(self, d):
         for k, v in d.items():
             if isinstance(v, dict):
-                self.print_dict_types(v)
+                self._print_dict_types(v)
 
             if isinstance(v, list):
                 for i in v:

@@ -9,6 +9,7 @@ MachUpX
    installation
    user_interface
    creating_input_files
+   units
    scene_object
    dxf
    common_issues
