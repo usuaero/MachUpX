@@ -113,5 +113,13 @@ if __name__=="__main__":
     # Load scene
     scene = MX.Scene(input_dict)
     scene.add_aircraft("plane", airplane_dict, state=state, control_state=control_state)
-    FM = scene.solve_forces()
+    FM = scene.solve_forces(verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    state["alpha"] = 5.5
+    scene.set_aircraft_state(state=state)
+    FM = scene.solve_forces(initial_guess='previous', verbose=True)
+    print(json.dumps(FM["plane"]["total"], indent=4))
+    state["alpha"] = 0.0
+    scene.set_aircraft_state(state=state)
+    FM = scene.solve_forces(initial_guess='previous', verbose=True)
     print(json.dumps(FM["plane"]["total"], indent=4))

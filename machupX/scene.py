@@ -900,46 +900,6 @@ class Scene:
             # Get gamma update
             dGamma = np.linalg.solve(J, -R)
 
-            # Check finite difference approximation to J
-            fd_size = 1e-2
-            g_test = np.identity(self._N)*fd_size
-            g_test += np.resize(copy.deepcopy(self._gamma), [self._N, 1])
-            R_init = np.resize(self._lifting_line_residual_conG(copy.deepcopy(self._gamma)), [self._N, 1])
-            dR = np.asarray([self._lifting_line_residual_conG(g_test[:, i]) for i in range(0, self._N, 1)])
-            dR = np.transpose(dR)
-            dR -= R_init
-            J_fd = dR / fd_size
-            print(J)
-            print()
-            print(J_fd)
-            print()
-
-            ## extract absolute error as:
-            #err_J = np.max(abs(J_fd-J))
-            #print("Max abs error in J: ", err_J)
-
-            # extract relative error
-            rel_err = abs((J-J_fd)/J_fd)
-            max_rel_err_loc = np.argmax(rel_err)
-            print("Max % error in J: ", np.max(rel_err)*100.0, "%")
-            print("    Occurs at: ", max_rel_err_loc)
-            print("    Corresponding abs error: ", abs(J_fd-J).flatten()[max_rel_err_loc])
-            print()
-            min_rel_err_loc = np.argmin(rel_err)
-            print("Min % error in J: ", np.min(rel_err)*100.0, "%")
-            print("    Occurs at: ", min_rel_err_loc)
-            print("    Corresponding abs error: ", abs(J_fd-J).flatten()[min_rel_err_loc])
-            print()
-
-            # Plot relative error versus angle of attack
-            plt.figure()
-            for i in range(self._N):
-                plt.plot(np.degrees(self._alpha), rel_err[:,i])
-            plt.xlabel("$\\alpha [deg]$")
-            plt.ylabel("\% Error")
-            plt.yscale('log')
-            plt.show()
-
             # Update gamma
             self._gamma = self._gamma+self._solver_relaxation*dGamma
 
@@ -960,80 +920,6 @@ class Scene:
                 print("Nonlinear solver successfully converged. Final error: {0}".format(error))
 
         return time.time()-self._nonlinear_start_time
-
-
-    def _lifting_line_residual_conG(self, gamma):
-        # Same as _lifting_line_residual, but makes no permanent changes to self
-
-        # Calculate control point velocities
-        v_i = self._v_inf_and_rot + np.einsum('ijk,j->ik', self._V_ji, gamma)
-
-        # Get vortex lift
-        w_i = np.cross(v_i, self._dl)
-        w_i_mag = np.linalg.norm(w_i, axis=1)
-        L_vortex = 2.0 * w_i_mag * gamma
-
-        # Get section lift
-        L_section = self._get_section_lift_conG(v_i)
-
-        # Return difference
-        return L_vortex - L_section
-
-
-    def _get_section_lift_conG(self, v_i):
-        # Same as _get_section_lift(), but makes no permanent changes to self
-        CL = copy.deepcopy(self._CL)
-        CLa = copy.deepcopy(self._CLa)
-        CLRe = copy.deepcopy(self._CLRe)
-
-        # Get section properties
-        if self._use_in_plane:
-            v_i_in_plane = np.matmul(self._P_in_plane, v_i[:, :, np.newaxis]).reshape((self._N, 3))
-            V_i_in_plane_2 = np.einsum('ij,ij->i', v_i_in_plane, v_i_in_plane)
-            V_i_in_plane = np.sqrt(V_i_in_plane_2)
-            Re = V_i_in_plane * self._c_bar / self._nu
-        else:
-            V_i_2 = np.einsum('ij,ij->i', v_i, v_i)
-            V_i = np.sqrt(V_i_2)
-            Re = V_i * self._c_bar / self._nu
-
-        # Calculate angle of attack
-        v_a = np.einsum('ij,ij->i', v_i, self._u_a)
-        v_n = np.einsum('ij,ij->i', v_i, self._u_n)
-        alpha = np.arctan2(v_n, v_a)
-
-        # Loop through airplanes
-        index = 0
-        for airplane_object in self._airplane_objects:
-            N = airplane_object.N
-            # Loop through segments
-            seg_ind = 0
-            for segment in airplane_object.segments:
-                seg_N = segment.N
-                seg_slice = slice(index + seg_ind, index + seg_ind + seg_N)
-                CLa[seg_slice] = segment.get_cp_CLa(alpha[seg_slice], Re[seg_slice])
-                CL[seg_slice] = segment.get_cp_CL(alpha[seg_slice], Re[seg_slice])
-                CLRe[seg_slice] = segment.get_cp_CLRe(alpha[seg_slice], Re[seg_slice])
-                seg_ind += seg_N
-            index += N
-
-        # Correct lift coefficient
-        if self._use_swept_sections:
-            CL += CLa * (self._aL0 - self._aL0 * self._C_sweep_inv)
-    
-        # Return lift coefficient based on certain conditions
-        if self._use_total_velocity:
-            if self._use_in_plane:
-                return V_i_in_plane_2 * CL * self._dS # in case you're wondering, this is the one you want to go for ;)
-    
-            else:
-                return V_i_2 * CL * self._dS
-    
-        else:
-            if self._use_in_plane:
-                return self._V_inf_in_plane * self._V_inf_in_plane * CL * self._dS
-            else:
-                return self._V_inf * self._V_inf * CL * self._dS
 
 
     def _get_frames(self, **kwargs):
@@ -1516,16 +1402,13 @@ class Scene:
         Parameters
         ----------
         filename : str
-            File to export the force and moment results to. Should be .json. If not specified, 
-            results will not be exported to a file.
+            File to export the force and moment results to. Should be .json. If not specified, results will not be exported to a file.
 
         non_dimensional : bool
-            If this is set to True, nondimensional coefficients will be included in the results.
-            Defaults to True.
+            If this is set to True, nondimensional coefficients will be included in the results. Defaults to True.
 
         dimensional : bool
-            If this is set to True, dimensional forces and moments will be included in the results.
-            Defaults to True.
+            If this is set to True, dimensional forces and moments will be included in the results. Defaults to True.
 
         report_by_segment : bool
             Whether to include results broken down by wing segment. Defaults to False.
@@ -1539,8 +1422,10 @@ class Scene:
         wind_frame : boolean, optional
             Whether to output results in the wind frame. Defaults to True.
 
+        initial_guess : str, optional
+            Sets the initial guess for the nonlinear solver. May be 'linear' or 'previous'. If 'linear', the linear solver is first run to determine an estimate for the vortex strength distribution. If 'previous', the last determined vortex strength distribution is used as an initial guess; this will be from the last time ```Scene.solve_forces()``` was called or will be zero if ```Scene.solve_forces()``` has not previously been called (note that ```Scene.solve_forces()``` is called by other functions, such as ```derivatives()``` etc.). Defaults to 'linear'. Only affects execution if the nonlinear solver is used. This has no effect on the final solution, only convergence rates. It should also be noted that in most instances using 'previous' will actually increase the number of iterations required for convergence. This should be used with prudence.
+
         verbose : bool
-            Whether to display timing and convergence information. Defaults to False.
 
         Returns
         -------
@@ -1551,6 +1436,9 @@ class Scene:
         # Check for aircraft
         if self._num_aircraft == 0:
             raise RuntimeError("There are no aircraft in this scene. No calculations can be performed.")
+
+        # Get kwargs
+        initial_guess = kwargs.get("initial_guess", "linear")
 
         # Initialize timing and error handling
         self._FM = {}
@@ -1565,23 +1453,31 @@ class Scene:
             if self._solver_type == "scipy_fsolve":
                 fsolve_time = self._solve_w_scipy(**kwargs)
 
-            # Solve for gamma using analytical solvers
-            if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
+            # Solve for gamma using linear solver
+            if self._solver_type == "linear" or (self._solver_type == "nonlinear" and initial_guess == "linear") or fsolve_time == -1:
 
                 # Linear solution
                 linear_time = self._solve_linear(**kwargs)
 
-                # Nonlinear improvement
-                if self._solver_type == "nonlinear" or fsolve_time == -1:
-                    try:
-                        nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
-                    except KeyboardInterrupt:
-                        print("")
-                        print("!!!Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
-                        nonlinear_time = time.time()-self._nonlinear_start_time
+            # Nonlinear improvement
+            if self._solver_type == "nonlinear" or fsolve_time == -1:
+                try:
 
-                if fsolve_time == -1:
-                    fsolve_time = 0.0
+                    # Initialize things typically done in linear solver
+                    if initial_guess == "previous":
+                        self._calc_invariant_flow_properties()
+
+                    # Run nonlinear solver
+                    nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
+
+                # Ctrl-C interrupt
+                except KeyboardInterrupt:
+                    print("")
+                    print("!!!Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
+                    nonlinear_time = time.time()-self._nonlinear_start_time
+
+            if fsolve_time == -1:
+                fsolve_time = 0.0
 
         except Exception as e:
             self._handle_error(e)
