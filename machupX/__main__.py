@@ -17,8 +17,6 @@ def _run_interactive_mode():
         print('Sorry, interactive mode is not yet available. Try back later.')
         break
         
-        if command == 'q':
-            break
 
 def _run_prescribed_analyses(input_filename):
     # Runs the analyses specified in the .json file
@@ -35,113 +33,28 @@ def _run_prescribed_analyses(input_filename):
     # Run analyses
     print("\nRunning prescribed analyses")
     print("---------------------------")
-    for key in input_dict["run"]:
+    for key, params in input_dict["run"].items():
 
-        # Get options
-        params = input_dict["run"].get(key, {})
-
-        # Solve forces
-        if key == "solve_forces":
-            filename = params.pop("filename", input_filename.replace(".json", "_forces.json"))
-    
-            print("\nCalculating aerodynamic forces...", end='')
-            scene.solve_forces(filename=filename, **params)
-
-            print("Done")
-    
-        # Wireframe
-        elif key == "display_wireframe":
-    
-            print("\nDisplaying wireframe...", end='')
-            scene.display_wireframe(**params)
-            print("Done")
-
-        # Aerodynamic derivatives
-        elif key == "derivatives":
-            filename = params.pop("filename", input_filename.replace(".json", "_derivatives.json"))
-
-            print("\nCalculating aerodynamic derivatives...", end='')
-            scene.derivatives(filename=filename, **params)
-            print("Done")
-
-        # Distributions
+        # Specify filename
+        if key == "export_stl":
+            filename = params.pop("filename", input_filename.replace(".json", ".stl"))
+        elif key == "export_vtk":
+            filename = params.pop("filename", input_filename.replace(".json", ".vtk"))
         elif key == "distributions":
             filename = params.pop("filename", input_filename.replace(".json", "_distributions.txt"))
-
-            print("\nExporting distributions...", end='')
-            scene.distributions(filename=filename, **params)
-            print("Done")
-
-        # Pitch trim
-        elif key == "pitch_trim":
-            filename = params.pop("filename", input_filename.replace(".json", "_pitch_trim.json"))
-
-            print("\nTrimming aircraft in pitch...", end='')
-            scene.pitch_trim(filename=filename, **params)
-            print("Done")
-
-        # Target CL
-        elif key == "target_CL":
-            filename = params.pop("filename", input_filename.replace(".json", "_target_CL.json"))
-
-            print("\nGetting target CL...", end='')
-            scene.target_CL(filename=filename, **params)
-            print("Done")
-
-        # Aerodynamic center
-        elif key == "aero_center":
-            filename = params.pop("filename", input_filename.replace(".json", "_aero_center.json"))
-
-            print("\nCalculating location of aerodynamic center...", end='')
-            scene.aero_center(filename=filename, **params)
-            print("Done")
-
-        # MAC
-        elif key == "MAC":
-            filename = params.pop("filename", input_filename.replace(".json", "_MAC.json"))
-
-            print("\nCalculating mean aerodynamic chord...", end='')
-            scene.MAC(filename=filename, **params)
-            print("Done")
-
-        # Export .stl
-        elif key == "export_stl":
-            filename = params.pop("filename", input_filename.replace(".json", ".stl"))
-
-            print("\nExporting stl...", end='')
-            scene.export_stl(filename=filename, **params)
-            print("Done")
-
-        # Export .stp
-        elif key == "export_stp":
-
-            print("\nExporting stp...", end='')
-            scene.export_stp(**params)
-            print("Done")
-
-        # Export dxf
-        elif key == "export_dxf":
-
-            print("\nExporting dxf...", end='')
-            scene.export_dxf(**params)
-            print("Done")
-
-        # Export linearized model
-        elif key == "export_pylot_model":
-
-            print("\nExporting Pylot model...", end='')
-            scene.export_pylot_model(**params)
-            print("Done")
-
-        # Set error suppression
-        elif key == "set_err_state":
-
-            print("Setting error state...", end='')
-            scene.set_err_state(**params)
-            print("Done")
-
-        # Unrecognized command
+        elif "display" in key:
+            filename = params.pop("filename", None)
         else:
+            filename = params.pop("filename", input_filename.replace(".json", "_"+key+".json"))
+
+        # Call
+        try:
+            print()
+            print("Calling method {0}...".format(key), end='')
+            getattr(scene, key)(filename=filename, **params)
+            print("Done")
+        
+        except AttributeError:
             print("{0} is not recognized as a valid run command. Skipping...".format(key))
 
     print("\nCompleted prescribed analyses.")
@@ -155,7 +68,7 @@ if __name__=="__main__":
     print('|        M    A     C     H     U     P                                                    |')
     print('|      _____________       _____________                                                   |')
     print('|      \            \     /            /                                                   |')
-    print('|       \            \   /            /                    MachUpX 2.7.0                   |')
+    print('|       \            \   /            /                    MachUpX 2.7.1                   |')
     print('|        \            \ /            /                                                     |')
     print('|         \            X            /                  (c) USU Aero Lab, 2020              |')
     print('|          \          / \          /                                                       |')
@@ -188,7 +101,7 @@ if __name__=="__main__":
 
     # Print quit message
     print()
-    print("----------------------------------------------------")
-    print("|          MachUpX exited successfully.            |")
-    print("|                  Thank you!                      |")
-    print("----------------------------------------------------")
+    print('--------------------------------------------------------------------------------------------')
+    print('|                              MachUpX exited successfully.                                |')
+    print('|                                      Thank you!                                          |')
+    print('--------------------------------------------------------------------------------------------')

@@ -1,6 +1,5 @@
 # This script is for me to easily test convergences
 import machupX as MX
-import pypan as pp
 import json
 import numpy as np
 import subprocess as sp

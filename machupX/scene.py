@@ -754,7 +754,9 @@ class Scene:
             for segment in airplane_object.segments:
                 seg_N = segment.N
                 seg_slice = slice(index+seg_ind, index+seg_ind+seg_N)
+                self._CLa[seg_slice] = segment.get_cp_CLa(self._alpha[seg_slice], self._Re[seg_slice])
                 self._CL[seg_slice] = segment.get_cp_CL(self._alpha[seg_slice], self._Re[seg_slice])
+                self._CLRe[seg_slice] = segment.get_cp_CLRe(self._alpha[seg_slice], self._Re[seg_slice])
                 seg_ind += seg_N
 
             index += N
@@ -831,10 +833,6 @@ class Scene:
 
         J = np.zeros((self._N, self._N))
 
-        # Airfoil coefs
-        C_LRe = np.zeros(self._N)
-        C_LM = np.zeros(self._N)
-
         # Calculate the derivative of induced velocity wrt vortex strength
         if self._use_in_plane:
             V_ji = np.matmul(self._P_in_plane, self._V_ji[:,:,:,np.newaxis]).reshape((self._N,self._N,3))
@@ -850,21 +848,6 @@ class Scene:
             R = self._lifting_line_residual(self._gamma)
             error = np.linalg.norm(R)
 
-            # Loop through airplanes
-            index = 0
-            for airplane_object in self._airplane_objects:
-
-                # Loop through segments
-                for segment_object in airplane_object.segments:
-                    num_cps = segment_object.N
-                    cur_slice = slice(index, index+num_cps)
-
-                    # Get lift coefficient and lift slopes
-                    self._CLa[cur_slice] = segment_object.get_cp_CLa(self._alpha[cur_slice], self._Re[cur_slice])
-                    C_LRe[cur_slice] = segment_object.get_cp_CLRe(self._alpha[cur_slice], self._Re[cur_slice])
-
-                    index += num_cps
-
             # Intermediate calcs
             if self._use_in_plane:
                 v_iji = np.einsum('ijk,ijk->ij', self._v_i_in_plane[:,np.newaxis,:], V_ji)
@@ -878,9 +861,9 @@ class Scene:
                 J[:,:] -= (2*self._dS*self._CL)[:,np.newaxis]*v_iji # Comes from taking the derivative of V_i^2 with respect to gamma
 
             if self._use_in_plane:
-                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i_in_plane)[:,np.newaxis]*v_iji
+                CL_gamma_Re = self._CLRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i_in_plane)[:,np.newaxis]*v_iji
             else:
-                CL_gamma_Re = C_LRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
+                CL_gamma_Re = self._CLRe[:,np.newaxis]*self._c_bar/(self._nu*self._V_i)[:,np.newaxis]*v_iji
 
             CL_gamma_alpha = self._CLa[:,np.newaxis]*(self._v_a[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_n[:,np.newaxis])-self._v_n[:,np.newaxis]*np.einsum('ijk,ijk->ij', V_ji, self._u_a[:,np.newaxis]))/(self._v_n*self._v_n+self._v_a*self._v_a)[:,np.newaxis]
 
@@ -942,7 +925,7 @@ class Scene:
 
         # Scale gammas to match MachUp Pro (this is approximate; I can't figure out how to get these to match exactly; it'd due to how Phillips nondimensionalizes things)
         if self._match_machup_pro:
-            self._gamma *= (self._V_inf/self._V_inf_w_o_rotation)**2
+            self._gamma *= (self._V_inf_and_rot/self._V_inf)**2
 
         # Get velocities
         if self._use_total_velocity or self._match_machup_pro:
@@ -1403,16 +1386,13 @@ class Scene:
         Parameters
         ----------
         filename : str
-            File to export the force and moment results to. Should be .json. If not specified, 
-            results will not be exported to a file.
+            File to export the force and moment results to. Should be .json. If not specified, results will not be exported to a file.
 
         non_dimensional : bool
-            If this is set to True, nondimensional coefficients will be included in the results.
-            Defaults to True.
+            If this is set to True, nondimensional coefficients will be included in the results. Defaults to True.
 
         dimensional : bool
-            If this is set to True, dimensional forces and moments will be included in the results.
-            Defaults to True.
+            If this is set to True, dimensional forces and moments will be included in the results. Defaults to True.
 
         report_by_segment : bool
             Whether to include results broken down by wing segment. Defaults to False.
@@ -1426,8 +1406,10 @@ class Scene:
         wind_frame : boolean, optional
             Whether to output results in the wind frame. Defaults to True.
 
+        initial_guess : str, optional
+            Sets the initial guess for the nonlinear solver. May be 'linear' or 'previous'. If 'linear', the linear solver is first run to determine an estimate for the vortex strength distribution. If 'previous', the last determined vortex strength distribution is used as an initial guess; this will be from the last time ```Scene.solve_forces()``` was called or will be zero if ```Scene.solve_forces()``` has not previously been called (note that ```Scene.solve_forces()``` is called by other functions, such as ```derivatives()``` etc.). Defaults to 'linear'. Only affects execution if the nonlinear solver is used. This has no effect on the final solution, only convergence rates. It should also be noted that in most instances using 'previous' will actually increase the number of iterations required for convergence. This should be used with prudence.
+
         verbose : bool
-            Whether to display timing and convergence information. Defaults to False.
 
         Returns
         -------
@@ -1438,6 +1420,9 @@ class Scene:
         # Check for aircraft
         if self._num_aircraft == 0:
             raise RuntimeError("There are no aircraft in this scene. No calculations can be performed.")
+
+        # Get kwargs
+        initial_guess = kwargs.get("initial_guess", "linear")
 
         # Initialize timing and error handling
         self._FM = {}
@@ -1452,23 +1437,31 @@ class Scene:
             if self._solver_type == "scipy_fsolve":
                 fsolve_time = self._solve_w_scipy(**kwargs)
 
-            # Solve for gamma using analytical solvers
-            if self._solver_type != "scipy_fsolve" or fsolve_time == -1:
+            # Solve for gamma using linear solver
+            if self._solver_type == "linear" or (self._solver_type == "nonlinear" and initial_guess == "linear") or fsolve_time == -1:
 
                 # Linear solution
                 linear_time = self._solve_linear(**kwargs)
 
-                # Nonlinear improvement
-                if self._solver_type == "nonlinear" or fsolve_time == -1:
-                    try:
-                        nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
-                    except KeyboardInterrupt:
-                        print("")
-                        print("!!!Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
-                        nonlinear_time = time.time()-self._nonlinear_start_time
+            # Nonlinear improvement
+            if self._solver_type == "nonlinear" or fsolve_time == -1:
+                try:
 
-                if fsolve_time == -1:
-                    fsolve_time = 0.0
+                    # Initialize things typically done in linear solver
+                    if initial_guess == "previous":
+                        self._calc_invariant_flow_properties()
+
+                    # Run nonlinear solver
+                    nonlinear_time = self._solve_nonlinear(**kwargs, scipy_failed=(fsolve_time==-1))
+
+                # Ctrl-C interrupt
+                except KeyboardInterrupt:
+                    print("")
+                    print("!!!Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
+                    nonlinear_time = time.time()-self._nonlinear_start_time
+
+            if fsolve_time == -1:
+                fsolve_time = 0.0
 
         except Exception as e:
             self._handle_error(e)
@@ -1484,9 +1477,13 @@ class Scene:
         # Output timing
         verbose = kwargs.get("verbose", False)
         if verbose:
-            print("Time to compute circulation distribution using scipy.fsolve: {0} s".format(fsolve_time))
-            print("Time to compute circulation distribution using linear equations: {0} s".format(linear_time))
-            print("Time to compute nonlinear improvement to circulation distribution: {0} s".format(nonlinear_time))
+            if fsolve_time > 0.0:
+                print("Time to compute circulation distribution using scipy.fsolve: {0} s".format(fsolve_time))
+            if linear_time > 0.0:
+                print("Time to compute circulation distribution using linear equations: {0} s".format(linear_time))
+            if nonlinear_time > 0.0:
+                print("Time to compute nonlinear improvement to circulation distribution: {0} s".format(nonlinear_time))
+
             total_time = linear_time+nonlinear_time+integrate_time+fsolve_time
             print("Time to integrate forces: {0} s".format(integrate_time))
             print("Total time: {0} s".format(total_time))
@@ -3670,7 +3667,7 @@ class Scene:
     def _print_dict_types(self, d):
         for k, v in d.items():
             if isinstance(v, dict):
-                self.print_dict_types(v)
+                self._print_dict_types(v)
 
             if isinstance(v, list):
                 for i in v:

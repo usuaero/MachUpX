@@ -22,7 +22,7 @@ copyright = '2020, Cory Goates, Doug Hunsaker'
 author = 'Cory Goates, Doug Hunsaker'
 
 # The full version, including alpha/beta/rc tags
-release = '2.7.0'
+release = '2.7.1'
 
 
 # -- General configuration ---------------------------------------------------

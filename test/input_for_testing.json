@@ -5,7 +5,7 @@
             "verbose" : true
         },
         "distributions" : {},
-        "aero_derivatives" : {},
+        "derivatives" : {},
         "pitch_trim" : {},
         "stl" : {}
     },
