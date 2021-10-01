@@ -3,6 +3,7 @@ import os
 
 import machupX as MX
 import numpy as np
+import math as m
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 
@@ -102,12 +103,13 @@ def analyze_wing(args):
                 CL[i,j] = np.nan
             del scene
 
-        plt.plot(blending_distances, CL[i,:], 'o-', label=str(grid), color=grid_colors[i], markersize=3)
+        plt.plot(blending_distances, CL[i,:], 'ko', label=str(grid), markersize=grid/15, mfc='none', linewidth=0.5)
 
     plt.xscale('log')
     plt.xlabel('$\\Delta s_b$')
     plt.ylabel('$C_L$')
-    plt.savefig("dev/blending_distance_plots/CL_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
+    plt.legend(title="Grid Size")
+    plt.savefig("dev/studies/blending_distance_plots_marker_size/CL_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
     plt.close()
 
     # Calculate Richardson extrapolations
@@ -122,7 +124,8 @@ def analyze_wing(args):
     plt.yscale('log')
     plt.xlabel('$N$')
     plt.ylabel('Error in $C_L$')
-    plt.savefig("dev/blending_distance_plots/error_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
+    #plt.legend(title="$\\Delta s_b$")
+    plt.savefig("dev/studies/blending_distance_plots_marker_size/error_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
     plt.close()
 
     return p
@@ -131,8 +134,8 @@ def analyze_wing(args):
 if __name__=="__main__":
 
     # Create plot directory
-    if not os.path.exists("dev/blending_distance_plots/"):
-        os.mkdir("dev/blending_distance_plots")
+    if not os.path.exists("dev/studies/blending_distance_plots_marker_size/"):
+        os.mkdir("dev/studies/blending_distance_plots_marker_size")
 
     # Options
     sweeps = [-25.0, -15.0, -5.0, 5.0, 15.0, 25.0]
@@ -154,7 +157,7 @@ if __name__=="__main__":
     print("".join(["-"]*80))
 
     # Send to pool
-    with mp.Pool(processes=8) as pool:
+    with mp.Pool() as pool:
         convergence_rates = pool.map(analyze_wing, args_list)
 
     # Write convergence rates to file

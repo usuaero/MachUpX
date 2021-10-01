@@ -1457,7 +1457,7 @@ class Scene:
                 # Ctrl-C interrupt
                 except KeyboardInterrupt:
                     print("")
-                    print("!!!Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
+                    print("!!! Nonlinear solver interrupted by Ctrl+C event. Moving on to force and moment integration...")
                     nonlinear_time = time.time()-self._nonlinear_start_time
 
             if fsolve_time == -1:
