@@ -103,12 +103,12 @@ def analyze_wing(args):
                 CL[i,j] = np.nan
             del scene
 
-        plt.plot(blending_distances, CL[i,:], 'ko', label=str(grid), markersize=grid/15, mfc='none', linewidth=0.5)
+        plt.plot(blending_distances, CL[i,:], 'ko', label=str(grid), markersize=150/grid, mfc='none', linewidth=0.5)
 
     plt.xscale('log')
     plt.xlabel('$\\Delta s_b$')
     plt.ylabel('$C_L$')
-    plt.legend(title="Grid Size")
+    plt.legend(title="N")
     plt.savefig("dev/studies/blending_distance_plots_marker_size/CL_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
     plt.close()
 
