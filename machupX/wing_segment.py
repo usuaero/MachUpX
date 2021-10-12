@@ -1040,7 +1040,7 @@ class WingSegment:
         return return_val
 
 
-    def _get_control_point_coef(self, alpha, Rey, coef_func):
+    def _get_control_point_coef(self, alpha, Rey, Mach, coef_func):
         # Determines the value of the desired coefficient at each control point
 
         # Only one airfoil
@@ -1048,6 +1048,7 @@ class WingSegment:
             try:
                 return getattr(self._airfoils[0], coef_func)(alpha=alpha,
                                                              Rey=Rey,
+                                                             Mach=Mach,
                                                              trailing_flap_deflection=self._delta_flap,
                                                              trailing_flap_fraction=self._cp_c_f)
 
@@ -1077,10 +1078,12 @@ class WingSegment:
                 for j, cur_slice in enumerate(self._airfoil_slices):
                     coefs[cur_slice,j] = getattr(self._airfoils[j], coef_func)(alpha=alpha[cur_slice],
                                                                                Rey=Rey[cur_slice],
+                                                                               Mach=Mach[cur_slice],
                                                                                trailing_flap_deflection=self._delta_flap[cur_slice],
                                                                                trailing_flap_fraction=self._cp_c_f[cur_slice])
                     coefs[cur_slice,j+1] = getattr(self._airfoils[j+1], coef_func)(alpha=alpha[cur_slice],
                                                                                    Rey=Rey[cur_slice],
+                                                                                   Mach=Mach[cur_slice],
                                                                                    trailing_flap_deflection=self._delta_flap[cur_slice],
                                                                                    trailing_flap_fraction=self._cp_c_f[cur_slice])
 
@@ -1092,7 +1095,7 @@ class WingSegment:
                 raise e
 
 
-    def get_cp_CLa(self, alpha, Rey):
+    def get_cp_CLa(self, alpha, Rey, Mach):
         """Returns the lift slope at each control point.
 
         Parameters
@@ -1103,16 +1106,19 @@ class WingSegment:
         Rey : ndarray
             Reynolds number
 
+        Mach : ndarray
+            Mach number
+
         Returns
         -------
         float
             Lift slope
         """
             
-        return self._get_control_point_coef(alpha, Rey, "get_CLa")
+        return self._get_control_point_coef(alpha, Rey, Mach, "get_CLa")
 
 
-    def get_cp_aL0(self, Rey):
+    def get_cp_aL0(self, Rey, Mach):
         """Returns the zero-lift angle of attack at each control point. Used for the linear 
         solution to NLL.
 
@@ -1121,16 +1127,19 @@ class WingSegment:
         Rey : ndarray
             Reynolds number
 
+        Mach : ndarray
+            Mach number
+
         Returns
         -------
         float
             Zero lift angle of attack
         """
 
-        return self._get_control_point_coef(np.zeros_like(Rey), Rey, "get_aL0") # Need to pass a dummy variable for alpha
+        return self._get_control_point_coef(np.zeros_like(Rey), Rey, Mach, "get_aL0") # Need to pass a dummy variable for alpha
 
 
-    def get_cp_CLRe(self, alpha, Rey):
+    def get_cp_CLRe(self, alpha, Rey, Mach):
         """Returns the derivative of the lift coefficient with respect to Reynolds number at each control point
 
         Parameters
@@ -1141,16 +1150,42 @@ class WingSegment:
         Rey : ndarray
             Reynolds number
 
+        Mach : ndarray
+            Mach number
+
         Returns
         -------
         float
             Z
         """
 
-        return self._get_control_point_coef(alpha, Rey, "get_CLRe")
+        return self._get_control_point_coef(alpha, Rey, Mach, "get_CLRe")
 
 
-    def get_cp_CL(self, alpha, Rey):
+    def get_cp_CLM(self, alpha, Rey, Mach):
+        """Returns the derivative of the lift coefficient with respect to Mach number at each control point
+
+        Parameters
+        ----------
+        alpha : ndarray
+            Angle of attack
+
+        Rey : ndarray
+            Reynolds number
+
+        Mach : ndarray
+            Mach number
+
+        Returns
+        -------
+        float
+            Z
+        """
+
+        return self._get_control_point_coef(alpha, Rey, Mach, "get_CLM")
+
+
+    def get_cp_CL(self, alpha, Rey, Mach):
         """Returns the coefficient of lift at each control point as a function of params.
 
         Parameters
@@ -1161,16 +1196,19 @@ class WingSegment:
         Rey : ndarray
             Reynolds number
 
+        Mach : ndarray
+            Mach number
+
         Returns
         -------
         float or ndarray
             Coefficient of lift
         """
 
-        return self._get_control_point_coef(alpha, Rey, "get_CL")
+        return self._get_control_point_coef(alpha, Rey, Mach, "get_CL")
 
 
-    def get_cp_CD(self, alpha, Rey):
+    def get_cp_CD(self, alpha, Rey, Mach):
         """Returns the coefficient of drag at each control point as a function of params.
 
         Parameters
@@ -1181,16 +1219,19 @@ class WingSegment:
         Rey : ndarray
             Reynolds number
 
+        Mach : ndarray
+            Mach number
+
         Returns
         -------
         float
             Coefficient of drag
         """
 
-        return self._get_control_point_coef(alpha, Rey, "get_CD")
+        return self._get_control_point_coef(alpha, Rey, Mach, "get_CD")
 
 
-    def get_cp_Cm(self, alpha, Rey):
+    def get_cp_Cm(self, alpha, Rey, Mach):
         """Returns the moment coefficient at each control point as a function of params.
 
         Parameters
@@ -1201,13 +1242,16 @@ class WingSegment:
         Rey : ndarray
             Reynolds number
 
+        Mach : ndarray
+            Mach number
+
         Returns
         -------
         float
             Moment coefficient
         """
 
-        return self._get_control_point_coef(alpha, Rey, "get_Cm")
+        return self._get_control_point_coef(alpha, Rey, Mach, "get_Cm")
 
 
     def get_outline_points(self):
