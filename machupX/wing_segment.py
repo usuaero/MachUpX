@@ -1428,19 +1428,37 @@ class WingSegment:
 
             # Create facets between the outlines
             for j in range(section_res-1):
+
+                # Check which side we're on
+                # Rolling the order of the vertices based on this mirrors panel distributions for symmetric wings
+                on_top = j <= section_res//2-1 # Calling this side top is totally arbitrary
+
+                # Get index of these vertices
                 index = (2*i*(section_res-1)+2*j)*3+num_root_facets*3*close_root+num_root_facets*3*n_round*round_root
 
                 # Set orientation based on which span
                 if self.side == "left":
-                    vectors[index:index+6] = self._get_two_tris_from_quad(root_outline[j],
-                                                                          root_outline[j+1],
-                                                                          tip_outline[j+1],
-                                                                          tip_outline[j])
+                    if on_top:
+                        vectors[index:index+6] = self._get_two_tris_from_quad(root_outline[j],
+                                                                              root_outline[j+1],
+                                                                              tip_outline[j+1],
+                                                                              tip_outline[j])
+                    else:
+                        vectors[index:index+6] = self._get_two_tris_from_quad(root_outline[j+1],
+                                                                              tip_outline[j+1],
+                                                                              tip_outline[j],
+                                                                              root_outline[j])
                 else:
-                    vectors[index:index+6] = self._get_two_tris_from_quad(tip_outline[j],
-                                                                          tip_outline[j+1],
-                                                                          root_outline[j+1],
-                                                                          root_outline[j])
+                    if on_top:
+                        vectors[index:index+6] = self._get_two_tris_from_quad(tip_outline[j],
+                                                                              tip_outline[j+1],
+                                                                              root_outline[j+1],
+                                                                              root_outline[j])
+                    else:
+                        vectors[index:index+6] = self._get_two_tris_from_quad(tip_outline[j+1],
+                                                                              root_outline[j+1],
+                                                                              root_outline[j],
+                                                                              tip_outline[j])
 
         return vectors
 
@@ -1448,8 +1466,12 @@ class WingSegment:
     def _get_two_tris_from_quad(self, v0, v1, v2, v3):
         # Takes a set of four vertices and gives the two minimum AR triangles with the same orientation
 
+        # Determine where to split
+        x0 = np.linalg.norm(v0-v2) 
+        x1 = np.linalg.norm(v1-v3)
+
         # Split along v0-v2
-        if np.linalg.norm(v0-v2) < np.linalg.norm(v1-v3): # I don't get why this works, but it does
+        if x0 < x1 or (x0 == x1 and self.side == "left"): # I don't get why this works, but it does
             return v0, v1, v2, v0, v2, v3
         
         # Split along v1-v3
