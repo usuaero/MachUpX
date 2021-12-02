@@ -1604,7 +1604,7 @@ class WingSegment:
         T[1] = np.cross(T[2], T[0])
 
         # Transform the outline
-        shifted_outline = outline-p0[np.newaxis]
+        shifted_outline = outline-p0[np.newaxis,:]
         transed_outline = np.einsum('ij,kj->ki', T, shifted_outline)
         bottom_outline = transed_outline[-1:N//2-1:-1]
         top_outline = transed_outline[:N//2+1]
@@ -1660,6 +1660,12 @@ class WingSegment:
         start_outline = np.einsum('ij,kj->ki', T_from_top_to_start, top_outline)*start_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_start, bottom_outline)*start_bottom_weight
         end_outline = np.einsum('ij,kj->ki', T_from_top_to_end, top_outline)*end_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_end, bottom_outline)*end_bottom_weight
 
+        # Ensure the rounding outlines do not protrude above or below the original outlines
+        start_outline[:,1] = np.where(start_outline[:,1]<top_outline[:,1], top_outline[:,1], start_outline[:,1])
+        start_outline[:,1] = np.where(start_outline[:,1]>bottom_outline[:,1], bottom_outline[:,1], start_outline[:,1])
+        end_outline[:,1] = np.where(end_outline[:,1]<top_outline[:,1], top_outline[:,1], end_outline[:,1])
+        end_outline[:,1] = np.where(end_outline[:,1]>bottom_outline[:,1], bottom_outline[:,1], end_outline[:,1])
+
         # Concatenate
         rounding_outline = np.concatenate((start_outline, end_outline[-2::-1]), axis=0)
 
@@ -1671,7 +1677,7 @@ class WingSegment:
             rounding_outline[:,0] -= offset
 
         # Transform to global coords
-        return np.einsum('ij,ki->kj', T.T, rounding_outline)+p0[np.newaxis]
+        return np.einsum('ij,ki->kj', T, rounding_outline)+p0[np.newaxis]
 
 
     def get_vtk_panel_vertices(self, **kwargs):
