@@ -951,12 +951,24 @@ class Scene:
         # Calculate vortex force differential elements
         self._dF_inv = (self._rho*self._gamma)[:,np.newaxis]*np.cross(self._v_i, self._dl)
 
-        # Calculate conditions for determining viscid contributions
+        # Calculate conditions for determining viscous contributions
         self._v_a = np.einsum('ij,ij->i', self._v_i, self._u_a)
         self._v_n = np.einsum('ij,ij->i', self._v_i, self._u_n)
         self._alpha = np.arctan2(self._v_n, self._v_a)
         if self._use_swept_sections:
             self._Re_unswept = self._V_i*self._c_bar*self._C_sweep_inv/self._nu
+
+            # Calculate unswept angle of attack for determining drag coefficient
+            u_a = np.zeros_like(self._u_a)
+            u_n = np.zeros_like(self._u_n)
+            for airplane_object, airplane_slice in zip(self._airplane_objects, self._airplane_slices):
+                q = airplane_object.q
+                u_a[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_a_unswept)
+                u_n[airplane_slice,:] = quat_inv_trans(q, airplane_object.u_n_unswept)
+            v_a = np.einsum('ij,ij->i', self._v_i, u_a)
+            v_n = np.einsum('ij,ij->i', self._v_i, u_n)
+            alpha_unswept = np.arctan2(v_n, v_a)
+
         else:
             self._Re_unswept = self._V_i*self._c_bar/self._nu
 
@@ -999,7 +1011,10 @@ class Scene:
                 cur_slice = slice(index, index+num_cps)
 
                 # Section drag coefficient
-                self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re_unswept[cur_slice], self._M[cur_slice])
+                if self._use_swept_sections:
+                    self._CD[cur_slice] = segment.get_cp_CD(alpha_unswept[cur_slice], self._Re_unswept[cur_slice], self._M[cur_slice])
+                else:
+                    self._CD[cur_slice] = segment.get_cp_CD(self._alpha[cur_slice], self._Re_unswept[cur_slice], self._M[cur_slice])
 
                 # Section moment coefficient
                 self._Cm[cur_slice] = segment.get_cp_Cm(self._alpha[cur_slice], self._Re[cur_slice], self._M[cur_slice])
