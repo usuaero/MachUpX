@@ -968,6 +968,8 @@ class Scene:
             v_a = np.einsum('ij,ij->i', self._v_i, u_a)
             v_n = np.einsum('ij,ij->i', self._v_i, u_n)
             alpha_unswept = np.arctan2(v_n, v_a)
+            print(alpha_unswept[-1])
+            print(self._alpha[-1])
 
         else:
             self._Re_unswept = self._V_i*self._c_bar/self._nu
@@ -2533,13 +2535,62 @@ class Scene:
         i = 0
         while (abs(R)>1e-10).any():
 
+
+            # Calculate CL,delta and Cm,delta
+            dtheta = 0.5
+            curr_control_state = copy.deepcopy(airplane_object.current_control_state)
+            pert_control_state = copy.deepcopy(curr_control_state)
+            curr_control_val = curr_control_state.get(pitch_control, 0.0)
+
+            #Perturb forward
+            pert_control_state[pitch_control] = curr_control_val + dtheta
+            airplane_object.set_control_state(control_state=pert_control_state)
+            FM_fwd = self.solve_forces(dimensional=False, wind_frame=True, body_frame=False, stab_frame=False)
+
+            #Perturb backward
+            pert_control_state[pitch_control] = curr_control_val - dtheta
+            airplane_object.set_control_state(control_state=pert_control_state)
+            FM_bwd = self.solve_forces(dimensional=False, wind_frame=True, body_frame=False, stab_frame=False)
+
+            # Reset state
+            pert_control_state[pitch_control] = curr_control_val
+            airplane_object.set_control_state(control_state=pert_control_state)
+            self._solved = False
+
+            # Calculate derivatives
+            diff = 2*np.radians(dtheta)
+            CL_delta = (FM_fwd[aircraft_name]["total"]["CL"]-FM_bwd[aircraft_name]["total"]["CL"])/diff
+            Cm_delta = (FM_fwd[aircraft_name]["total"]["Cm_w"]-FM_bwd[aircraft_name]["total"]["Cm_w"])/diff
+
+            # Calculate alpha derivatives
+
+            # Get current aerodynamic state
+            alpha_0, beta_0,_ = airplane_object.get_aerodynamic_state()
+
+            # Perturb forward in alpha
+            airplane_object.set_aerodynamic_state(alpha=alpha_0+dtheta)
+            self.solve_forces(dimensional=False, wind_frame=True, body_frame=False, stab_frame=False)
+            FM_dalpha_fwd = self._FM
+
+            # Perturb backward in alpha
+            airplane_object.set_aerodynamic_state(alpha=alpha_0-dtheta)
+            self.solve_forces(dimensional=False, wind_frame=True, body_frame=False, stab_frame=False)
+            FM_dalpha_bwd = self._FM
+
+            # Calculate derivatives
+            CL_a = (FM_dalpha_fwd[aircraft_name]["total"]["CL"]-FM_dalpha_bwd[aircraft_name]["total"]["CL"])/diff
+            Cm_a = (FM_dalpha_fwd[aircraft_name]["total"]["Cm_w"]-FM_dalpha_bwd[aircraft_name]["total"]["Cm_w"])/diff
+
+            # Reset aerodynamic state
+            self._airplanes[aircraft_name].set_aerodynamic_state(alpha=alpha_0, beta=beta_0)
+            self._solved = False
+
             # Determine Jacobian
             stab_derivs = self.stability_derivatives()
-            cont_derivs = self.control_derivatives()
-            J[0,0] = stab_derivs[aircraft_name]["CL,a"]
-            J[0,1] = cont_derivs[aircraft_name]["CL,d"+pitch_control]
-            J[1,0] = stab_derivs[aircraft_name]["Cm,a"]
-            J[1,1] = cont_derivs[aircraft_name]["Cm,d"+pitch_control]
+            J[0,0] = CL_a
+            J[0,1] = CL_delta
+            J[1,0] = Cm_a
+            J[1,1] = Cm_delta
 
             # Calculate update
             delta = np.linalg.solve(J,-R)
