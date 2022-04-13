@@ -1535,6 +1535,58 @@ class WingSegment:
         return coords
 
 
+    def _get_rectangle_outline_coords_at_span(self, span):
+        # Returns the rectangle section outline in body-fixed coordinates at the specified span fraction
+
+        # initialize rectangle outline
+        rect = np.array([[1.0,-0.5],[1.0,0.5],[0.0,0.5],[0.0,-0.5],[1.0,-0.5]])
+
+        # Linearly interpolate outlines, ignoring twist, etc for now
+        if self._num_airfoils == 1:
+            points = rect * 1.0
+            points[:,1] = points[:,1] * self._airfoils[0].get_max_thickness()
+        else:
+            index = 0
+            while True:
+                if span >= self._airfoil_spans[index] and span <= self._airfoil_spans[index+1]:
+                    total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+
+                    # Get weights
+                    root_weight = 1-abs(span-self._airfoil_spans[index])/total_span
+                    tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
+
+                    # Get outlines
+                    root_outline = rect * 1.0
+                    root_outline[:,1] = root_outline[:,1] * self._airfoils[index].get_max_thickness()
+                    
+                    tip_outline = rect * 1.0
+                    tip_outline[:,1] = tip_outline[:,1] * self._airfoils[index+1].get_max_thickness()
+                    
+                    # Interpolate
+                    points = root_weight*root_outline+tip_weight*tip_outline
+                    break
+
+                index += 1
+
+        # Get twist, dihedral, and chord
+        twist = self.get_twist(span)
+        dihedral = self.get_dihedral(span)
+        chord = self.get_chord(span)
+
+        # Scale to chord and transform to body-fixed coordinates
+        if self._shear_dihedral:
+            q = euler_to_quat(np.array([0.0, twist, 0.0]))
+        else:
+            q_dih = euler_to_quat(np.array([dihedral, 0.0, 0.0]))
+            q_twi = euler_to_quat(np.array([0.0, twist, 0.0]))
+            q = quat_mult(q_dih, q_twi)
+
+        untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(5), -points[:,1]]).T
+        coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)
+
+        return coords
+
+
     def _get_stl_end_vectors(self, N, outline_points, close_te, num_facets, le_tri):
         # Determines the stl vectors that seal an end of the wing segment
 
@@ -1875,23 +1927,23 @@ class WingSegment:
 
         Parameters
         ----------
-        airplane_name: str
-            Name of the airplane this segment belongs to.
-
         file_tag : str, optional
-            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.dxf".
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
 
-        section_resolution : int
-            Number of outline points to use for the sections. Defaults to 200.
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         
-        number_guide_curves : int
+        number_guide_curves : int, optional
             Number of guidecurves to create. Defaults to 2 (one at the leading edge, one at the trailing edge).
         
-        export_english_units : bool
+        export_english_units : bool, optional
             Whether to export the dxf file in English units. Defaults to True.
 
-        dxf_line_type : str
+        dxf_line_type : str, optional
             Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
+        
+        export_as_prismoid : bool, optional
+            Whether to export each airfoil as a rectangle. Forces number_guide_curves to 4 and section_resolution to 5. Defaults to False.
         """
 
         # Get kwargs
@@ -1900,6 +1952,10 @@ class WingSegment:
         number_guide_curves = kwargs.get("number_guide_curves", 2)
         export_english_units = kwargs.get("export_english_units", True)
         dxf_line_type = kwargs.get("dxf_line_type", "spline")
+        export_as_prismoid = kwargs.get("export_as_prismoid", False)
+        if export_as_prismoid:
+            number_guide_curves = 4
+            section_res = 5
 
         # raise error if number of guidecurves is less than 1
         if number_guide_curves < 1:
@@ -1950,7 +2006,10 @@ class WingSegment:
         for i, s_i in enumerate(self.node_span_locs):
 
             # Get outline points
-            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res, close_te)
+            if export_as_prismoid:
+                outline = self._get_rectangle_outline_coords_at_span(s_i)
+            else:
+                outline = self._get_airfoil_outline_coords_at_span(s_i, section_res, close_te)
 
             # Store in arrays
             X_3D[i,:] = outline[:,0] * unit_multiplier
@@ -1965,8 +2024,8 @@ class WingSegment:
 
             # if not the first index, determine the index to place a guide curve
             if i != 0:
-                guide_curve_indices[i] = (float(i) * (number_guide_curves-1) / number_guide_curves) * 200 // (number_guide_curves-1)
-
+                guide_curve_indices[i] = (float(i) * (number_guide_curves-1) / number_guide_curves) * section_res // (number_guide_curves-1)
+        
         # add the guide curve points at each index
         for i in range(guide_curve_indices.shape[0]):
 
@@ -1992,7 +2051,10 @@ class WingSegment:
                 span = float(i)
             
             # determine 3D shape at this location
-            outline = self._get_airfoil_outline_coords_at_span(span, section_res, close_te) * unit_multiplier
+            if export_as_prismoid:
+                outline = self._get_rectangle_outline_coords_at_span(span) * unit_multiplier
+            else:
+                outline = self._get_airfoil_outline_coords_at_span(span, section_res, close_te) * unit_multiplier
             
             # add 3D outline splines to array
             for j in range(number_guide_curves):
