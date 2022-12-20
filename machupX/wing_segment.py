@@ -101,9 +101,6 @@ class WingSegment:
         self.reid_corr = grid_dict.get("reid_corrections", True)
         self.delta_joint = grid_dict.get("joint_length", 0.15)
         self.blend_dist = grid_dict.get("blending_distance", 1.0)
-        self.wing_ID = grid_dict.get("wing_ID", None)
-        if self.wing_ID is not None and self.wing_ID < 0:
-            raise IOError("'wing_ID' for wing segment {0} cannot be negative. Got {1}.".format(self.name, self.wing_ID))
 
         # Get location information
         connect_dict = self._input_dict.get("connect_to", {})
