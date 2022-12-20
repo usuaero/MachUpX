@@ -1,12 +1,12 @@
-"""MachUpX: A new implementation of Phillips' numerical lifting-line algorigthm, combining the best of MachUp Pro and MachUp_Py"""
+"""MachUpX: An implementation of the Goates-Hunsaker generalized numerical lifting-line algorithm."""
 
 from setuptools import setup
 import os
 import sys
 
 setup(name = 'MachUpX',
-    version = '2.7.1',
-    description = "MachUpX: A new implementation of Phillips' numerical lifting-line algorigthm, combining the best of MachUp Pro and MachUp_Py",
+    version = '2.7.2',
+    description = "MachUpX: An implementation of the Goates-Hunsaker generalized numerical lifting-line algorithm.",
     url = 'https://github.com/usuaero/MachUpX',
     author = 'usuaero',
     author_email = 'doug.hunsaker@usu.edu',

@@ -63,6 +63,10 @@ class WingSegment:
         self.ID = self._input_dict.get("ID")
         if self.ID == 0 and name != "origin":
             raise IOError("Wing segment ID for {0} may not be 0.".format(name))
+        if name == "origin":
+            self.has_mirror = False
+        else:
+            self.has_mirror = self._input_dict.get("side", "both") == "both"
 
         if self.ID != 0: # These do not need to be run for the origin segment
             self._initialize_params()
@@ -79,7 +83,7 @@ class WingSegment:
             # Get CAD options
             self._cad_options = self._input_dict.get("CAD_options", {})
 
-    
+
     def _initialize_params(self):
 
         # Determine if it's part of the main wing
@@ -101,18 +105,23 @@ class WingSegment:
         if self.wing_ID is not None and self.wing_ID < 0:
             raise IOError("'wing_ID' for wing segment {0} cannot be negative. Got {1}.".format(self.name, self.wing_ID))
 
+        # Get location information
+        connect_dict = self._input_dict.get("connect_to", {})
+        self._connected_to_ID = connect_dict.get("ID", 0)
+        self._connected_to_loc = connect_dict.get("location", "tip")
+
         # Set origin offset
         self._delta_origin = np.zeros(3)
-        connect_dict = self._input_dict.get("connect_to", {})
         self._delta_origin[0] = connect_dict.get("dx", 0.0)
         self._delta_origin[1] = connect_dict.get("dy", 0.0)
         self._delta_origin[2] = connect_dict.get("dz", 0.0)
 
+        # Apply y-offset
+        self.y_offset = connect_dict.get("y_offset", 0.0)
         if self.side == "left":
-            self._delta_origin[1] -= connect_dict.get("y_offset", 0.0)
-
+            self._delta_origin[1] -= self.y_offset
         else:
-            self._delta_origin[1] += connect_dict.get("y_offset", 0.0)
+            self._delta_origin[1] += self.y_offset
 
         # Create arrays of span locations used to generate nodes and control points
         if distribution == "cosine_cluster": # Cosine clustering
@@ -221,6 +230,13 @@ class WingSegment:
         if self.side == "left":
             self.node_span_locs = self.node_span_locs[::-1]
             self.cp_span_locs = self.cp_span_locs[::-1]
+
+
+    def is_continuation(self):
+        """Returns whether this wing segment directly connects to the tip of another wing segment."""
+
+        # A continuation of a lifting line will attach to another wing segment at the tip with no offset
+        return self._connected_to_ID != 0 and self._connected_to_loc == "tip" and np.linalg.norm(self._delta_origin) < 1e-12
 
 
     def _initialize_getters(self):
@@ -788,12 +804,12 @@ class WingSegment:
         self.nodes = self._get_ll_loc(self.node_span_locs)
 
 
-    def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+    def attach_wing_segment(self, new_segment_name, input_dict, side, unit_sys, airfoil_dict):
         """Attaches a wing segment to the current segment or one of its children.
         
         Parameters
         ----------
-        wing_segment_name : str
+        new_segment_name : str
             Name of the wing segment to attach.
 
         input_dict : dict
@@ -819,50 +835,69 @@ class WingSegment:
             raise RuntimeError("Segments can only be added at the origin segment.")
 
         else:
-            return self._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+            return self._attach_wing_segment(new_segment_name, input_dict, side, unit_sys, airfoil_dict)
 
 
-    def _attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+    def _attach_wing_segment(self, new_segment_name, input_dict, side, unit_sys, airfoil_dict):
         # Recursive function for attaching a wing segment.
 
-        parent_ID = input_dict.get("connect_to", {}).get("ID", 0)
-        if self.ID == parent_ID: # The new segment is supposed to attach to this one
+        connect_dict = input_dict.get("connect_to", {})
+        parent_ID = connect_dict.get("ID", 0)
+
+        # Check this ID matches the ID of the one we want to attach to
+        if self.ID == parent_ID:
+
+            # For mirrored wing segments, a right segment only ever attaches to a right segment and same with left
+            if self.has_mirror and side not in self.name:
+                return False
 
             # Determine the connection point
-            if input_dict.get("connect_to", {}).get("location", "tip") == "root":
+            if connect_dict.get("location", "tip") == "root":
                 attachment_point = self.get_root_loc()
+
+                # Remove y-offset
+                if self.side == "left":
+                    attachment_point[1] += self.y_offset
+                else:
+                    attachment_point[1] -= self.y_offset
             else:
                 attachment_point = self.get_tip_loc()
 
-            self._attached_segments[wing_segment_name] = WingSegment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
+            # Initialize wing segment
+            self._attached_segments[new_segment_name] = WingSegment(new_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
 
-            return self._attached_segments[wing_segment_name] # Return reference to newly created wing segment
+            # Set whether this segment's parent has a mirror
+            self._attached_segments[new_segment_name].parent_has_mirror = self.has_mirror
+
+            # Return reference to newly created wing segment
+            return self._attached_segments[new_segment_name]
 
         else: # We need to recurse deeper
+
             result = False
-            for key in self._attached_segments:
-                if side not in key: # A right segment only ever attaches to a right segment and same with left
-                    continue
-                result = self._attached_segments[key]._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+            for segment_name, segment in self._attached_segments.items():
+
+                result = segment._attach_wing_segment(new_segment_name, input_dict, side, unit_sys, airfoil_dict)
+
                 if result is not False:
                     break
 
             if self.ID == 0 and not result:
-                raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(wing_segment_name))
+                raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(new_segment_name))
 
             return result
 
 
-    def _get_attached_wing_segment(self, wing_segment_name):
+    def _get_attached_wing_segment(self, new_segment_name):
         # Returns a reference to the specified wing segment.
         try:
             # See if it is attached to this wing segment
-            return self._attached_segments[wing_segment_name]
+            return self._attached_segments[new_segment_name]
         except KeyError:
             # Otherwise
             result = False
             for key in self._attached_segments:
-                result = self._attached_segments[key]._get_attached_wing_segment(wing_segment_name)
+                result = self._attached_segments[key]._get_attached_wing_segment(new_segment_name)
                 if result:
                     break
 
