@@ -1604,7 +1604,7 @@ class Scene:
 
         # Setup 3D figure
         fig = plt.figure(figsize=plt.figaspect(1.0)*2.0)
-        ax = fig.gca(projection='3d')
+        ax = fig.add_subplot(projection='3d')
 
         # This matters for setting up the plot axis limits
         first_segment = True
