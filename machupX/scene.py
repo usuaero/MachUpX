@@ -3241,13 +3241,13 @@ class Scene:
         if filename is not None:
             
             # Define header and output format
-            header = "{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0}".format(
+            header = "{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21},{22},{23},{24},{25},{26},{27},{28},{29},{30},{31},{32}".format(
                 "aircraft", "segment", "span_fraction", "control_x", "control_y", "control_z", "chord", "swept_chord", "twist", "dihedral", "sweep", "aero_sweep", "area", "alpha",
                 "flap_deflection", "u", "v", "w", "Re", "M", "q", "CL", "Cm", "parasitic_CD", "alpha_L0", "Fx", "Fy", "Fz", "Mx", "My", "Mz", "Circ", "CD_i")
             format_string = "%-20s,%-20s,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e,%20.12e"
 
             # Save
-            np.savetxt(filename, table_data, fmt=format_string, header=header)
+            np.savetxt(filename, table_data, fmt=format_string, header=header, comments='')
 
         # Create plots specified by the user
         make_plots = kwargs.get("make_plots", [])
