@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-Version 2 of MachUpX is dependent upon the AirfoilDatabase package, also distributed by the USU AeroLab. The source code for AirfoilDatabase can be found on our [Github page](https://github.com/usuaero/AirfoilDatabase). Before installing MachUpX, you will need to download and install AirfoilDatabase manually.
+Version 2 of MachUpX is dependent upon the AirfoilDatabase package, also distributed by the USU AeroLab. The source code for AirfoilDatabase can be found on our [Github page](https://github.com/usuaero/AirfoilDatabase). **Before installing MachUpX, you will need to download and install AirfoilDatabase.**
 
 ## Getting Python
 

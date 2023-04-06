@@ -243,7 +243,7 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>Specifies whether this wing segment is part of the main wing (used for determining reference lengths and areas).
 >>>
 >>>**"side" : string**
->>>>May be "right", "left", or "both". Defines which side(s) of the aircraft the wing segment appears on. If "both", the wing segment will be mirrored across the x-z plane.
+>>>>May be "right", "left", or "both". Defines which side(s) of the aircraft the wing segment appears on. If "both", the wing segment will be mirrored across the x-z plane. Defaults to "both".
 >>>
 >>>**"connect_to" : dict**
 >>>>Places the origin for the wing segment. This can be defined relative to the aircraft's body-fixed origin, or the root or tip of any other wing segment.
@@ -252,7 +252,7 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>>ID of the wing segment this wing segment's origin is being defined relative to. If 0, this wing segment's origin will be defined relative to the aircraft's body-fixed origin. Defaults to 0.
 >>>>
 >>>>**"location" : string, optional**
->>>>>May be "root" or "tip". Defines whether this wing segment's origin should be defined relative to the root or tip of the other wing segment. Defaults to "tip"
+>>>>>May be "root" or "tip". Defines whether this wing segment's origin should be defined relative to the root or tip of the other wing segment. Defaults to "tip". If "root", any y-offset used in placing the other wing segment will be ignored in placing this wing segment.
 >>>>
 >>>>**"dx" : float, optional**
 >>>>>Displacement of the origin from the selected reference point in the body-fixed x- direction. Defaults to 0.
@@ -329,16 +329,13 @@ Describes an aircraft. Stored as a .json file or a Python dictionary.
 >>>>>If extra clustering is desired (for example at a sharp change in geometry) the user can specify a list of additional span fractions here about which control points should be clustered. Can only be used if "distribution" is "cosine_cluster". Defaults to no extra clustering.
 >>>>
 >>>>**"reid_corrections" : bool, optional**
->>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). For those not familiar with the general implementation of numerical lifting-line, it is highly recommended to read the paper. These analytic corrections increase accuracy and ensure grid convergence for swept wings and wings in sideslip. Should not be set to False unless you know what you're doing. Defaults to True.
+>>>>>Whether to apply corrections to this wing segment to implement the general approach to lifting-line developed by Reid (Reid, et al. "A General Approach to Lifting-Line Theory, Applied to Wings with Sweep," *AIAA SciTech Forum*, 2020.). Defaults to True. Should not be set to False unless you know what you're doing.
 >>>>
 >>>>**"joint_length" : float, optional**
 >>>>>Non-dimensional joint length, as a fraction of the chord, of the jointed horseshoe vortices. Defaults to 0.15. Note that any joint length less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
 >>>>
 >>>>**"blending_distance" : float, optional**
 >>>>>Non-dimensional lifting-line blending distance to be used in setting conditional concavity. Defaults to 1.0. Note that any blending distance less than the default is considered by Reid to be numerically sensitive, leading to poor grid convergence. Final results are mildly sensitive to this parameter.
->>>>
->>>>**"wing_ID" : int, optional**
->>>>>ID of the wing this wing segment belongs to. This is not the same as the ID of the wing segment that this wing segment connects to. Rather, this parameter is used to group wing segments into contiguous wings that share a single lifting-line. If this is not specified, MachUpX will assume this wing segment is isolated in space, except from its mirror image if the two halves are contiguous. Must be positive. Defaults to None. Not required if "reid_corrections" is False.
 >>>
 >>>**"control_surface" : dict, optional**
 >>>>Defines a control surface on the trailing edge of the wing segment. The flap aerodynamics are determined by the airfoil type given for the wing segment. A "linear" airfoil will use Phillips' approximations for trailing-edge flaps (Mechanics of Flight, ed. 2, Ch. 1.7).

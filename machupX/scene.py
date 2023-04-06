@@ -1621,7 +1621,7 @@ class Scene:
 
         # Setup 3D figure
         fig = plt.figure(figsize=plt.figaspect(1.0)*2.0)
-        ax = fig.gca(projection='3d')
+        ax = fig.add_subplot(projection='3d')
 
         # This matters for setting up the plot axis limits
         first_segment = True
@@ -3484,23 +3484,26 @@ class Scene:
 
         Parameters
         ----------
-        aircraft : str
+        aircraft : str, optional
             The aircraft to export .dxf files of.
 
         file_tag : str, optional
-            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.dxf".
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
 
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         
-        number_guide_curves : int
+        number_guide_curves : int, optional
             Number of guidecurves to create. Defaults to 2 (one at the leading edge, one at the trailing edge).
         
-        export_english_units : bool
+        export_english_units : bool, optional
             Whether to export the dxf file in English units. Defaults to True.
 
-        dxf_line_type : str
+        dxf_line_type : str, optional
             Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
+        
+        export_as_prismoid : bool, optional
+            Whether to export each airfoil as a rectangle. Forces number_guide_curves to 4 and section_resolution to 5. Defaults to False.
         """
         
         # Specify the aircraft

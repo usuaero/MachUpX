@@ -433,7 +433,6 @@ class Airplane:
 
     def _calculate_geometry(self):
         # Figures out which wing segments are contiguous and sets up the lists of control points and vortex nodes
-        jackson_analytic = False # For comparing to Jackson's case
 
         # Initialize arrays
         # Geometry
@@ -562,13 +561,7 @@ class Airplane:
         self.PC_CG = self.PC-self.CG[np.newaxis,:]
 
         # Calculate control point derivative with respect to distance along the lifting line projected onto the body y-z plane
-        if jackson_analytic:
-            z = self.PC[:,1]
-            PC_deriv = np.zeros((self.N,3))
-            PC_deriv[:,1] = 1.0
-            PC_deriv[:,0] = self._calc_f_prime_of_z(z)
-        else:
-            PC_deriv = self.u_s/np.linalg.norm(self.u_s[:,1:], axis=1, keepdims=True)
+        PC_deriv = self.u_s/np.linalg.norm(self.u_s[:,1:], axis=1, keepdims=True)
 
         # Determine the sweep angle of each section based on the lifting line
         self.section_sweep = -np.arctan(PC_deriv[:,0])
@@ -610,82 +603,64 @@ class Airplane:
                 u_a = u_a/np.linalg.norm(u_a, axis=1, keepdims=True)
 
                 # Place vortex joints
-                if jackson_analytic:
+                # These equations ensure the joint vector (u_j) is orthogonal to the lifting-line tangent and lies in the plane defined
+                # by the lifting-line tangent and the unswept axial vector (i.e. chord line). You get these by solving
+                #
+                #   < u_j, T > = 0
+                #   < u_j, u_a > > 0
+                #   u_j = c1*u_a+c2*T
+                # 
+                # Lead to
+                #
+                # c1 = sqrt(1/1-k^2)
+                # c2 = -c1*k
+                #
+                # where
+                #
+                # k = < T, u_a >
 
-                    z_P0 = self.P0_eff[i,wing_slice,1]
-                    f_prime_0 = self._calc_f_prime_of_z(z_P0)
-                    f_eff_prime_0 = f_prime_0+blend_0*(PC_deriv[i,0]-f_prime_0-2*sigma_blend[i]*ds0*ds0*(PC_deriv[i,0]+(PC[0]-self.P0[wing_slice,0])/ds0))
-                    length = delta_joint[i]/np.sqrt(1+f_eff_prime_0**2)
-                    self.P0_joint_eff[i,wing_slice,0] = self.P0_eff[i,wing_slice,0]-length
-                    self.P0_joint_eff[i,wing_slice,1] = self.P0_eff[i,wing_slice,1]+f_eff_prime_0*length
+                # Same for both
+                dt = np.zeros(wing_slice.stop-wing_slice.start)
 
-                    z_P1 = self.P1_eff[i,wing_slice,1]
-                    f_prime_1 = self._calc_f_prime_of_z(z_P1)
-                    f_eff_prime_1 = f_prime_1+blend_1*(PC_deriv[i,0]-f_prime_1-2*sigma_blend[i]*ds1*ds1*(PC_deriv[i,0]+(PC[0]-self.P1[wing_slice,0])/ds1))
-                    length = delta_joint[i]/np.sqrt(1+f_eff_prime_1**2)
-                    self.P1_joint_eff[i,wing_slice,0] = self.P1_eff[i,wing_slice,0]-length
-                    self.P1_joint_eff[i,wing_slice,1] = self.P1_eff[i,wing_slice,1]+f_eff_prime_1*length
+                # P0
+                d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
+                dt[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
+                T0 = np.gradient(self.P0_eff[i,wing_slice,:], dt, edge_order=2, axis=0)
+                T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
+                k = np.einsum('ij,ij->i', T0, u_a)
+                c1 = np.sqrt(1/(1-k*k))
+                c2 = -c1*k
+                u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
+                u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
+                self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
-                else:
+                # P1 joint
+                d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
+                dt[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
+                T1 = np.gradient(self.P1_eff[i,wing_slice,:], dt, edge_order=2, axis=0)
+                T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
+                k = np.einsum('ij,ij->i', T1, u_a)
+                c1 = np.sqrt(1/(1-k*k))
+                c2 = -c1*k
+                u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
+                u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
+                self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
 
-                    # These equations ensure the joint vector (u_j) is orthogonal to the lifting-line tangent and lies in the plane defined
-                    # by the lifting-line tangent and the unswept axial vector (i.e. chord line). You get these by solving
-                    #
-                    #   < u_j, T > = 0
-                    #   < u_j, u_a > > 0
-                    #   u_j = c1*u_a+c2*T
-                    # 
-                    # Lead to
-                    #
-                    # c1 = sqrt(1/1-k^2)
-                    # c2 = -c1*k
-                    #
-                    # where
-                    #
-                    # k = < T, u_a >
+                # Plot effective vortices for control points at the root
+                if False and i > (self.N//2-2) and i < (self.N//2+1):
+                    fig = plt.figure(figsize=plt.figaspect(1.0))
+                    ax = fig.gca(projection='3d')
+                    for j in range(wing_slice.start, wing_slice.stop):
+                        ax.plot([self.P0_joint_eff[i,j,0], self.P0_eff[i,j,0], self.P1_eff[i,j,0], self.P1_joint_eff[i,j,0]],
+                                [self.P0_joint_eff[i,j,1], self.P0_eff[i,j,1], self.P1_eff[i,j,1], self.P1_joint_eff[i,j,1]],
+                                [self.P0_joint_eff[i,j,2], self.P0_eff[i,j,2], self.P1_eff[i,j,2], self.P1_joint_eff[i,j,2]],
+                                '--')
 
-                    # Same for both
-                    dt = np.zeros(wing_slice.stop-wing_slice.start)
-
-                    # P0
-                    d_P0 = np.diff(self.P0_eff[i,wing_slice,:], axis=0)
-                    dt[1:] = np.cumsum(np.linalg.norm(d_P0, axis=1))
-                    T0 = np.gradient(self.P0_eff[i,wing_slice,:], dt, edge_order=2, axis=0)
-                    T0 = T0/np.linalg.norm(T0, axis=1)[:,np.newaxis]
-                    k = np.einsum('ij,ij->i', T0, u_a)
-                    c1 = np.sqrt(1/(1-k*k))
-                    c2 = -c1*k
-                    u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T0
-                    u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    self.P0_joint_eff[i,wing_slice,:] = self.P0_eff[i,wing_slice,:]+self.P0_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-
-                    # P1 joint
-                    d_P1 = np.diff(self.P1_eff[i,wing_slice,:], axis=0)
-                    dt[1:] = np.cumsum(np.linalg.norm(d_P1, axis=1))
-                    T1 = np.gradient(self.P1_eff[i,wing_slice,:], dt, edge_order=2, axis=0)
-                    T1 = T1/np.linalg.norm(T1, axis=1)[:,np.newaxis]
-                    k = np.einsum('ij,ij->i', T1, u_a)
-                    c1 = np.sqrt(1/(1-k*k))
-                    c2 = -c1*k
-                    u_j = c1[:,np.newaxis]*u_a+c2[:,np.newaxis]*T1
-                    u_j = u_j/np.linalg.norm(u_j, axis=-1, keepdims=True)
-                    self.P1_joint_eff[i,wing_slice,:] = self.P1_eff[i,wing_slice,:]+self.P1_chord[wing_slice,np.newaxis]*delta_joint[wing_slice,np.newaxis]*u_j
-
-                    # Plot effective vortices for control points at the root
-                    if False and i > (self.N//2-2) and i < (self.N//2+1):
-                        fig = plt.figure(figsize=plt.figaspect(1.0))
-                        ax = fig.gca(projection='3d')
-                        for j in range(wing_slice.start, wing_slice.stop):
-                            ax.plot([self.P0_joint_eff[i,j,0], self.P0_eff[i,j,0], self.P1_eff[i,j,0], self.P1_joint_eff[i,j,0]],
-                                    [self.P0_joint_eff[i,j,1], self.P0_eff[i,j,1], self.P1_eff[i,j,1], self.P1_joint_eff[i,j,1]],
-                                    [self.P0_joint_eff[i,j,2], self.P0_eff[i,j,2], self.P1_eff[i,j,2], self.P1_joint_eff[i,j,2]],
-                                    '--')
-
-                        lim = np.max(np.max(np.max(self.P0_joint_eff)))
-                        ax.set_xlim3d(lim, -lim)
-                        ax.set_ylim3d(lim, -lim)
-                        ax.set_zlim3d(lim, -lim)
-                        plt.show()
+                    lim = np.max(np.max(np.max(self.P0_joint_eff)))
+                    ax.set_xlim3d(lim, -lim)
+                    ax.set_ylim3d(lim, -lim)
+                    ax.set_zlim3d(lim, -lim)
+                    plt.show()
 
             else:
 
@@ -731,98 +706,87 @@ class Airplane:
             plt.show()
 
 
-    def _calc_f_prime_of_z(self, z):
-        # !!!THIS IS ONLY FOR COMPARING TO JACKSON'S CASE!!!
-        CLa = 6.907213339669221
-        sweep = np.radians(45)
-        lambda_k = sweep/(1+((CLa*np.cos(sweep))/(np.pi*5.0))**2)**0.25
-        exp = np.pi/(4.0*(np.pi+2*np.abs(lambda_k)))
-        K = (1+((CLa*np.cos(lambda_k))/(np.pi*5.0))**2)**exp
-        sweep_div = np.tan(lambda_k)/lambda_k
-        pi2 = 2.0*np.pi
-        cen_inf = z
-        tip_inf = 2.5-np.abs(z)
-        hyp_int = np.sqrt(1+(pi2*sweep_div*cen_inf)**2)-pi2*sweep_div*np.abs(z)
-        hyp_int -= np.sqrt(1+(pi2*sweep_div*tip_inf)**2)-pi2*sweep_div*tip_inf
-        hyp_int_prime = pi2**2*sweep_div**2*z/np.sqrt(1+(pi2*sweep_div*cen_inf)**2)-pi2*sweep_div*np.sign(z)
-        hyp_int_prime += pi2**2*sweep_div**2*np.sign(z)*(2.5-np.abs(z))/np.sqrt(1+(pi2*sweep_div*tip_inf)**2)-pi2*sweep_div*np.sign(z)
-        return -np.sign(z)*np.tan(sweep)-hyp_int_prime*lambda_k/(pi2*K)
-
-
     def _sort_segments_into_wings(self):
-        # Groups segments into wings for calculating effective lifting-lines
-        wing_IDs = []
+        # Groups segments into wings for calculating effective lifting lines
 
-        # Get user selections
-        for segment in self.wing_segments.values():
-            if segment.wing_ID is not None and segment.wing_ID not in wing_IDs:
-                wing_IDs.append(segment.wing_ID)
+        # Count the number of "lifting lines" we have
+        N_ll = 0
+        originals = [] # Segments that are not continuations
+        for segment_name, segment in self.wing_segments.items():
 
-        # To allow for max() check in while loop
-        if len(wing_IDs) == 0:
-            wing_IDs.append(-1)
+            # Skip left segments if there is a matching right one with no offset
+            if segment.side == "left" and segment.has_mirror and abs(segment.y_offset) < 1e-12:
+                continue
 
-        # Assign IDs and group
-        curr_ID = 0
-        self._segments_in_wings = []
-        finished = False
-        while not finished or curr_ID <= max(wing_IDs):
+            # Check that this segment is not a continuation
+            if not segment.is_continuation():
+                N_ll += 1
+                originals.append(segment_name)
 
-            # Create storage
-            self._segments_in_wings.append([])
-
-            # Check if the user has called for the current ID
-            if curr_ID in wing_IDs:
-
-                # Gather segments with that ID
-                for segment in self.wing_segments.values():
-                    if segment.wing_ID == curr_ID:
-                        self._segments_in_wings[curr_ID].append(segment)
-
+            # If it is a continuation, check if it's a branch (e.g. a T-tail on top of a vertical stabilizer)
             else:
-                
-                # Assign current ID to segment with no specified wing
-                for segment in self.wing_segments.values():
 
-                    # Look for segment with no ID
-                    if segment.wing_ID is None:
-                        segment.wing_ID = curr_ID
-                        self._segments_in_wings[curr_ID].append(segment)
+                # Check this segment has both sides
+                if segment.has_mirror:
 
-                        # Look for matching half
-                        segment_root_name = segment.name.replace("_right", "").replace("_left", "")
-                        for partner_segment in self.wing_segments.values():
-                            if segment_root_name in partner_segment.name and partner_segment.wing_ID is None:
-                                partner_segment.wing_ID = curr_ID
-                                self._segments_in_wings[curr_ID].append(partner_segment)
-                                break
+                    # Check the segment it is attached to does not
+                    if not segment.parent_has_mirror:
+                        N_ll += 1
+                        originals.append(segment_name)
 
-                        break
-                
-                # If there are no unspecified wings left
-                else:
-                    finished = True
+        # Gather wing segments sharing lifting lines
+        self._segments_in_wings = []
+        i_curr_ll = 0
+        for original_segment_name in originals:
 
-            curr_ID += 1
+            # Get original segment object
+            original_segment = self.wing_segments[original_segment_name]
+            original_ID = original_segment.ID
+            original_segment.wing_ID = i_curr_ll
+            original_joined_at_middle = abs(original_segment.y_offset) < 1e-12
+
+            # Add list for this lifting line, initialized with the original segment
+            self._segments_in_wings.append([original_segment])
+
+            # Add the original segment's mirror (if there is no offset)
+            if original_segment.has_mirror and original_joined_at_middle:
+                mirror_segment = self.wing_segments[original_segment_name.replace("right", "left")]
+                mirror_segment.wing_ID = i_curr_ll
+                self._segments_in_wings[i_curr_ll].append(mirror_segment)
+
+            # Loop through other wing segments to see if they are a continuation of this original
+            for segment_name, segment in self.wing_segments.items():
+
+                # Check continuation
+                if segment.is_continuation():
+
+                    # Check the ID is the same and this isn't already in originals
+                    if segment._connected_to_ID == original_ID and segment_name not in originals:
+
+                        # If the original doesn't have a mirror but the other one does, they will not be on the same lifting line
+                        if not original_segment.has_mirror and segment.has_mirror:
+                            continue
+
+                        # If the original segment is joined at the middle, then we don't need to check anything else
+                        # If not, we need to make sure it's on the same side
+                        if original_joined_at_middle or (not original_joined_at_middle and segment.side == original_segment.side):
+                            segment.wing_ID = i_curr_ll
+                            self._segments_in_wings[i_curr_ll].append(segment)
+
+
+            # Increment lifting line index
+            i_curr_ll += 1
 
         # Store number of wings
-        self._num_wings = curr_ID
+        self._num_wings = N_ll
 
-        # Delete empty wings
-        empty = []
-        for i in range(self._num_wings):
-            if len(self._segments_in_wings[i]) == 0:
-                empty.append(i)
-                self._num_wings -= 1
-        for index in empty[::-1]:
-            del self._segments_in_wings[index]
+        # Sort left to right
+        self._sort_segments_left_to_right()
 
-        # Reassign IDs
-        for i in range(self._num_wings):
-            for segment in self._segments_in_wings[i]:
-                segment.wing_ID = i
 
+    def _sort_segments_left_to_right(self):
         # Sort segments along wingspan from left to right
+
         for i in range(self._num_wings):
             sorted_segments = []
 
@@ -896,29 +860,6 @@ class Airplane:
                 self.l_ref_lon = self.S_w/(self.l_ref_lat)
         except:
             raise IOError("No wing was specified as main for {0} so reference parameters cannot be determined.".format(self.name))
-
-
-    def delete_wing_segment(self, wing_segment_name):
-        """Removes the specified wing segment from the airplane. Removes both sides.
-
-        Parameters
-        ----------
-        wing_segment_name : str
-            Name of the wing segment.
-
-        Returns
-        -------
-
-        Raises
-        ------
-        ValueError
-            If the wing segment does not exist
-
-        RuntimeError
-            If the wing segment has other segments attached to it.
-        """
-        #TODO: Do this
-        pass
 
 
     def _get_wing_segment(self, wing_segment_name):
@@ -1170,14 +1111,17 @@ class Airplane:
         section_resolution : int, optional
             Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         
-        number_guide_curves : int
+        number_guide_curves : int, optional
             Number of guidecurves to create. Defaults to 2 (one at the leading edge, one at the trailing edge).
         
-        export_english_units : bool
+        export_english_units : bool, optional
             Whether to export the dxf file in English units. Defaults to True.
 
-        dxf_line_type : str
+        dxf_line_type : str, optional
             Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
+        
+        export_as_prismoid : bool, optional
+            Whether to export each airfoil as a rectangle. Forces number_guide_curves to 4 and section_resolution to 5. Defaults to False.
         """
 
         # Export wing segment parts

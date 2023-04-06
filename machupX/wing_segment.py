@@ -63,6 +63,10 @@ class WingSegment:
         self.ID = self._input_dict.get("ID")
         if self.ID == 0 and name != "origin":
             raise IOError("Wing segment ID for {0} may not be 0.".format(name))
+        if name == "origin":
+            self.has_mirror = False
+        else:
+            self.has_mirror = self._input_dict.get("side", "both") == "both"
 
         if self.ID != 0: # These do not need to be run for the origin segment
             self._initialize_params()
@@ -79,7 +83,7 @@ class WingSegment:
             # Get CAD options
             self._cad_options = self._input_dict.get("CAD_options", {})
 
-    
+
     def _initialize_params(self):
 
         # Determine if it's part of the main wing
@@ -97,22 +101,24 @@ class WingSegment:
         self.reid_corr = grid_dict.get("reid_corrections", True)
         self.delta_joint = grid_dict.get("joint_length", 0.15)
         self.blend_dist = grid_dict.get("blending_distance", 1.0)
-        self.wing_ID = grid_dict.get("wing_ID", None)
-        if self.wing_ID is not None and self.wing_ID < 0:
-            raise IOError("'wing_ID' for wing segment {0} cannot be negative. Got {1}.".format(self.name, self.wing_ID))
+
+        # Get location information
+        connect_dict = self._input_dict.get("connect_to", {})
+        self._connected_to_ID = connect_dict.get("ID", 0)
+        self._connected_to_loc = connect_dict.get("location", "tip")
 
         # Set origin offset
         self._delta_origin = np.zeros(3)
-        connect_dict = self._input_dict.get("connect_to", {})
         self._delta_origin[0] = connect_dict.get("dx", 0.0)
         self._delta_origin[1] = connect_dict.get("dy", 0.0)
         self._delta_origin[2] = connect_dict.get("dz", 0.0)
 
+        # Apply y-offset
+        self.y_offset = connect_dict.get("y_offset", 0.0)
         if self.side == "left":
-            self._delta_origin[1] -= connect_dict.get("y_offset", 0.0)
-
+            self._delta_origin[1] -= self.y_offset
         else:
-            self._delta_origin[1] += connect_dict.get("y_offset", 0.0)
+            self._delta_origin[1] += self.y_offset
 
         # Create arrays of span locations used to generate nodes and control points
         if distribution == "cosine_cluster": # Cosine clustering
@@ -221,6 +227,13 @@ class WingSegment:
         if self.side == "left":
             self.node_span_locs = self.node_span_locs[::-1]
             self.cp_span_locs = self.cp_span_locs[::-1]
+
+
+    def is_continuation(self):
+        """Returns whether this wing segment directly connects to the tip of another wing segment."""
+
+        # A continuation of a lifting line will attach to another wing segment at the tip with no offset
+        return self._connected_to_ID != 0 and self._connected_to_loc == "tip" and np.linalg.norm(self._delta_origin) < 1e-12
 
 
     def _initialize_getters(self):
@@ -788,12 +801,12 @@ class WingSegment:
         self.nodes = self._get_ll_loc(self.node_span_locs)
 
 
-    def attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+    def attach_wing_segment(self, new_segment_name, input_dict, side, unit_sys, airfoil_dict):
         """Attaches a wing segment to the current segment or one of its children.
         
         Parameters
         ----------
-        wing_segment_name : str
+        new_segment_name : str
             Name of the wing segment to attach.
 
         input_dict : dict
@@ -819,50 +832,69 @@ class WingSegment:
             raise RuntimeError("Segments can only be added at the origin segment.")
 
         else:
-            return self._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+            return self._attach_wing_segment(new_segment_name, input_dict, side, unit_sys, airfoil_dict)
 
 
-    def _attach_wing_segment(self, wing_segment_name, input_dict, side, unit_sys, airfoil_dict):
+    def _attach_wing_segment(self, new_segment_name, input_dict, side, unit_sys, airfoil_dict):
         # Recursive function for attaching a wing segment.
 
-        parent_ID = input_dict.get("connect_to", {}).get("ID", 0)
-        if self.ID == parent_ID: # The new segment is supposed to attach to this one
+        connect_dict = input_dict.get("connect_to", {})
+        parent_ID = connect_dict.get("ID", 0)
+
+        # Check this ID matches the ID of the one we want to attach to
+        if self.ID == parent_ID:
+
+            # For mirrored wing segments, a right segment only ever attaches to a right segment and same with left
+            if self.has_mirror and side not in self.name:
+                return False
 
             # Determine the connection point
-            if input_dict.get("connect_to", {}).get("location", "tip") == "root":
+            if connect_dict.get("location", "tip") == "root":
                 attachment_point = self.get_root_loc()
+
+                # Remove y-offset
+                if self.side == "left":
+                    attachment_point[1] += self.y_offset
+                else:
+                    attachment_point[1] -= self.y_offset
             else:
                 attachment_point = self.get_tip_loc()
 
-            self._attached_segments[wing_segment_name] = WingSegment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
+            # Initialize wing segment
+            self._attached_segments[new_segment_name] = WingSegment(new_segment_name, input_dict, side, unit_sys, airfoil_dict, attachment_point)
 
-            return self._attached_segments[wing_segment_name] # Return reference to newly created wing segment
+            # Set whether this segment's parent has a mirror
+            self._attached_segments[new_segment_name].parent_has_mirror = self.has_mirror
+
+            # Return reference to newly created wing segment
+            return self._attached_segments[new_segment_name]
 
         else: # We need to recurse deeper
+
             result = False
-            for key in self._attached_segments:
-                if side not in key: # A right segment only ever attaches to a right segment and same with left
-                    continue
-                result = self._attached_segments[key]._attach_wing_segment(wing_segment_name, input_dict, side, unit_sys, airfoil_dict)
+            for segment_name, segment in self._attached_segments.items():
+
+                result = segment._attach_wing_segment(new_segment_name, input_dict, side, unit_sys, airfoil_dict)
+
                 if result is not False:
                     break
 
             if self.ID == 0 and not result:
-                raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(wing_segment_name))
+                raise RuntimeError("Could not attach wing segment {0}. Check ID of parent is valid.".format(new_segment_name))
 
             return result
 
 
-    def _get_attached_wing_segment(self, wing_segment_name):
+    def _get_attached_wing_segment(self, new_segment_name):
         # Returns a reference to the specified wing segment.
         try:
             # See if it is attached to this wing segment
-            return self._attached_segments[wing_segment_name]
+            return self._attached_segments[new_segment_name]
         except KeyError:
             # Otherwise
             result = False
             for key in self._attached_segments:
-                result = self._attached_segments[key]._get_attached_wing_segment(wing_segment_name)
+                result = self._attached_segments[key]._get_attached_wing_segment(new_segment_name)
                 if result:
                     break
 
@@ -1535,6 +1567,58 @@ class WingSegment:
         return coords
 
 
+    def _get_rectangle_outline_coords_at_span(self, span):
+        # Returns the rectangle section outline in body-fixed coordinates at the specified span fraction
+
+        # initialize rectangle outline
+        rect = np.array([[1.0,-0.5],[1.0,0.5],[0.0,0.5],[0.0,-0.5],[1.0,-0.5]])
+
+        # Linearly interpolate outlines, ignoring twist, etc for now
+        if self._num_airfoils == 1:
+            points = rect * 1.0
+            points[:,1] = points[:,1] * self._airfoils[0].get_max_thickness()
+        else:
+            index = 0
+            while True:
+                if span >= self._airfoil_spans[index] and span <= self._airfoil_spans[index+1]:
+                    total_span = self._airfoil_spans[index+1]-self._airfoil_spans[index]
+
+                    # Get weights
+                    root_weight = 1-abs(span-self._airfoil_spans[index])/total_span
+                    tip_weight = 1-abs(span-self._airfoil_spans[index+1])/total_span
+
+                    # Get outlines
+                    root_outline = rect * 1.0
+                    root_outline[:,1] = root_outline[:,1] * self._airfoils[index].get_max_thickness()
+                    
+                    tip_outline = rect * 1.0
+                    tip_outline[:,1] = tip_outline[:,1] * self._airfoils[index+1].get_max_thickness()
+                    
+                    # Interpolate
+                    points = root_weight*root_outline+tip_weight*tip_outline
+                    break
+
+                index += 1
+
+        # Get twist, dihedral, and chord
+        twist = self.get_twist(span)
+        dihedral = self.get_dihedral(span)
+        chord = self.get_chord(span)
+
+        # Scale to chord and transform to body-fixed coordinates
+        if self._shear_dihedral:
+            q = euler_to_quat(np.array([0.0, twist, 0.0]))
+        else:
+            q_dih = euler_to_quat(np.array([dihedral, 0.0, 0.0]))
+            q_twi = euler_to_quat(np.array([0.0, twist, 0.0]))
+            q = quat_mult(q_dih, q_twi)
+
+        untransformed_coords = chord*np.array([-points[:,0].flatten()+0.25, np.zeros(5), -points[:,1]]).T
+        coords = self._get_quarter_chord_loc(span)[np.newaxis]+quat_inv_trans(q, untransformed_coords)
+
+        return coords
+
+
     def _get_stl_end_vectors(self, N, outline_points, close_te, num_facets, le_tri):
         # Determines the stl vectors that seal an end of the wing segment
 
@@ -1604,7 +1688,7 @@ class WingSegment:
         T[1] = np.cross(T[2], T[0])
 
         # Transform the outline
-        shifted_outline = outline-p0[np.newaxis]
+        shifted_outline = outline-p0[np.newaxis,:]
         transed_outline = np.einsum('ij,kj->ki', T, shifted_outline)
         bottom_outline = transed_outline[-1:N//2-1:-1]
         top_outline = transed_outline[:N//2+1]
@@ -1660,6 +1744,12 @@ class WingSegment:
         start_outline = np.einsum('ij,kj->ki', T_from_top_to_start, top_outline)*start_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_start, bottom_outline)*start_bottom_weight
         end_outline = np.einsum('ij,kj->ki', T_from_top_to_end, top_outline)*end_top_weight+np.einsum('ij,kj->ki', T_from_bottom_to_end, bottom_outline)*end_bottom_weight
 
+        # Ensure the rounding outlines do not protrude above or below the original outlines
+        start_outline[:,1] = np.where(start_outline[:,1]<top_outline[:,1], top_outline[:,1], start_outline[:,1])
+        start_outline[:,1] = np.where(start_outline[:,1]>bottom_outline[:,1], bottom_outline[:,1], start_outline[:,1])
+        end_outline[:,1] = np.where(end_outline[:,1]<top_outline[:,1], top_outline[:,1], end_outline[:,1])
+        end_outline[:,1] = np.where(end_outline[:,1]>bottom_outline[:,1], bottom_outline[:,1], end_outline[:,1])
+
         # Concatenate
         rounding_outline = np.concatenate((start_outline, end_outline[-2::-1]), axis=0)
 
@@ -1671,7 +1761,7 @@ class WingSegment:
             rounding_outline[:,0] -= offset
 
         # Transform to global coords
-        return np.einsum('ij,ki->kj', T.T, rounding_outline)+p0[np.newaxis]
+        return np.einsum('ij,ki->kj', T, rounding_outline)+p0[np.newaxis]
 
 
     def get_vtk_panel_vertices(self, **kwargs):
@@ -1869,23 +1959,23 @@ class WingSegment:
 
         Parameters
         ----------
-        airplane_name: str
-            Name of the airplane this segment belongs to.
-
         file_tag : str, optional
-            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.dxf".
+            Optional tag to prepend to output filename default. The output files will be named "<AIRCRAFT_NAME>_<WING_NAME>.stp".
 
-        section_resolution : int
-            Number of outline points to use for the sections. Defaults to 200.
+        section_resolution : int, optional
+            Number of points to use in discretizing the airfoil section outline. Defaults to 200.
         
-        number_guide_curves : int
+        number_guide_curves : int, optional
             Number of guidecurves to create. Defaults to 2 (one at the leading edge, one at the trailing edge).
         
-        export_english_units : bool
+        export_english_units : bool, optional
             Whether to export the dxf file in English units. Defaults to True.
 
-        dxf_line_type : str
+        dxf_line_type : str, optional
             Type of line to be used in the .dxf file creation. Options include 'line', 'spline', and 'polyline'. Defaults to 'spline'.
+        
+        export_as_prismoid : bool, optional
+            Whether to export each airfoil as a rectangle. Forces number_guide_curves to 4 and section_resolution to 5. Defaults to False.
         """
 
         # Get kwargs
@@ -1894,6 +1984,10 @@ class WingSegment:
         number_guide_curves = kwargs.get("number_guide_curves", 2)
         export_english_units = kwargs.get("export_english_units", True)
         dxf_line_type = kwargs.get("dxf_line_type", "spline")
+        export_as_prismoid = kwargs.get("export_as_prismoid", False)
+        if export_as_prismoid:
+            number_guide_curves = 4
+            section_res = 5
 
         # raise error if number of guidecurves is less than 1
         if number_guide_curves < 1:
@@ -1944,7 +2038,10 @@ class WingSegment:
         for i, s_i in enumerate(self.node_span_locs):
 
             # Get outline points
-            outline = self._get_airfoil_outline_coords_at_span(s_i, section_res, close_te)
+            if export_as_prismoid:
+                outline = self._get_rectangle_outline_coords_at_span(s_i)
+            else:
+                outline = self._get_airfoil_outline_coords_at_span(s_i, section_res, close_te)
 
             # Store in arrays
             X_3D[i,:] = outline[:,0] * unit_multiplier
@@ -1959,8 +2056,8 @@ class WingSegment:
 
             # if not the first index, determine the index to place a guide curve
             if i != 0:
-                guide_curve_indices[i] = (float(i) * (number_guide_curves-1) / number_guide_curves) * 200 // (number_guide_curves-1)
-
+                guide_curve_indices[i] = (float(i) * (number_guide_curves-1) / number_guide_curves) * section_res // (number_guide_curves-1)
+        
         # add the guide curve points at each index
         for i in range(guide_curve_indices.shape[0]):
 
@@ -1986,7 +2083,10 @@ class WingSegment:
                 span = float(i)
             
             # determine 3D shape at this location
-            outline = self._get_airfoil_outline_coords_at_span(span, section_res, close_te) * unit_multiplier
+            if export_as_prismoid:
+                outline = self._get_rectangle_outline_coords_at_span(span) * unit_multiplier
+            else:
+                outline = self._get_airfoil_outline_coords_at_span(span, section_res, close_te) * unit_multiplier
             
             # add 3D outline splines to array
             for j in range(number_guide_curves):

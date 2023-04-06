@@ -1,4 +1,5 @@
 # This script is for me to easily test convergences
+import csv
 import os
 
 import machupX as MX
@@ -128,6 +129,25 @@ def analyze_wing(args):
     plt.savefig("dev/studies/blending_distance_plots_marker_size/error_{0}_{1}_sweep_RA_{2}_RT_{3}.pdf".format(sweep, sweep_type, R_A, R_T))
     plt.close()
 
+    # Write out to file
+    filename = "dev/studies/blending_distance_data/CL_{0}_{1}_sweep_RA_{2}_RT_{3}.csv".format(sweep, sweep_type, R_A, R_T)
+    with open(filename, 'w') as csv_handle:
+
+        # Header
+        header = "CL,,Blending Distance" + "".join([","]*(len(blending_distances)-1))
+        print(header, file=csv_handle)
+        header2 = ",," + ",".join([str(b) for b in blending_distances])
+        print(header2, file=csv_handle)
+
+        # Loop through grids
+        for i, grid in enumerate(grids):
+            if i == 0:
+                line = "Grid Size,{0},".format(grid)+",".join([str(cl) for cl in CL[i,:]])
+            else:
+                line = ",{0},".format(grid)+",".join([str(cl) for cl in CL[i,:]])
+            print(line, file=csv_handle)
+        csv_handle.flush()
+
     return p
 
 
@@ -136,6 +156,10 @@ if __name__=="__main__":
     # Create plot directory
     if not os.path.exists("dev/studies/blending_distance_plots_marker_size/"):
         os.mkdir("dev/studies/blending_distance_plots_marker_size")
+
+    # Create data directory
+    if not os.path.exists("dev/studies/blending_distance_data/"):
+        os.mkdir("dev/studies/blending_distance_data")
 
     # Options
     sweeps = [-25.0, -15.0, -5.0, 5.0, 15.0, 25.0]
