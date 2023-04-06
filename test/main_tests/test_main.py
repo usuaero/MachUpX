@@ -35,7 +35,7 @@ def test_main():
     # Check the proper files have been created
     assert os.path.exists(altered_input_name.replace(".json", "_solve_forces.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_derivatives.json"))
-    assert os.path.exists(altered_input_name.replace(".json", "_distributions.txt"))
+    assert os.path.exists(altered_input_name.replace(".json", "_distributions.csv"))
     assert os.path.exists(altered_input_name.replace(".json", "_pitch_trim.json"))
     assert os.path.exists(altered_input_name.replace(".json", "_aero_center.json"))
     assert os.path.exists(altered_input_name.replace(".json", ".stl"))
@@ -43,7 +43,7 @@ def test_main():
     # Cleanup
     os.remove(altered_input_name.replace(".json", "_solve_forces.json"))
     os.remove(altered_input_name.replace(".json", "_derivatives.json"))
-    os.remove(altered_input_name.replace(".json", "_distributions.txt"))
+    os.remove(altered_input_name.replace(".json", "_distributions.csv"))
     os.remove(altered_input_name.replace(".json", "_pitch_trim.json"))
     os.remove(altered_input_name.replace(".json", "_aero_center.json"))
     os.remove(altered_input_name.replace(".json", ".stl"))

@@ -41,7 +41,7 @@ def _run_prescribed_analyses(input_filename):
         elif key == "export_vtk":
             filename = params.pop("filename", input_filename.replace(".json", ".vtk"))
         elif key == "distributions":
-            filename = params.pop("filename", input_filename.replace(".json", "_distributions.txt"))
+            filename = params.pop("filename", input_filename.replace(".json", "_distributions.csv"))
         elif "display" in key:
             filename = params.pop("filename", None)
         else:
