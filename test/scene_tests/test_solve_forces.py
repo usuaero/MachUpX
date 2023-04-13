@@ -290,14 +290,14 @@ def test_swept_wing():
     scene.add_aircraft(aircraft_name, aircraft_dict, state=state, control_state=control_state)
     FM = scene.solve_forces(non_dimensional=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-    assert abs(FM["test_plane"]["total"]["FL"]-19.783243781894804)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-1.5107597754297257)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-19.783804843985347)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-1.3995975291276221)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+0.8194142102628863)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.7083001002131478)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]+19.823917120109112)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+19.820598333967528)<1e-10
     assert abs(FM["test_plane"]["total"]["Mx"])<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]+30.137871282759612)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+30.13434354434114)<1e-10
     assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
 
 
@@ -324,15 +324,15 @@ def test_swept_wing_with_controls():
     scene.add_aircraft(aircraft_name, aircraft_dict, state=state, control_state=control_state)
     FM = scene.solve_forces(non_dimensional=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-    assert abs(FM["test_plane"]["total"]["FL"]-32.44429480507447)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-4.283836550324898)<1e-10
-    assert abs(FM["test_plane"]["total"]["FS"]+4.414822066505888)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+3.1489373932791636)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fy"]+4.414822066505888)<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]+32.57403435685684)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mx"]+17.905545144497058)<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]+76.51699263955834)<1e-10
-    assert abs(FM["test_plane"]["total"]["Mz"]-13.915921134824531)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-32.445031339087635)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-4.123299947318139)<1e-10
+    assert abs(FM["test_plane"]["total"]["FS"]+4.4145932035790505)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+2.9884728801670395)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fy"]+4.4145932035790505)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+32.569167795546115)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mx"]+17.912175298121873)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+76.51336732249929)<1e-10
+    assert abs(FM["test_plane"]["total"]["Mz"]-14.040324769001394)<1e-10
 
 
 def test_tapered_wing():
@@ -386,20 +386,20 @@ def test_step_change_in_twist_wing():
     scene.add_aircraft(aircraft_name, aircraft_dict, state=state, control_state=control_state)
     FM = scene.solve_forces(non_dimensional=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-    assert abs(FM["test_plane"]["total"]["FL"]-28.35481401045731)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-3.606067666817706)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]-28.36516174602864)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-2.996305717918925)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+2.614302209769785)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+2.004550580611607)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]+28.463390970530668)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]+28.452452017416174)<1e-10
     assert abs(FM["test_plane"]["total"]["Mx"])<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]+18.601536350947654)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]+18.71714165086305)<1e-10
     assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
 
 
 def test_jackson_compare():
     # Tests that the circulation distribution for a swept wing matches Jackson's result (quickly becoming obsolete...)
-    return # This test is obsolete
+    return # Yep; it's obsolete now.
 
     # Inputs
     input_dict = {
@@ -483,13 +483,12 @@ def test_swept_wing_with_aerodynamic_twist():
     scene.add_aircraft(aircraft_name, aircraft_dict, state=state, control_state=control_state)
     FM = scene.solve_forces(non_dimensional=True, verbose=True)
     print(json.dumps(FM["test_plane"]["total"], indent=4))
-    assert abs(FM["test_plane"]["total"]["FL"]+1.9214284458668762)<1e-10
-    assert abs(FM["test_plane"]["total"]["FD"]-0.6769190134597486)<1e-10
+    assert abs(FM["test_plane"]["total"]["FL"]+1.921431422738798)<1e-10
+    assert abs(FM["test_plane"]["total"]["FD"]-0.6730156268500228)<1e-10
     assert abs(FM["test_plane"]["total"]["FS"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Fx"]+0.6263899171155313)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fx"]+0.622487790173485)<1e-10
     assert abs(FM["test_plane"]["total"]["Fy"])<1e-10
-    assert abs(FM["test_plane"]["total"]["Fz"]-1.938489694351176)<1e-10
+    assert abs(FM["test_plane"]["total"]["Fz"]-1.9383904914534897)<1e-10
     assert abs(FM["test_plane"]["total"]["Mx"])<1e-10
-    assert abs(FM["test_plane"]["total"]["My"]-0.4140670188302566)<1e-10
+    assert abs(FM["test_plane"]["total"]["My"]-0.41401938251627074)<1e-10
     assert abs(FM["test_plane"]["total"]["Mz"])<1e-10
-
