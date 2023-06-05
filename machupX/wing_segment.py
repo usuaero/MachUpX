@@ -385,8 +385,8 @@ class WingSegment:
                         p0 = self._get_quarter_chord_loc(s-0.005)
                         p1 = self._get_quarter_chord_loc(s+0.005)
 
-                    # Calculate dihedral
-                    sweep[i] = -np.arctan((p1[0]-p0[0])/(p1[1]-p0[1]))
+                    # Calculate sweep
+                    sweep[i] = -np.arctan((p1[0]-p0[0])/(np.sqrt((p1[1]-p0[1]))**2 + (p1[2]-p0[2])**2))
 
                 # Convert back to float if needed
                 if converted:
