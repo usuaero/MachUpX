@@ -2067,7 +2067,7 @@ class WingSegment:
 
         # Export guide curves
         folder_path = os.path.abspath("{0}_dxf_files".format(airplane_name))
-        file_path = folder_path + "/{0}{1}_{2}_GC".format(file_tag, airplane_name, self.name)
+        file_path = os.path.join(folder_path, "{0}{1}_{2}_GC".format(file_tag, airplane_name, self.name) )
         dxf(file_path, X_GC, Y_GC, Z_GC,geometry="spline")
 
         # Add section resolution to guide curve indices
@@ -2096,5 +2096,5 @@ class WingSegment:
                 k += 1
         
         # create airfoils DXF file
-        file_path = folder_path + "/{0}{1}_{2}_AF".format(file_tag, airplane_name, self.name)
+        file_path = os.path.join(folder_path, "{0}{1}_{2}_AF".format(file_tag, airplane_name, self.name) )
         dxf(file_path, X_AF, Y_AF, Z_AF, geometry="spline")
