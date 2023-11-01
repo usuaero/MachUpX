@@ -329,13 +329,10 @@ def dxf_spline(filename,x,y,z,file_info):
 
 def dxf(filename,x,y,z,file_info = [],geometry = "spline"):
 
-    # create directory if not existant yet
-    directory = filename.split("/")[1:]
-    path = "/"
-    for i in range(len(directory)-1):
-        path += directory[i] + "/"
-        if not os.path.isdir(path[:-1]):
-            os.mkdir(path[:-1])
+    # create directory if not existent yet
+    directory = os.path.split(filename)[0]
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     
     # if isonelayer:
     if geometry == "spline":
