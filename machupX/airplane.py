@@ -714,7 +714,10 @@ class Airplane:
         originals = [] # Segments that are not continuations
         for segment_name, segment in self.wing_segments.items():
 
+            segment.wing_ID = -1
+
             # Skip left segments if there is a matching right one with no offset
+            #if segment.side == "left" and segment.has_mirror and abs(segment.y_offset) < 1e-12 and not (segment._connected_to_loc == "tip" and np.linalg.norm(segment._delta_origin) > 1.e-12):
             if segment.side == "left" and segment.has_mirror and abs(segment.y_offset) < 1e-12:
                 continue
 
@@ -754,14 +757,28 @@ class Airplane:
                 mirror_segment.wing_ID = i_curr_ll
                 self._segments_in_wings[i_curr_ll].append(mirror_segment)
 
-            # Loop through other wing segments to see if they are a continuation of this original
-            for segment_name, segment in self.wing_segments.items():
+            # Outer loop makes sure we check connections to connected segments, not just the original
+            added_segment = True
+            while added_segment:
+                added_segment = False
 
-                # Check continuation
-                if segment.is_continuation():
+                # Loop through other wing segments to see if they are a continuation of this original or another connected segment
+                for segment_name, segment in self.wing_segments.items():
 
-                    # Check the ID is the same and this isn't already in originals
-                    if segment._connected_to_ID == original_ID and segment_name not in originals:
+                    # Check whether this segment is already in the originals
+                    if segment_name in originals:
+                        continue
+
+                    # Check whether this segment is already in the list of connected segments
+                    if segment.wing_ID != -1:
+                        continue
+
+                    # Check continuation
+                    if not segment.is_continuation():
+                        continue
+
+                    # Check whether this segment is connected to the original segment
+                    if segment._connected_to_ID == original_ID:
 
                         # If the original doesn't have a mirror but the other one does, they will not be on the same lifting line
                         if not original_segment.has_mirror and segment.has_mirror:
@@ -772,7 +789,22 @@ class Airplane:
                         if original_joined_at_middle or (not original_joined_at_middle and segment.side == original_segment.side):
                             segment.wing_ID = i_curr_ll
                             self._segments_in_wings[i_curr_ll].append(segment)
+                            added_segment = True
 
+                    # Check whether this segment is connected to any of the other connected segments
+                    else:
+                        for connected_segment in self._segments_in_wings[i_curr_ll]:
+
+                            if segment._connected_to_ID == connected_segment.ID:
+
+                                if not connected_segment.has_mirror and segment.has_mirror:
+                                    continue
+
+                                # We can assume the connected segment is not joined at the middle
+                                if segment.side == connected_segment.side:
+                                    segment.wing_ID = i_curr_ll
+                                    self._segments_in_wings[i_curr_ll].append(segment)
+                                    added_segment = True
 
             # Increment lifting line index
             i_curr_ll += 1
