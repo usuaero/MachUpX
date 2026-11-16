@@ -25,12 +25,18 @@
   <aside class="sidebar" aria-label="Design inputs">
     <div class="tabs small" role="tablist" id="input-tabs">
       <button role="tab" aria-selected="true" data-pane="req">Requirements</button>
+      <button role="tab" aria-selected="false" data-pane="sheet">Spreadsheet</button>
       <button role="tab" aria-selected="false" data-pane="geo">Geometry</button>
     </div>
     <section id="pane-req" class="pane">
       <h3>Start from</h3>
       <div id="presets" class="presets"></div>
       <form id="req-form" autocomplete="off"></form>
+    </section>
+    <section id="pane-sheet" class="pane" hidden>
+      <p class="hint">Your design sheet, row for row. Enter the values you would normally type into the sheet;
+        the aircraft is built and run through the solver automatically.</p>
+      <form id="sheet-form" autocomplete="off"></form>
     </section>
     <section id="pane-geo" class="pane" hidden>
       <p class="hint">Fine-tune the sized aircraft. Every edit is re-analysed. Changing a requirement re-sizes
@@ -55,6 +61,7 @@
 
     <div class="tabs" role="tablist" id="result-tabs">
       <button role="tab" aria-selected="true" data-pane="review">Design review</button>
+      <button role="tab" aria-selected="false" data-pane="sheet" id="tab-sheet" hidden>Sheet vs solver</button>
       <button role="tab" aria-selected="false" data-pane="aero">Aerodynamics</button>
       <button role="tab" aria-selected="false" data-pane="stability">Stability</button>
       <button role="tab" aria-selected="false" data-pane="performance">Performance</button>

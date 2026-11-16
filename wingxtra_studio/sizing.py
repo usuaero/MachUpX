@@ -139,11 +139,32 @@ def _geometry(req: Requirements, m: Dict[str, float]) -> Design:
                     sweep_deg=5.0, control_chord_fraction=0.35, control_span_start=0.0, control_span_end=1.0)
     vtail = Surface(span=vs, root_chord=vr, tip_chord=vt, airfoil="0010", x=-arm, z=-0.5 * height,
                     sweep_deg=20.0, control_chord_fraction=0.35, control_span_start=0.0, control_span_end=1.0)
+    tail_type = "conventional"
+    if req.tail == "v_tail":
+        htail, vtail, tail_type = v_tail(htail.area, vtail.area, arm, z=-0.3 * height), None, "v_tail"
     return Design(requirements=req, mass_kg=m["mass"], wing=wing, htail=htail, vtail=vtail, fuselage=fuselage,
+                  tail_type=tail_type,
                   propulsion=Propulsion(layout="tractor", prop_diameter=prop_d, motor_power_w=m["shaft_max"],
                                         prop_x=nose_x + 0.02, hover_power_w=m["hover_w"],
                                         lift_motor_power_w=m["lift_motor_w"]),
                   battery_wh=m["battery_wh"])
+
+
+def v_tail(h_area: float, v_area: float, arm: float, z: float = 0.0, span: Optional[float] = None,
+           taper: float = 0.8, average_chord: Optional[float] = None) -> Surface:
+    """Replaces a horizontal tail and fin with a V-tail of the same projected areas.
+
+    Total area is the sum of the two; the dihedral angle is atan(sqrt(S_v / S_h)), so each
+    projection matches the surface it replaces. Span is measured along the panels.
+    """
+    area = h_area + v_area
+    dihedral = math.degrees(math.atan(math.sqrt(v_area / h_area)))
+    if span is None:
+        span = math.sqrt(4.5 * area)
+    chord = average_chord if average_chord is not None else area / span
+    root = 2 * chord / (1 + taper)
+    return Surface(span=span, root_chord=root, tip_chord=root * taper, dihedral_deg=dihedral, airfoil="0010",
+                   x=-arm, z=z, sweep_deg=5.0, control_chord_fraction=0.35)
 
 
 def mac_quarter_chord_x(s: Surface) -> float:

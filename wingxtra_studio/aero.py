@@ -109,7 +109,13 @@ def machup_airplane(design: Design, cg_x: Optional[float] = None, keep_cl_max: b
 
     if design.htail:
         h = design.htail
-        wings["h_stab"] = _wing_dict(h, f"htail_NACA_{h.airfoil}", 2, 16, {"elevator": 1.0}, connect_to={"ID": 0, "dx": h.x, "dz": h.z + nudge["h"]})
+        v_tail = design.tail_type == "v_tail"
+        # A V-tail's two panels move together for pitch and in opposition for yaw.
+        mixing = {"elevator": 1.0, "rudder": 1.0} if v_tail else {"elevator": 1.0}
+        wings["h_stab"] = _wing_dict(h, f"htail_NACA_{h.airfoil}", 2, 16, mixing,
+                                     connect_to={"ID": 0, "dx": h.x, "dz": h.z + nudge["h"]})
+        if v_tail:
+            controls["rudder"] = {"is_symmetric": False}
     if design.vtail:
         v = design.vtail
         if flying_wing:  # a winglet on each tip
@@ -180,6 +186,10 @@ def parasite_buildup(design: Design, speed: Optional[float] = None) -> List[Dict
     V = speed or req.cruise_speed_ms
     alt = req.cruise_altitude_m
     items = []
+
+    if design.body_cd_override is not None:
+        cd = design.body_cd_override
+        return [{"name": "Fuselage and other non-lifting parts (your value)", "cda": cd * design.wing.area, "cd": cd}]
 
     f = design.fuselage
     d_eq = math.sqrt(f.width * f.height)

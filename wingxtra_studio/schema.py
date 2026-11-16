@@ -9,6 +9,7 @@ from typing import Dict, List, Literal, Optional
 from pydantic import BaseModel, Field
 
 Config = Literal["conventional", "flying_wing", "vtol_quadplane"]
+TailType = Literal["conventional", "v_tail"]
 
 
 class Requirements(BaseModel):
@@ -24,6 +25,8 @@ class Requirements(BaseModel):
     endurance_min: float = Field(60.0, gt=1, le=1440)
     cruise_altitude_m: float = Field(100.0, ge=0, le=6000)
     hover_time_min: float = Field(3.0, ge=0, le=30)  # VTOL only: total hover per flight
+    range_km: Optional[float] = Field(None, gt=0, le=5000)  # optional target, checked if given
+    tail: TailType = "conventional"  # ignored for a flying wing
 
     # Shape preferences
     aspect_ratio: float = Field(8.0, ge=3, le=20)
@@ -116,7 +119,8 @@ class Design(BaseModel):
     requirements: Requirements
     mass_kg: float
     wing: Surface
-    htail: Optional[Surface] = None
+    tail_type: TailType = "conventional"
+    htail: Optional[Surface] = None  # for a V-tail: the two panels, with their dihedral
     vtail: Optional[Surface] = None  # one fin; winglets on a flying wing are two
     fuselage: Fuselage
     propulsion: Propulsion
@@ -126,4 +130,7 @@ class Design(BaseModel):
     cg_x: float = 0.0
     cg_z: float = 0.0
     inertia: Dict[str, float] = {}  # Ixx, Iyy, Izz in kg m^2
+    body_cd_override: Optional[float] = None  # user-supplied drag coefficient of all non-lifting parts
+    source: Literal["requirements", "spreadsheet"] = "requirements"
+    sheet_inputs: Optional[Dict] = None  # the spreadsheet inputs this design was built from
     notes: List[str] = []

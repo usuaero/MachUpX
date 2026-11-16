@@ -9,7 +9,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from . import __version__, airfoils, analysis, export, geometry, sizing
+from . import __version__, airfoils, analysis, export, geometry, sheet, sizing
 from .schema import Design, Requirements
 
 warnings.filterwarnings("ignore")  # MachUpX is chatty about benign conditions
@@ -41,7 +41,11 @@ def _bundle(design: Design) -> Dict:
         results = analysis.analyze(design)
     except Exception as exc:  # the solver could not handle this geometry
         raise HTTPException(422, f"The analysis could not be completed for this geometry: {exc}") from exc
-    return {"design": design.model_dump(), "analysis": results, "mesh": geometry.mesh(design)}
+    out = {"design": design.model_dump(), "analysis": results, "mesh": geometry.mesh(design)}
+    if design.source == "spreadsheet" and design.sheet_inputs:
+        inputs = sheet.SheetInputs(**design.sheet_inputs)
+        out["sheet"] = {"estimates": sheet.estimates(inputs), "comparison": sheet.comparison(inputs, results)}
+    return out
 
 
 @app.get("/api/meta")
@@ -49,6 +53,7 @@ def meta() -> Dict:
     return {
         "version": __version__,
         "defaults": Requirements().model_dump(),
+        "sheet_defaults": sheet.SheetInputs().model_dump(),
         "presets": PRESETS,
         "airfoils": airfoils.library(),
         "exports": [{"id": k, "label": v["label"], "ext": v["ext"]} for k, v in export.FORMATS.items()],
@@ -60,6 +65,16 @@ def size(req: Requirements) -> Dict:
     """Requirements in, a sized and fully analysed aircraft out."""
     try:
         design = sizing.size(req)
+    except (sizing.SizingError, ValueError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return _bundle(design)
+
+
+@app.post("/api/sheet")
+def from_sheet(inputs: sheet.SheetInputs) -> Dict:
+    """Spreadsheet inputs in; the same aircraft, analysed and compared with the sheet, out."""
+    try:
+        design = sheet.build(inputs)
     except (sizing.SizingError, ValueError) as exc:
         raise HTTPException(422, str(exc)) from exc
     return _bundle(design)

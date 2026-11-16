@@ -37,6 +37,11 @@ def review(design: Design, polar: Dict, trim: Dict, perf: Dict, dyn: Dict) -> Li
     out.append(_check("Cruise endurance", "pass" if e >= req.endurance_min * 0.98 else "warn" if e >= req.endurance_min * 0.9 else "fail",
                       f"{e:.0f} min", f"at least {req.endurance_min:.0f} min",
                       "Add battery, reduce drag, or cruise nearer the best-endurance speed."))
+    if req.range_km:
+        rng = perf["cruise"]["range_km"]
+        out.append(_check("Cruise range", "pass" if rng >= req.range_km * 0.98 else "warn" if rng >= req.range_km * 0.9 else "fail",
+                          f"{rng:.0f} km", f"at least {req.range_km:.0f} km",
+                          "Add battery, reduce drag, or cruise nearer the best-range speed."))
     margin = req.cruise_speed_ms / vs
     out.append(_check("Cruise stall margin", _band(margin, (1.3, 99), (1.2, 99)), f"{margin:.2f} x stall speed", "at least 1.3",
                       "Cruising this close to stall leaves little margin for gusts and turns."))

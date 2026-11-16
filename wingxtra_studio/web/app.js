@@ -2,13 +2,16 @@ import { Viewer } from '/viewer.js';
 import { lineChart, fmt } from '/charts.js';
 
 const $ = (sel) => document.querySelector(sel);
-const state = { meta: null, req: null, design: null, analysis: null, mesh: null, tab: 'review', seq: 0 };
+const state = { meta: null, req: null, sheet: null, sheetResult: null, mode: 'req', design: null, analysis: null, mesh: null, tab: 'review', seq: 0 };
 const viewer = new Viewer($('#viewer'));
 const STORE = 'wingxtra-studio-v1';
 
 // ------------------------------------------------------------------ field definitions
 
 const CONFIGS = [['conventional', 'Fixed-wing'], ['flying_wing', 'Flying wing'], ['vtol_quadplane', 'VTOL']];
+
+const TAILS = [['conventional', 'Conventional'], ['v_tail', 'V-tail']];
+const isVTail = (src) => src.tail === 'v_tail';
 
 const REQ_FIELDS = [
   { group: 'Mission' },
@@ -23,6 +26,7 @@ const REQ_FIELDS = [
   ['taper_ratio', 'Taper ratio', '', 0.05],
   ['wing_airfoil', 'Airfoil', 'airfoil'],
   ['static_margin', 'Static margin', 'MAC', 0.01],
+  ['tail', 'Tail', TAILS, null, (src) => src.config !== 'flying_wing'],
   { group: 'Technology assumptions', collapsed: true },
   ['battery_wh_per_kg', 'Battery energy', 'Wh/kg', 10],
   ['battery_usable_fraction', 'Usable capacity', '', 0.05],
@@ -33,6 +37,55 @@ const REQ_FIELDS = [
   ['drive_efficiency', 'Motor and ESC efficiency', '', 0.01],
   ['climb_rate_ms', 'Climb rate', 'm/s', 0.5],
   ['rotor_disk_loading_nm2', 'Rotor disk loading', 'N/m²', 10, 'vtol_quadplane'],
+];
+
+const SHEET_FIELDS = [
+  { group: 'Mission requirements' },
+  ['endurance_min', 'Endurance', 'min', 5],
+  ['range_km', 'Range', 'km', 5],
+  ['stall_margin_ms', 'Stall margin', 'm/s', 0.5],
+  ['min_airspeed_ms', 'Min airspeed', 'm/s', 0.5],
+  ['cruise_airspeed_ms', 'Cruise airspeed', 'm/s', 0.5],
+  { group: 'Payload' },
+  ['payload_kg', 'Payload weight', 'kg', 0.1],
+  ['payload_power_w', 'Payload power', 'W', 1],
+  { group: 'Aircraft' },
+  ['airframe_kg', 'Airframe weight', 'kg', 0.1],
+  ['avionics_power_w', 'Avionics power', 'W', 1],
+  ['fuselage_cd', 'Fuselage drag coeff.', '', 0.001],
+  ['zero_lift_cd', 'Zero-lift drag coeff.', '', 0.001],
+  ['air_density', 'Air density', 'kg/m³', 0.005],
+  { group: 'Propulsion / batteries' },
+  ['battery_capacity_mah', 'Battery pack capacity', 'mAh', 500],
+  ['energy_density_wh_kg', 'Energy density', 'Wh/kg', 5],
+  ['cell_voltage', 'Cell voltage', 'V', 0.1],
+  ['cells_in_series', 'Cells in series', 's', 1],
+  ['battery_count', 'Number of batteries', '', 1],
+  ['capacity_used_pct', 'Total capacity used', '%', 5],
+  ['overall_efficiency_pct', 'Overall efficiency', '%', 1],
+  { group: 'Main wing' },
+  ['wing_loading_g_dm2', 'Wing loading', 'g/dm²', 1],
+  ['aspect_ratio', 'Aspect ratio', '', 0.1],
+  ['taper_ratio', 'Taper ratio', '', 0.05],
+  ['oswald_efficiency', 'Oswald efficiency', '', 0.01],
+  ['max_lift_coefficient', 'Max lift coefficient', '', 0.01],
+  ['wing_airfoil', 'Airfoil', 'airfoil'],
+  { group: 'Horizontal stabilizer' },
+  ['h_volume_ratio', 'Volume ratio (0.3–0.6)', '', 0.01],
+  ['h_moment_arm_m', 'Moment arm', 'm', 0.05],
+  ['h_aspect_ratio', 'Aspect ratio', '', 0.1],
+  ['h_taper_ratio', 'Taper ratio', '', 0.05],
+  { group: 'Vertical stabilizer' },
+  ['v_volume_ratio', 'Volume ratio (0.02–0.05)', '', 0.001],
+  ['v_moment_arm_m', 'Moment arm', 'm', 0.05],
+  ['v_semispan_m', 'Semispan', 'm', 0.01],
+  ['v_taper_ratio', 'Taper ratio', '', 0.01],
+  { group: 'Tail and balance' },
+  ['tail', 'Tail', TAILS],
+  ['vtail_span_m', 'V-tail span', 'm', 0.01, isVTail, 'auto'],
+  ['vtail_average_chord_m', 'V-tail average chord', 'm', 0.005, isVTail, 'auto'],
+  ['vtail_taper_ratio', 'V-tail taper ratio', '', 0.05, isVTail],
+  ['static_margin', 'Static margin', 'MAC', 0.01],
 ];
 
 const surfaceFields = (key, name, vertical) => [
@@ -79,7 +132,7 @@ async function run(url, body, label) {
   try {
     const data = await (await post(url, body)).json();
     if (seq !== state.seq) return; // a newer request superseded this one
-    Object.assign(state, { design: data.design, analysis: data.analysis, mesh: data.mesh });
+    Object.assign(state, { design: data.design, analysis: data.analysis, mesh: data.mesh, sheetResult: data.sheet || null });
     $('#error').hidden = true;
     save();
     renderAll();
@@ -92,34 +145,40 @@ async function run(url, body, label) {
   }
 }
 
-const sizeAircraft = () => run('/api/size', state.req, 'Sizing and analysing');
+const sizeAircraft = () => { state.mode = 'req'; return run('/api/size', state.req, 'Sizing and analysing'); };
+const buildSheet = () => { state.mode = 'sheet'; return run('/api/sheet', state.sheet, 'Building and analysing'); };
 const analyseDesign = () => run('/api/analyze', state.design, 'Analysing');
 const debounce = (fn, ms) => { let t; return () => { clearTimeout(t); t = setTimeout(fn, ms); }; };
 const sizeSoon = debounce(sizeAircraft, 500);
 const analyseSoon = debounce(analyseDesign, 500);
+const sheetSoon = debounce(buildSheet, 500);
 
 function save() {
-  try { localStorage.setItem(STORE, JSON.stringify({ req: state.req })); } catch { /* storage unavailable */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ req: state.req, sheet: state.sheet, mode: state.mode })); } catch { /* storage unavailable */ }
 }
 
 // ------------------------------------------------------------------ forms
 
-function fieldHtml([path, label, unit, step], value) {
-  const id = `f-${path.replace(/\./g, '-')}`;
+function fieldHtml([path, label, unit, step, , placeholder], value, prefix) {
+  const id = `${prefix}-${path.replace(/\./g, '-')}`;
   let control;
-  if (unit === 'airfoil') {
+  if (Array.isArray(unit)) {
+    const opts = unit.map(([v, text]) => `<option value="${v}" ${v === value ? 'selected' : ''}>${text}</option>`).join('');
+    control = `<select id="${id}" data-path="${path}" data-rerender="1">${opts}</select>`;
+  } else if (unit === 'airfoil') {
     const opts = state.meta.airfoils.map((a) => `<option value="${a.code}" ${a.code === value ? 'selected' : ''}>${a.name}</option>`).join('');
     control = `<select id="${id}" data-path="${path}">${opts}</select>`;
   } else if (unit === 'text') {
     control = `<input id="${id}" data-path="${path}" type="text" value="${value}" maxlength="4" inputmode="numeric">`;
   } else {
-    control = `<input id="${id}" data-path="${path}" type="number" step="${step}" value="${round(value, step)}">` +
+    control = `<input id="${id}" data-path="${path}" type="number" step="${step}" value="${value == null ? '' : round(value, step)}"` +
+      `${placeholder ? ` placeholder="${placeholder}" data-optional="1"` : ''}>` +
       (unit ? `<span class="unit">${unit}</span>` : '');
   }
   return `<div class="field"><label for="${id}">${label}</label><div class="control">${control}</div></div>`;
 }
 
-function buildForm(fields, source) {
+function buildForm(fields, source, prefix) {
   let html = '', open = false;
   for (const f of fields) {
     if (!Array.isArray(f)) {
@@ -127,8 +186,8 @@ function buildForm(fields, source) {
       if (f.collapsed) { html += `<details><summary>${f.group}</summary>`; open = true; } else html += `<h3>${f.group}</h3>`;
       continue;
     }
-    if (f[4] && f[4] !== state.req.config) continue;
-    html += fieldHtml(f, get(source, f[0]));
+    if (f[4] && !(typeof f[4] === 'function' ? f[4](source) : f[4] === source.config)) continue;
+    html += fieldHtml(f, get(source, f[0]), prefix);
   }
   return html + (open ? '</details>' : '');
 }
@@ -136,23 +195,30 @@ function buildForm(fields, source) {
 function renderReqForm() {
   const seg = CONFIGS.map(([id, label]) => `<button type="button" data-config="${id}" aria-pressed="${state.req.config === id}">${label}</button>`).join('');
   const wasOpen = $('#req-form details')?.open;
-  $('#req-form').innerHTML = `<h3>Configuration</h3><div class="segmented">${seg}</div>` + buildForm(REQ_FIELDS, state.req);
+  $('#req-form').innerHTML = `<h3>Configuration</h3><div class="segmented">${seg}</div>` + buildForm(REQ_FIELDS, state.req, 'r');
   if (wasOpen) $('#req-form details').open = true;
   $('#design-name').value = state.req.name;
+}
+
+function renderSheetForm() {
+  $('#sheet-form').innerHTML = buildForm(SHEET_FIELDS, state.sheet, 's');
 }
 
 function renderGeoForm() {
   const d = state.design;
   if (!d) return;
   const fields = [...surfaceFields('wing', 'Wing', false)];
-  if (d.htail) fields.push(...surfaceFields('htail', 'Horizontal tail', false));
+  if (d.htail) fields.push(...surfaceFields('htail', d.tail_type === 'v_tail' ? 'V-tail' : 'Horizontal tail', false));
   if (d.vtail) fields.push(...surfaceFields('vtail', d.htail ? 'Fin' : 'Winglets (each)', true));
   if (document.activeElement?.closest('#geo-form')) return; // do not rebuild under the user's cursor
-  $('#geo-form').innerHTML = buildForm(fields, d);
+  $('#geo-form').innerHTML = buildForm(fields, d, 'g');
 }
 
 function readInput(input) {
-  if (input.type === 'number') { const v = parseFloat(input.value); return Number.isFinite(v) ? v : null; }
+  if (input.type === 'number') {
+    if (input.dataset.optional && input.value.trim() === '') return undefined; // blank means "work it out"
+    const v = parseFloat(input.value); return Number.isFinite(v) ? v : null;
+  }
   return input.value.trim();
 }
 
@@ -160,7 +226,13 @@ $('#req-form').addEventListener('input', (ev) => {
   const v = readInput(ev.target);
   if (v === null || v === '') return;
   state.req[ev.target.dataset.path] = v;
-  sizeSoon();
+  if (ev.target.dataset.rerender) { renderReqForm(); sizeAircraft(); } else sizeSoon();
+});
+$('#sheet-form').addEventListener('input', (ev) => {
+  const v = readInput(ev.target);
+  if (v === null || v === '') return;
+  state.sheet[ev.target.dataset.path] = v === undefined ? null : v;
+  if (ev.target.dataset.rerender) { renderSheetForm(); buildSheet(); } else sheetSoon();
 });
 $('#req-form').addEventListener('click', (ev) => {
   const cfg = ev.target.dataset?.config;
@@ -176,8 +248,12 @@ $('#geo-form').addEventListener('input', (ev) => {
   analyseSoon();
 });
 $('#design-name').addEventListener('change', (ev) => {
-  state.req.name = ev.target.value || 'My UAV';
-  if (state.design) state.design.requirements.name = state.req.name;
+  const name = ev.target.value || 'My UAV';
+  if (state.mode === 'sheet') state.sheet.name = name; else state.req.name = name;
+  if (state.design) {
+    state.design.requirements.name = name;
+    if (state.design.sheet_inputs) state.design.sheet_inputs.name = name;
+  }
   save();
 });
 
@@ -189,7 +265,12 @@ function tabs(root, onChange) {
     onChange(btn.dataset.pane);
   });
 }
-tabs($('#input-tabs'), (pane) => { $('#pane-req').hidden = pane !== 'req'; $('#pane-geo').hidden = pane !== 'geo'; });
+tabs($('#input-tabs'), (pane) => {
+  for (const id of ['req', 'sheet', 'geo']) $(`#pane-${id}`).hidden = pane !== id;
+  // Opening a pane makes it the source of the design, so the inputs on screen match the aircraft shown.
+  if (pane === 'sheet' && state.mode !== 'sheet') buildSheet();
+  if (pane === 'req' && state.mode !== 'req') sizeAircraft();
+});
 tabs($('#result-tabs'), (pane) => { state.tab = pane; renderResult(); });
 
 document.querySelector('.view-buttons').addEventListener('click', (ev) => {
@@ -235,6 +316,9 @@ $('#open-file').addEventListener('change', async (ev) => {
     if (!design.requirements || !design.wing) throw new Error('not a design file');
     state.req = design.requirements;
     state.design = design;
+    if (design.source === 'spreadsheet' && design.sheet_inputs) {
+      state.sheet = design.sheet_inputs; state.mode = 'sheet'; renderSheetForm();
+    } else state.mode = 'req';
     renderReqForm();
     analyseDesign();
   } catch {
@@ -280,6 +364,36 @@ function reviewPane(a) {
       <span class="pill pass">${s.pass} pass</span>${s.warn ? `<span class="pill warn">${s.warn} to review</span>` : ''}
       ${s.fail ? `<span class="pill fail">${s.fail} failing</span>` : ''}</div>
     ${notes}<ul class="checks">${rows}</ul></div>`;
+}
+
+function sheetPane() {
+  const r = state.sheetResult;
+  if (!r) return { html: '<div class="empty">Open the Spreadsheet tab on the left to build a design from your sheet.</div>', draw() {} };
+  const e = r.estimates;
+  const rows = r.comparison.map((c) => [c.quantity, `${fmt(c.sheet)} ${c.unit}`, `${fmt(c.solver)} ${c.unit}`,
+    c.difference_pct == null ? '–' : `${c.difference_pct > 0 ? '+' : ''}${fmt(c.difference_pct, 0)}%`]);
+  const geo = [
+    ['Total mass', `${fmt(e.total_mass_kg, 2)} kg`], ['Batteries weight', `${fmt(e.battery_kg, 2)} kg`],
+    ['Payload and battery mass fraction', `${fmt(e.mass_fraction_pct, 1)}%`], ['Voltage', `${fmt(e.voltage, 1)} V`],
+    ['Wing area', `${fmt(e.wing_area, 3)} m²`], ['Wing semispan', `${fmt(e.semispan, 3)} m`],
+    ['Wing root / tip chord', `${fmt(e.root_chord, 3)} / ${fmt(e.tip_chord, 3)} m`],
+    ['Horizontal stabilizer area', `${fmt(e.h_area, 4)} m²`], ['Horizontal stabilizer semispan', `${fmt(e.h_semispan, 3)} m`],
+    ['Vertical stabilizer area', `${fmt(e.v_area, 4)} m²`],
+    ['Vertical root / tip chord', `${fmt(e.v_root_chord, 3)} / ${fmt(e.v_tip_chord, 3)} m`],
+    ['Required V-tail area', `${fmt(e.vtail_required_area, 4)} m²`], ['V-tail dihedral from formula', `${fmt(e.vtail_dihedral_deg, 1)}°`],
+    ['Min-power / min-drag airspeed', `${fmt(e.min_power_airspeed, 1)} / ${fmt(e.min_drag_airspeed, 1)} m/s`],
+    ['Cruise current draw', `${fmt(e.cruise_current_a, 2)} A`],
+  ];
+  return {
+    html: `<p class="note">Left: what the sheet's formulas predict. Right: what the lifting-line solver predicts for the
+        same aircraft. The solver computes wing drag and maximum lift itself; it uses your fuselage drag coefficient
+        as entered. Geometry edits change the solver column only.</p>
+      <div class="grid2"><div class="card"><h4>Sheet estimate against solver prediction</h4><div class="sub">At cruise airspeed</div>
+        ${table(['Quantity', 'Spreadsheet', 'Solver', 'Difference'], rows)}</div>
+      <div class="card"><h4>Spreadsheet results</h4><div class="sub">The sheet's calculated cells</div>
+        ${table(['Quantity', 'Value'], geo)}</div></div>`,
+    draw() {},
+  };
 }
 
 function table(head, rows, numericFrom = 1, numericTo = Infinity) {
@@ -435,13 +549,19 @@ function massPane() {
 function renderResult() {
   const a = state.analysis;
   if (!a) { $('#result').innerHTML = '<div class="empty">Sizing your aircraft…</div>'; return; }
-  const pane = { review: () => ({ html: reviewPane(a), draw() {} }), aero: () => aeroPane(a), stability: () => stabilityPane(a),
+  const pane = { review: () => ({ html: reviewPane(a), draw() {} }), sheet: sheetPane, aero: () => aeroPane(a), stability: () => stabilityPane(a),
     performance: () => performancePane(a), sim: () => simPane(a), mass: massPane }[state.tab]();
   $('#result').innerHTML = pane.html;
   pane.draw();
 }
 
 function renderAll() {
+  $('#tab-sheet').hidden = !state.sheetResult;
+  if (!state.sheetResult && state.tab === 'sheet') {
+    state.tab = 'review';
+    document.querySelectorAll('#result-tabs button').forEach((b) => b.setAttribute('aria-selected', b.dataset.pane === 'review'));
+  }
+  $('#design-name').value = state.design.requirements.name;
   viewer.setAircraft(state.mesh, state.analysis.trim.neutral_point_x);
   renderTiles();
   renderGeoForm();
@@ -455,6 +575,7 @@ async function start() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch { /* ignore */ }
   state.req = { ...state.meta.defaults, ...(saved?.req || {}) };
+  state.sheet = { ...state.meta.sheet_defaults, ...(saved?.sheet || {}) };
   $('#presets').innerHTML = state.meta.presets.map((p) => `<button type="button" data-preset="${p.id}"><b>${p.label}</b><span>${p.blurb}</span></button>`).join('');
   $('#presets').addEventListener('click', (ev) => {
     const btn = ev.target.closest('button[data-preset]');
@@ -465,6 +586,7 @@ async function start() {
   });
   renderExportMenu();
   renderReqForm();
+  renderSheetForm();
   renderResult();
   sizeAircraft();
 }

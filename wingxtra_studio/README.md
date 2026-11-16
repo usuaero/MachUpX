@@ -23,7 +23,8 @@ Then open http://127.0.0.1:8000. Tests: `python -m pytest test/studio`.
 
 | Step | What happens |
 |---|---|
-| Requirements | Payload, cruise and stall speed, endurance, altitude, wing shape, technology assumptions. Three layouts: conventional fixed-wing, flying wing, VTOL quadplane. |
+| Requirements | Payload, cruise and stall speed, endurance, altitude, wing shape, technology assumptions. Three layouts: conventional fixed-wing, flying wing, VTOL quadplane; conventional or V-tail. |
+| Spreadsheet mode | The Wingxtra design sheet, row for row: you choose wing loading, battery pack and airframe weight directly. The sheet's formulas are reproduced exactly, the same aircraft is built and run through the solver, and the two sets of numbers are shown side by side. Includes the sheet's V-tail conversion. |
 | Sizing | Take-off mass, wing area, tail, battery, cruise motor and lift rotors are solved together. The loop is closed on the solver: the aircraft is resized until the *predicted* stall speed and endurance meet the requirement. |
 | Balance | Every mass is placed; the battery position is solved so the centre of gravity gives the requested static margin. Inertia is estimated from the layout. |
 | Aerodynamics | MachUpX nonlinear lifting-line: lift curve, drag polar, spanwise loading, critical-section stall, plus a parasite drag build-up for the body, booms and stopped rotors. |
@@ -42,6 +43,7 @@ wingxtra_studio/
   airfoils.py      NACA 4-digit geometry and section properties
   atmosphere.py    Standard atmosphere, Reynolds number, skin friction
   sizing.py        Requirements -> balanced Design (closed loop on the solver)
+  sheet.py         Spreadsheet inputs -> Design, sheet formulas, sheet-vs-solver comparison
   aero.py          Design -> MachUpX model; polar, trim, derivatives, drag build-up
   performance.py   Point performance and hover
   dynamics.py      Linearised equations of motion, modes, responses
@@ -94,7 +96,7 @@ which covers cruise, trim and stability of most UAVs. Known limits of this versi
 - Mission simulation with a full energy budget.
 
 **3. Design breadth**
-- V-tail, T-tail, twin-boom, canard, tandem wing, tilt-rotor and tailsitter layouts.
+- T-tail, twin-boom, inverted V, canard, tandem wing, tilt-rotor and tailsitter layouts.
 - Flaps and multi-segment wings; optimisation ("maximise endurance subject to these checks").
 - Parametric sweeps and side-by-side comparison of design variants.
 - Units switch, richer CAD output (control-surface cuts, ribs and spars, drawings, PDF report).

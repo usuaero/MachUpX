@@ -91,7 +91,7 @@ def lofts(design: Design) -> List[Dict]:
         out.append({"name": f"Wing {tag}", "kind": "wing", "rings": surface_loft(w, side), "ruled": True})
     if design.htail:
         for side, tag in ((1, "right"), (-1, "left")):
-            out.append({"name": f"Horizontal tail {tag}", "kind": "tail", "rings": surface_loft(design.htail, side), "ruled": True})
+            out.append({"name": f"{'V-tail' if design.tail_type == 'v_tail' else 'Horizontal tail'} {tag}", "kind": "tail", "rings": surface_loft(design.htail, side), "ruled": True})
         if design.vtail:
             out.append({"name": "Fin", "kind": "tail", "rings": surface_loft(design.vtail, 1, vertical=True), "ruled": True})
     elif design.vtail:

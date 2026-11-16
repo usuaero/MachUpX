@@ -138,3 +138,71 @@ def test_api_round_trip():
     assert client.post("/api/export/nope", json=design).status_code == 404
     assert client.post("/api/size", json={"endurance_min": 1400}).status_code == 422
     assert client.get("/").status_code == 200
+
+
+# ---------------------------------------------------------------- spreadsheet mode and V-tails
+
+from wingxtra_studio import sheet  # noqa: E402
+
+# Calculated cells of the Wingxtra design sheet for its default inputs.
+SHEET_REFERENCE = {
+    "total_mass_kg": 15.98571, "battery_kg": 5.28571, "mass_fraction_pct": 43.69973, "wing_area": 0.70298,
+    "semispan": 1.49984, "root_chord": 0.36054, "tip_chord": 0.10816, "average_chord": 0.23435,
+    "min_drag_airspeed": 16.94858, "min_power_airspeed": 12.87814, "stall_speed": 18.02991, "stall_margin": 4.97009,
+    "CL": 0.68825, "CD": 0.06086, "LD": 11.30908, "flight_time_min": 125.62124, "range_km": 173.35731,
+    "propulsive_power_w": 398.53209, "cruise_current_a": 8.97595, "h_area": 0.07551, "h_semispan": 0.33654,
+    "h_root_chord": 0.11218, "v_area": 0.04793, "v_root_chord": 0.12746, "v_tip_chord": 0.11217,
+    "vtail_required_area": 0.12343, "vtail_dihedral_deg": 38.54389, "vtail_span_prediction": 0.93442,
+    "vtail_chord_prediction": 0.15574,
+}
+
+
+@pytest.mark.parametrize("key", sorted(SHEET_REFERENCE))
+def test_sheet_formulas_reproduce_the_spreadsheet(key):
+    assert sheet.estimates(sheet.SheetInputs())[key] == pytest.approx(SHEET_REFERENCE[key], rel=1e-4)
+
+
+@pytest.mark.parametrize("tail", ["conventional", "v_tail"])
+def test_sheet_design_matches_sheet_geometry_and_flies(tail):
+    inputs = sheet.SheetInputs(tail=tail)
+    design = sheet.build(inputs)
+    assert design.mass_kg == pytest.approx(15.98571, rel=1e-4)
+    assert design.wing.area == pytest.approx(0.70298, rel=1e-4)
+    assert design.wing.span == pytest.approx(2 * 1.49984, rel=1e-4)
+    assert sum(m.mass_kg for m in design.masses) == pytest.approx(design.mass_kg, rel=1e-6)
+
+    a = analysis.analyze(design)
+    assert a["summary"]["fail"] == 0
+    assert a["trim"]["static_margin"] == pytest.approx(inputs.static_margin, abs=0.02)
+    # Solver and sheet should broadly agree; a large gap would mean one of them is wrong.
+    for row in sheet.comparison(inputs, a):
+        assert abs(row["difference_pct"]) < 20, row
+
+    if tail == "v_tail":
+        assert design.vtail is None and design.htail.dihedral_deg == pytest.approx(38.54389, rel=1e-4)
+        control = a["trim"]["control"]
+        assert abs(control["Cn,drudder"]) > 0.02 and abs(control["Cm,delevator"]) > 0.5
+        assert a["trim"]["stability"]["Cn,b"] > 0.04
+
+
+def test_v_tail_in_requirements_mode():
+    design = sizing.size(Requirements(tail="v_tail"), passes=1)
+    assert design.tail_type == "v_tail" and design.vtail is None
+    assert analysis.analyze(design)["summary"]["fail"] == 0
+    assert "PRODUCT('V-tail right'" in export.step(design).decode("latin-1")
+
+
+def test_sheet_api_and_reanalysis_keep_the_comparison():
+    client = TestClient(app)
+    defaults = client.get("/api/meta").json()["sheet_defaults"]
+    body = client.post("/api/sheet", json=defaults).json()
+    assert body["design"]["source"] == "spreadsheet"
+    assert body["sheet"]["estimates"]["total_mass_kg"] == pytest.approx(15.98571, rel=1e-4)
+
+    design = body["design"]
+    design["wing"]["washout_deg"] = -4.0
+    again = client.post("/api/analyze", json=design).json()
+    assert "comparison" in again["sheet"]
+
+    too_slow = dict(defaults, cruise_airspeed_ms=15)
+    assert client.post("/api/sheet", json=too_slow).status_code == 422

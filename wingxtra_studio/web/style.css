@@ -63,6 +63,7 @@ button, input, select { font: inherit; color: inherit; }
 
 .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin: 18px 0 14px; overflow-x: auto; }
 .tabs.small { margin-top: 0; }
+.tabs.small button { padding: 9px 8px; }
 .tabs button { border: 0; background: none; padding: 9px 12px; cursor: pointer; color: var(--ink-2); border-bottom: 2px solid transparent; white-space: nowrap; }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
 
