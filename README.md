@@ -22,3 +22,6 @@ For bugs, create a new issue on the Github repo.
 
 ## License
 This project is licensed under the MIT license. See LICENSE file for more information. 
+
+## Wingxtra Studio
+This repository also contains **Wingxtra Studio**, a browser-based UAV design tool built on MachUpX: mission requirements in; a sized, analysed and CAD-ready fixed-wing or VTOL aircraft out. See [wingxtra_studio/README.md](wingxtra_studio/README.md).

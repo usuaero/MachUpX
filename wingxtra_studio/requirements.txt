@@ -1,0 +1,11 @@
+numpy>=1.18
+scipy>=1.4
+matplotlib
+numpy-stl
+airfoil_db>=1.4.3
+pydantic>=2
+fastapi
+uvicorn
+cadquery-ocp
+pytest
+httpx

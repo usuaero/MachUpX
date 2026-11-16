@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wingxtra Studio</title>
+<link rel="stylesheet" href="/style.css">
+<script type="importmap">{"imports": {"three": "/vendor/three.module.min.js"}}</script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo" aria-hidden="true"></span>Wingxtra Studio</div>
+  <input id="design-name" class="name-input" aria-label="Design name" spellcheck="false">
+  <div class="spacer"></div>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <button id="open-btn" class="btn ghost" type="button">Open</button>
+  <input id="open-file" type="file" accept=".json,application/json" hidden>
+  <div class="menu">
+    <button id="export-btn" class="btn primary" type="button" aria-haspopup="true" aria-expanded="false">Export</button>
+    <div id="export-menu" class="menu-list" hidden></div>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar" aria-label="Design inputs">
+    <div class="tabs small" role="tablist" id="input-tabs">
+      <button role="tab" aria-selected="true" data-pane="req">Requirements</button>
+      <button role="tab" aria-selected="false" data-pane="geo">Geometry</button>
+    </div>
+    <section id="pane-req" class="pane">
+      <h3>Start from</h3>
+      <div id="presets" class="presets"></div>
+      <form id="req-form" autocomplete="off"></form>
+    </section>
+    <section id="pane-geo" class="pane" hidden>
+      <p class="hint">Fine-tune the sized aircraft. Every edit is re-analysed. Changing a requirement re-sizes
+        the aircraft and replaces these edits.</p>
+      <form id="geo-form" autocomplete="off"></form>
+    </section>
+  </aside>
+
+  <section class="workspace">
+    <div id="error" class="error" hidden></div>
+    <div class="viewer-card">
+      <div id="viewer" class="viewer" aria-label="3D view of the aircraft"></div>
+      <div class="view-buttons" role="group" aria-label="Camera">
+        <button type="button" data-view="iso">3D</button>
+        <button type="button" data-view="top">Top</button>
+        <button type="button" data-view="side">Side</button>
+        <button type="button" data-view="front">Front</button>
+      </div>
+      <div class="viewer-legend"><span class="dot cg"></span>Centre of gravity <span class="dot np"></span>Neutral point</div>
+    </div>
+    <div id="tiles" class="tiles"></div>
+
+    <div class="tabs" role="tablist" id="result-tabs">
+      <button role="tab" aria-selected="true" data-pane="review">Design review</button>
+      <button role="tab" aria-selected="false" data-pane="aero">Aerodynamics</button>
+      <button role="tab" aria-selected="false" data-pane="stability">Stability</button>
+      <button role="tab" aria-selected="false" data-pane="performance">Performance</button>
+      <button role="tab" aria-selected="false" data-pane="sim">Flight simulation</button>
+      <button role="tab" aria-selected="false" data-pane="mass">Mass and balance</button>
+    </div>
+    <div id="result" class="result"></div>
+  </section>
+</main>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
